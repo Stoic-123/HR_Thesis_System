@@ -1,45 +1,64 @@
 import { db } from "../config/db.js";
-
-export const addEmployee = async (employee, documents) => {
-  const connection = await db.getConnection();
+import bcrypt from "bcrypt";
+export const addEmployee = async (
+  first_name,
+  last_name,
+  age = null,
+  gender = null,
+  phone_number1 = null,
+  phone_number2 = null,
+  email = null,
+  address = null,
+  profile_path,
+  position_id = null,
+  department_id = null,
+  role_id,
+  telegram_username = null,
+  joined_at = null,
+  company_id,
+  is_active,
+  documents
+) => {
   try {
-    await connection.beginTransaction();
     const sql =
-      "INSERT INTO Employee (first_name, last_name, age, gender, phone_number1, phone_number2, address, profile_path, position, department, role_id, telegram_username, joined_at, company_id, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-    const [empResult] = await connection.execute(sql, [
-      employee.first_name,
-      employee.last_name,
-      employee.age,
-      employee.gender,
-      employee.phone_number1,
-      employee.phone_number2,
-      employee.address,
-      employee.profile_path,
-      employee.position,
-      employee.department,
-      employee.role_id,
-      employee.telegram_username,
-      employee.joined_at,
-      employee.company_id,
-      employee.is_active,
+      "INSERT INTO Employee (first_name, last_name, age, gender, phone_number1, phone_number2,email, address, profile_path, position_id, department_id, role_id, telegram_username,joined_at, company_id, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?, ?)";
+    const [empResult] = await db.execute(sql, [
+      first_name,
+      last_name,
+      age,
+      gender,
+      phone_number1,
+      phone_number2,
+      email,
+      address,
+      profile_path,
+      position_id,
+      department_id,
+      role_id,
+      telegram_username,
+      joined_at,
+      company_id,
+      is_active,
     ]);
+
     const employeeId = empResult.insertId;
+    const username = `${first_name} ${last_name}`;
     const defaultPassword = "Hr12345";
-    await connection.execute(
+    const salt = await bcrypt.genSalt();
+    const hashPassword = await bcrypt.hash(defaultPassword, salt);
+    await db.execute(
       "INSERT INTO User (employee_id, username, password) VALUES (?, ?, ?)",
-      [employeeId, employee.username, defaultPassword]
+      [employeeId, username, hashPassword]
     );
 
     if (documents && documents.length > 0) {
       for (const doc of documents) {
-        await connection.execute(
-          "INSERT INTO Document (employee_id, document_type, document_path) VALUES (?, ?, ?)",
+        await db.execute(
+          "INSERT INTO Document (employee_id, document_type_id, document_path) VALUES (?, ?, ?)",
           [employeeId, doc.type, doc.path]
         );
       }
     }
-
-    await connection.commit();
     if (empResult.affectedRows === 0) {
       return {
         result: false,
@@ -52,10 +71,26 @@ export const addEmployee = async (employee, documents) => {
       message: "Employee created successfully.",
     };
   } catch (error) {
-    await connection.rollback();
     console.log(error);
     throw error;
-  } finally {
-    connection.release();
+  }
+};
+export const emailCheck = async (email) => {
+  try {
+    const sql = "SELECT email FROM employee where email=?";
+    const [emailResult] = await db.execute(sql, [email]);
+    if (emailResult.length === 0) {
+      return {
+        result: false,
+        message: "Email not yet have in database..!",
+      };
+    }
+    return {
+      result: true,
+      data: emailResult,
+    };
+  } catch (error) {
+    console.log(error.message);
+    throw error;
   }
 };

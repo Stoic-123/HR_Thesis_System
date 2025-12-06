@@ -2,6 +2,8 @@ import { db } from "../config/db.js";
 
 export const addCompany = async (
   name,
+  phone,
+  email,
   primary_color,
   secondary_color,
   logo_path,
@@ -9,10 +11,12 @@ export const addCompany = async (
   telegram_bot_token
 ) => {
   try {
-    const sql = `INSERT INTO Company (name,primary_color,secondary_color,logo_path,telegram_group_id,telegram_bot_token) VALUE(?,?,?,?,?,?)`;
+    const sql = `INSERT INTO Company (name,phone,email,primary_color,secondary_color,logo_path,telegram_group_id,telegram_bot_token) VALUE(?,?,?,?,?,?,?,?)`;
 
     const [companyResult] = await db.execute(sql, [
       name,
+      phone,
+      email,
       primary_color,
       secondary_color,
       logo_path,

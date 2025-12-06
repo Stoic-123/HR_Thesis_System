@@ -14,6 +14,8 @@ export const addCompanyController = async (req, res) => {
     }
     const {
       name,
+      phone,
+      email,
       primary_color,
       secondary_color,
       telegram_group_id,
@@ -26,6 +28,8 @@ export const addCompanyController = async (req, res) => {
     }
     const companyInsertData = await addCompany(
       name,
+      phone,
+      email,
       primary_color,
       secondary_color,
       logoPath,
