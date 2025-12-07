@@ -90,6 +90,8 @@ export const deactivatedDepartment = async (department_id) => {
     const sql = "UPDATE department SET is_active = 0 WHERE id=?";
     const setUserToNullSql =
       "UPDATE employee SET department_id= NULL, position_id= NULL WHERE department_id=?";
+    const setPositionToNullSql =
+      "UPDATE positions SET is_active = 0 WHERE department_id=?";
     const [deactivatedDepartmentResult] = await db.execute(sql, [
       department_id,
     ]);
@@ -100,6 +102,7 @@ export const deactivatedDepartment = async (department_id) => {
       };
     }
     await db.execute(setUserToNullSql, [department_id]);
+    await db.execute(setPositionToNullSql, [department_id]);
     return {
       result: true,
       message: "Department deactivated successfully.",
@@ -112,6 +115,8 @@ export const deactivatedDepartment = async (department_id) => {
 export const activatedDepartment = async (department_id) => {
   try {
     const sql = "UPDATE department SET is_active = 1 WHERE id=?";
+    const ativatePositionSql =
+      "UPDATE positions SET is_active = 1 WHERE department_id=?";
     const [activatedDepartmentResult] = await db.execute(sql, [department_id]);
     if (activatedDepartmentResult.affectedRows === 0) {
       return {
@@ -119,6 +124,7 @@ export const activatedDepartment = async (department_id) => {
         message: "Failed to activate department..!",
       };
     }
+    await db.execute(ativatePositionSql, [department_id]);
     return {
       result: true,
       message: "Department activated successfully.",

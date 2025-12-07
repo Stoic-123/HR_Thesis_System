@@ -1,4 +1,9 @@
-import { addPosition, getPosition } from "../model/Position.js";
+import {
+  addPosition,
+  deletePosition,
+  getPosition,
+  updatePosition,
+} from "../model/Position.js";
 
 export const addPositionController = async (req, res) => {
   try {
@@ -27,6 +32,41 @@ export const getPositionController = async (req, res) => {
     }
     const positionGetData = await getPosition(company_id);
     res.status(200).json(positionGetData);
+  } catch (error) {
+    console.log(error.message);
+    res.status(500).json({ result: false, message: error.message });
+  }
+};
+export const updatedPositionController = async (req, res) => {
+  try {
+    const { name, department_id } = req.body;
+    const { position_id } = req.params;
+    if (!position_id) {
+      return res
+        .status(400)
+        .json({ result: false, message: "Position_id is required..!" });
+    }
+    const positionUpdateData = await updatePosition(
+      name,
+      department_id,
+      position_id
+    );
+    res.status(200).json(positionUpdateData);
+  } catch (error) {
+    console.log(error.message);
+    res.status(500).json({ result: false, message: error.message });
+  }
+};
+export const deletedPositionController = async (req, res) => {
+  try {
+    const { position_id } = req.params;
+    if (!position_id) {
+      return res
+        .status(400)
+        .json({ result: false, message: "Position_id is required..!" });
+    }
+    const positionDeleteData = await deletePosition(position_id);
+    res.status(200).json(positionDeleteData);
   } catch (error) {
     console.log(error.message);
     res.status(500).json({ result: false, message: error.message });
