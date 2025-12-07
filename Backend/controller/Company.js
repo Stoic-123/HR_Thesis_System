@@ -1,4 +1,4 @@
-import { addCompany, getCompany } from "../model/Company.js";
+import { addCompany, getCompany, updateCompany } from "../model/Company.js";
 
 export const addCompanyController = async (req, res) => {
   try {
@@ -48,6 +48,65 @@ export const getCompanyController = async (req, res) => {
     res.status(200).json(companyData);
   } catch (error) {
     console.log(error.message);
+    res.status(500).json({ result: false, message: error.message });
+  }
+};
+export const updateCompanyController = async (req, res) => {
+  try {
+    const {
+      name,
+      phone,
+      email,
+      primary_color,
+      secondary_color,
+      telegram_group_id,
+      telegram_bot_token,
+      old_logo_path, 
+    } = req.body;
+    const { company_id } = req.params;
+    if (!company_id) {
+      return res.status(400).json({
+        result: false,
+        message: "Company ID is required!",
+      });
+    }
+
+    let logo_path = old_logo_path; 
+
+    if (req.files && req.files.logo_path) {
+      const logo = req.files.logo_path;
+      const logo_name = Date.now() + "_" + logo.name;
+      const uploadPath = "./public/uploads/logos/" + logo_name;
+
+      // Save new file
+      await logo.mv(uploadPath);
+
+      // Set new path for DB
+      logo_path = "/uploads/logos/" + logo_name;
+
+      if (old_logo_path) {
+        const oldFile = path.join("./public", old_logo_path);
+        if (fs.existsSync(oldFile)) {
+          fs.unlinkSync(oldFile);
+        }
+      }
+    }
+
+    const result = await updateCompany(
+      name,
+      phone,
+      email,
+      primary_color,
+      secondary_color,
+      logo_path,
+      telegram_group_id,
+      telegram_bot_token,
+      company_id
+    );
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.log(error);
     res.status(500).json({ result: false, message: error.message });
   }
 };

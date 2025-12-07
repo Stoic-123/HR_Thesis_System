@@ -39,3 +39,22 @@ export const getRole = async (company_id) => {
     throw error;
   }
 };
+export const updateRole = async (name, role_id) => {
+  try {
+    const sql = "UPDATE role SET name=? WHERE id=?";
+    const [roleResult] = await db.execute(sql, [name, role_id]);
+    if (roleResult.affectedRows === 0) {
+      return {
+        result: false,
+        message: "Failed to update role..!",
+      };
+    }
+    return {
+      result: true,
+      message: "Role updated successfully.",
+    };
+  } catch (error) {
+    console.log(error.message);
+    throw error;
+  }
+};

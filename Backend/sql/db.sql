@@ -37,9 +37,12 @@ CREATE TABLE Holiday (
     name VARCHAR(255) NOT NULL,
     start_date DATETIME NOT NULL,
     end_date DATETIME NOT NULL,
+    company_id INT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_holiday_dates (start_date, end_date)
+    FOREIGN KEY (company_id) REFERENCES Company(id) ON DELETE CASCADE,
+    INDEX idx_holiday_dates (start_date, end_date),
+    INDEX idx_holiday_company (company_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Company Table
@@ -77,8 +80,7 @@ CREATE TABLE TimeMode (
     id INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(255) NOT NULL,
     company_id INT NOT NULL,
-    start_time TIME NOT NULL,
-    end_time TIME NOT NULL,
+    remark VARCHAR(255),
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (company_id) REFERENCES Company(id) ON DELETE CASCADE,
@@ -103,6 +105,7 @@ CREATE TABLE Department (
     name VARCHAR(255) NOT NULL,
     manager_id INT,
     company_id INT NOT NULL,
+    is_active TINYINT(1) DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (company_id) REFERENCES Company(id) ON DELETE CASCADE,
@@ -115,6 +118,7 @@ CREATE TABLE Position (
     id INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(255) NOT NULL,
     department_id INT,
+    is_active TINYINT(1) DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_position_department (department_id),

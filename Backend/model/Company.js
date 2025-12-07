@@ -59,3 +59,48 @@ export const getCompany = async () => {
     throw error.message;
   }
 };
+export const updateCompany = async (
+  name,
+  phone,
+  email,
+  primary_color,
+  secondary_color,
+  logo_path,
+  telegram_group_id,
+  telegram_bot_token,
+  company_id
+) => {
+  try {
+    const sql = `
+    UPDATE company
+    SET name=?, phone=?, email=?, primary_color=?, secondary_color=?,
+        logo_path=?, telegram_group_id=?, telegram_bot_token=?
+    WHERE id=?
+  `;
+
+    const [companyResult] = await db.execute(sql, [
+      name,
+      phone,
+      email,
+      primary_color,
+      secondary_color,
+      logo_path,
+      telegram_group_id,
+      telegram_bot_token,
+      company_id,
+    ]);
+    if (companyResult.affectedRows === 0) {
+      return {
+        result: false,
+        message: "Failed to update company..!",
+      };
+    }
+    return {
+      result: true,
+      message: "Company updated successfully.",
+    };
+  } catch (error) {
+    console.log(error.message);
+    throw error;
+  }
+};

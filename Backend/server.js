@@ -34,6 +34,8 @@ import companyRoutes from "./routes/Company.js";
 import departmentRoutes from "./routes/Department.js";
 import positionRoutes from "./routes/Position.js";
 import roleRoutes from "./routes/Role.js";
+import timemodeRoutes from "./routes/TimeMode.js";
+import holidayRoutes from "./routes/Holiday.js";
 //employee routes
 app.use("/api/employee", employeeRoutes);
 //document routes
@@ -46,6 +48,10 @@ app.use("/api/department", departmentRoutes);
 app.use("/api/position", positionRoutes);
 //role routes
 app.use("/api/role", roleRoutes);
+//timemode routes
+app.use("/api/timemode", timemodeRoutes);
+//holiday routes
+app.use("/api/holiday", holidayRoutes);
 app.listen(8080, () => {
   console.log("http://localhost:8080");
 });
