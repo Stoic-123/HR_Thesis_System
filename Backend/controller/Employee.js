@@ -1,4 +1,4 @@
-import { addEmployee, emailCheck } from "../model/Employee.js";
+import { addEmployee, emailCheck, getAllEmployee } from "../model/Employee.js";
 
 export const addEmployeeController = async (req, res) => {
   try {
@@ -76,6 +76,21 @@ export const addEmployeeController = async (req, res) => {
     res.status(200).json({ employeeInsertData });
   } catch (error) {
     console.error("Error adding employee:", error.message);
+    res.status(500).json({ result: false, message: error.message });
+  }
+};
+export const getAllEmployeeController = async (req, res) => {
+  try {
+    const { company_id } = req.params;
+    if (!company_id) {
+      return res
+        .status(400)
+        .json({ result: false, message: "Company_id is required..!" });
+    }
+    const employeeGetData = await getAllEmployee(company_id);
+    res.status(200).json(employeeGetData);
+  } catch (error) {
+    console.log(error.message);
     res.status(500).json({ result: false, message: error.message });
   }
 };
