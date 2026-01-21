@@ -16,8 +16,8 @@ export const addEmployee = async (
   telegram_username = null,
   joined_at = null,
   company_id,
-  is_active,
-  documents
+  is_active
+  // documents
 ) => {
   try {
     const sql =
@@ -51,14 +51,14 @@ export const addEmployee = async (
       [employeeId, username, hashPassword]
     );
 
-    if (documents && documents.length > 0) {
-      for (const doc of documents) {
-        await db.execute(
-          "INSERT INTO Document (employee_id, document_type_id, document_path) VALUES (?, ?, ?)",
-          [employeeId, doc.type, doc.path]
-        );
-      }
-    }
+    // if (documents && documents.length > 0) {
+    //   for (const doc of documents) {
+    //     await db.execute(
+    //       "INSERT INTO Document (employee_id, document_type_id, document_path) VALUES (?, ?, ?)",
+    //       [employeeId, doc.type, doc.path]
+    //     );
+    //   }
+    // }
     if (empResult.affectedRows === 0) {
       return {
         result: false,

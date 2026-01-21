@@ -36,6 +36,7 @@ import positionRoutes from "./routes/Position.js";
 import roleRoutes from "./routes/Role.js";
 import timemodeRoutes from "./routes/TimeMode.js";
 import holidayRoutes from "./routes/Holiday.js";
+import leaveTypeRoutes from "./routes/LeaveType.js";
 //employee routes
 app.use("/api/employee", employeeRoutes);
 //document routes
@@ -52,6 +53,7 @@ app.use("/api/role", roleRoutes);
 app.use("/api/timemode", timemodeRoutes);
 //holiday routes
 app.use("/api/holiday", holidayRoutes);
+//
 app.listen(8080, () => {
   console.log("http://localhost:8080");
 });

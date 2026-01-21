@@ -1,51 +1,37 @@
 -- =====================================================
--- Complete HRMS Database Schema - UPDATED VERSION
+-- Complete HRMS Database Schema - ENHANCED VERSION
 -- For MySQL 5.7+ / MariaDB 10.2+
--- Aligned with ER Diagrams
+-- With Family & Personal Information
 -- =====================================================
 
 -- Drop existing tables if they exist (in reverse order of dependencies)
 DROP TABLE IF EXISTS AuditLog;
+DROP TABLE IF EXISTS overtime;
+DROP TABLE IF EXISTS Notification;
+DROP TABLE IF EXISTS Announcement;
 DROP TABLE IF EXISTS EmployeeLocation;
-DROP TABLE IF EXISTS Location;
 DROP TABLE IF EXISTS RoleBaseAccess;
 DROP TABLE IF EXISTS Document;
+DROP TABLE IF EXISTS DocumentType;
 DROP TABLE IF EXISTS LeaveRecord;
 DROP TABLE IF EXISTS AttendanceRecord;
 DROP TABLE IF EXISTS LeaveProfile;
+DROP TABLE IF EXISTS LeaveType;
 DROP TABLE IF EXISTS User;
 DROP TABLE IF EXISTS Employee;
-DROP TABLE IF EXISTS Position;
+DROP TABLE IF EXISTS Positions;
 DROP TABLE IF EXISTS Department;
 DROP TABLE IF EXISTS Role;
-DROP TABLE IF EXISTS DocumentType;
-DROP TABLE IF EXISTS LeaveType;
 DROP TABLE IF EXISTS TimeMode;
-DROP TABLE IF EXISTS Company;
+DROP TABLE IF EXISTS Location;
 DROP TABLE IF EXISTS Holiday;
-DROP TABLE IF EXISTS Announcement;
-DROP TABLE IF EXISTS Notification;
-DROP TABLE IF EXISTS overtime;
+DROP TABLE IF EXISTS Company;
 
 -- =====================================================
 -- Core System Tables
 -- =====================================================
 
--- Holiday Table
-CREATE TABLE Holiday (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    name VARCHAR(255) NOT NULL,
-    start_date DATETIME NOT NULL,
-    end_date DATETIME NOT NULL,
-    company_id INT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (company_id) REFERENCES Company(id) ON DELETE CASCADE,
-    INDEX idx_holiday_dates (start_date, end_date),
-    INDEX idx_holiday_company (company_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Company Table
+-- Company Table (Must be created first)
 CREATE TABLE Company (
     id INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(255) NOT NULL,
@@ -59,6 +45,20 @@ CREATE TABLE Company (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_company_name (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Holiday Table
+CREATE TABLE Holiday (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(255) NOT NULL,
+    start_date DATETIME NOT NULL,
+    end_date DATETIME NOT NULL,
+    company_id INT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (company_id) REFERENCES Company(id) ON DELETE CASCADE,
+    INDEX idx_holiday_dates (start_date, end_date),
+    INDEX idx_holiday_company (company_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Location Table
@@ -113,8 +113,8 @@ CREATE TABLE Department (
     INDEX idx_department_company (company_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Position Table
-CREATE TABLE Position (
+-- Positions Table
+CREATE TABLE Positions (
     id INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(255) NOT NULL,
     department_id INT,
@@ -127,12 +127,14 @@ CREATE TABLE Position (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =====================================================
--- Employee & User Tables
+-- Employee & User Tables (ENHANCED)
 -- =====================================================
 
--- Employee Table
+-- Employee Table (Enhanced with Family Information)
 CREATE TABLE Employee (
     id INT PRIMARY KEY AUTO_INCREMENT,
+    
+    -- Basic Information
     first_name VARCHAR(255) NOT NULL,
     last_name VARCHAR(255) NOT NULL,
     age INT,
@@ -142,24 +144,67 @@ CREATE TABLE Employee (
     email VARCHAR(255),
     address VARCHAR(500),
     profile_path VARCHAR(500),
+    
+    -- Work Information
     position_id INT,
     department_id INT,
     role_id INT,
+    location_id INT,
     telegram_username VARCHAR(255),
     joined_at DATETIME,
     company_id INT NOT NULL,
     is_active ENUM('active', 'inactive') DEFAULT 'active',
+    
+    -- Family Information - Partner/Spouse
+    relationship_status ENUM('single', 'married', 'divorced', 'widowed', 'other') DEFAULT 'single',
+    partner_name VARCHAR(255),
+    partner_age INT,
+    partner_occupation VARCHAR(255),
+    
+    -- Family Information - Children
+    total_children INT DEFAULT 0,
+    total_daughters INT DEFAULT 0,
+    total_sons INT DEFAULT 0,
+    
+    -- Family Information - Siblings
+    female_sibling INT DEFAULT 0,
+    total_sibling INT DEFAULT 0,
+    
+    -- Family Information - Parents
+    father_name VARCHAR(255),
+    father_age INT,
+    father_occupation VARCHAR(255),
+    father_life_status ENUM('alive', 'deceased') DEFAULT 'alive',
+    
+    mother_name VARCHAR(255),
+    mother_age INT,
+    mother_occupation VARCHAR(255),
+    mother_life_status ENUM('alive', 'deceased') DEFAULT 'alive',
+    
+    -- Emergency Contact / Guardian
+    guardian_name VARCHAR(255),
+    guardian_phone_number VARCHAR(50),
+    guardian_relationship VARCHAR(100),
+    
+    -- Timestamps
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    -- Foreign Keys
     FOREIGN KEY (company_id) REFERENCES Company(id) ON DELETE CASCADE,
-    FOREIGN KEY (`position_id`) REFERENCES `Position`(`id`) ON DELETE SET NULL,
+    FOREIGN KEY (position_id) REFERENCES Positions(id) ON DELETE SET NULL,
     FOREIGN KEY (department_id) REFERENCES Department(id) ON DELETE SET NULL,
     FOREIGN KEY (role_id) REFERENCES Role(id) ON DELETE SET NULL,
+    FOREIGN KEY (location_id) REFERENCES Location(id) ON DELETE SET NULL,
+    
+    -- Indexes
     INDEX idx_employee_company (company_id),
     INDEX idx_employee_department (department_id),
     INDEX idx_employee_position (position_id),
+    INDEX idx_employee_location (location_id),
     INDEX idx_employee_active (is_active),
-    INDEX idx_employee_name (first_name, last_name)
+    INDEX idx_employee_name (first_name, last_name),
+    INDEX idx_employee_relationship (relationship_status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- User Table
@@ -400,5 +445,5 @@ ADD CONSTRAINT fk_department_manager
 FOREIGN KEY (manager_id) REFERENCES Employee(id) ON DELETE SET NULL;
 
 -- =====================================================
--- End of Schema
+-- End of Enhanced Schema
 -- =====================================================
