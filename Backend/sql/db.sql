@@ -444,6 +444,14 @@ ALTER TABLE Department
 ADD CONSTRAINT fk_department_manager 
 FOREIGN KEY (manager_id) REFERENCES Employee(id) ON DELETE SET NULL;
 
+
+ALTER TABLE User
+ADD COLUMN token_version INT NOT NULL DEFAULT 0 AFTER password;
+
+ALTER TABLE LeaveType
+ADD COLUMN code VARCHAR(20) NOT NULL AFTER name,
+ADD COLUMN default_balance INT NOT NULL DEFAULT 0 AFTER code;
+
 -- =====================================================
 -- End of Enhanced Schema
 -- =====================================================
