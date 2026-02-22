@@ -1,0 +1,445 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model announcement {
+  id           Int       @id @default(autoincrement())
+  company_id   Int
+  title        String    @db.VarChar(255)
+  announcement String    @db.Text
+  created_at   DateTime? @default(now()) @db.DateTime(0)
+  updated_at   DateTime? @default(now()) @db.DateTime(0)
+  company      company   @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "announcement_ibfk_1")
+
+  @@index([company_id], map: "idx_announcement_company")
+}
+
+model attendancerecord {
+  id           Int                     @id @default(autoincrement())
+  employee_id  Int
+  time_mode_id Int
+  status       attendancerecord_status
+  work_at      DateTime                @db.DateTime(0)
+  is_late      Boolean?                @default(false)
+  is_early     Boolean?                @default(false)
+  created_at   DateTime?               @default(now()) @db.DateTime(0)
+  updated_at   DateTime?               @default(now()) @db.DateTime(0)
+  employee     employee                @relation(fields: [employee_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "attendancerecord_ibfk_1")
+  timemode     timemode                @relation(fields: [time_mode_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "attendancerecord_ibfk_2")
+
+  @@index([employee_id], map: "idx_attendance_employee")
+  @@index([status], map: "idx_attendance_status")
+  @@index([time_mode_id], map: "idx_attendance_timemode")
+  @@index([work_at], map: "idx_attendance_work_at")
+}
+
+model auditlog {
+  id          Int       @id @default(autoincrement())
+  user_id     Int?
+  company_id  Int
+  module      String    @db.VarChar(255)
+  action      String    @db.VarChar(255)
+  description String?   @db.Text
+  ip_address  String?   @db.VarChar(45)
+  user_agent  String?   @db.VarChar(500)
+  created_at  DateTime? @default(now()) @db.DateTime(0)
+  user        user?     @relation(fields: [user_id], references: [id], onUpdate: NoAction, map: "auditlog_ibfk_1")
+  company     company   @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "auditlog_ibfk_2")
+
+  @@index([company_id], map: "idx_audit_company")
+  @@index([created_at], map: "idx_audit_created")
+  @@index([module], map: "idx_audit_module")
+  @@index([user_id], map: "idx_audit_user")
+}
+
+model company {
+  id                 Int            @id @default(autoincrement())
+  name               String         @db.VarChar(255)
+  phone              String?        @db.VarChar(50)
+  email              String?        @db.VarChar(255)
+  primary_color      String?        @db.VarChar(50)
+  secondary_color    String?        @db.VarChar(50)
+  logo_path          String?        @db.VarChar(500)
+  telegram_group_id  String?        @db.VarChar(255)
+  telegram_bot_token String?        @db.VarChar(255)
+  created_at         DateTime?      @default(now()) @db.DateTime(0)
+  updated_at         DateTime?      @default(now()) @db.DateTime(0)
+  announcement       announcement[]
+  auditlog           auditlog[]
+  department         department[]
+  documenttype       documenttype[]
+  employee           employee[]
+  holiday            holiday[]
+  leavetype          leavetype[]
+  location           location[]
+  notification       notification[]
+  role               role[]
+  timemode           timemode[]
+
+  @@index([name], map: "idx_company_name")
+}
+
+model department {
+  id                                          Int         @id @default(autoincrement())
+  name                                        String      @db.VarChar(255)
+  manager_id                                  Int?
+  company_id                                  Int
+  is_active                                   Boolean?    @default(true)
+  created_at                                  DateTime?   @default(now()) @db.DateTime(0)
+  updated_at                                  DateTime?   @default(now()) @db.DateTime(0)
+  company                                     company     @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "department_ibfk_1")
+  employee_department_manager_idToemployee    employee?   @relation("department_manager_idToemployee", fields: [manager_id], references: [id], onUpdate: NoAction, map: "fk_department_manager")
+  employee_employee_department_idTodepartment employee[]  @relation("employee_department_idTodepartment")
+  positions                                   positions[]
+
+  @@index([company_id], map: "idx_department_company")
+  @@index([manager_id], map: "idx_department_manager")
+}
+
+model document {
+  id               Int          @id @default(autoincrement())
+  employee_id      Int
+  document_type_id Int
+  document_path    String       @db.VarChar(500)
+  uploaded_at      DateTime?    @default(now()) @db.DateTime(0)
+  updated_at       DateTime?    @default(now()) @db.DateTime(0)
+  employee         employee     @relation(fields: [employee_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "document_ibfk_1")
+  documenttype     documenttype @relation(fields: [document_type_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "document_ibfk_2")
+
+  @@index([employee_id], map: "idx_document_employee")
+  @@index([document_type_id], map: "idx_document_type")
+}
+
+model documenttype {
+  id         Int        @id @default(autoincrement())
+  name       String     @db.VarChar(255)
+  company_id Int
+  created_at DateTime?  @default(now()) @db.DateTime(0)
+  updated_at DateTime?  @default(now()) @db.DateTime(0)
+  document   document[]
+  company    company    @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "documenttype_ibfk_1")
+
+  @@index([company_id], map: "idx_doctype_company")
+}
+
+model employee {
+  id                                            Int                           @id @default(autoincrement())
+  first_name                                    String                        @db.VarChar(255)
+  last_name                                     String                        @db.VarChar(255)
+  age                                           Int?
+  gender                                        employee_gender?              @default(other)
+  phone_number1                                 String?                       @db.VarChar(50)
+  phone_number2                                 String?                       @db.VarChar(50)
+  email                                         String?                       @db.VarChar(255)
+  address                                       String?                       @db.VarChar(500)
+  profile_path                                  String?                       @db.VarChar(500)
+  position_id                                   Int?
+  department_id                                 Int?
+  role_id                                       Int?
+  location_id                                   Int?
+  telegram_username                             String?                       @db.VarChar(255)
+  joined_at                                     DateTime?                     @db.DateTime(0)
+  company_id                                    Int
+  is_active                                     employee_is_active?           @default(active)
+  relationship_status                           employee_relationship_status? @default(single)
+  partner_name                                  String?                       @db.VarChar(255)
+  partner_age                                   Int?
+  partner_occupation                            String?                       @db.VarChar(255)
+  total_children                                Int?                          @default(0)
+  total_daughters                               Int?                          @default(0)
+  total_sons                                    Int?                          @default(0)
+  female_sibling                                Int?                          @default(0)
+  total_sibling                                 Int?                          @default(0)
+  father_name                                   String?                       @db.VarChar(255)
+  father_age                                    Int?
+  father_occupation                             String?                       @db.VarChar(255)
+  father_life_status                            employee_father_life_status?  @default(alive)
+  mother_name                                   String?                       @db.VarChar(255)
+  mother_age                                    Int?
+  mother_occupation                             String?                       @db.VarChar(255)
+  mother_life_status                            employee_mother_life_status?  @default(alive)
+  guardian_name                                 String?                       @db.VarChar(255)
+  guardian_phone_number                         String?                       @db.VarChar(50)
+  guardian_relationship                         String?                       @db.VarChar(100)
+  created_at                                    DateTime?                     @default(now()) @db.DateTime(0)
+  updated_at                                    DateTime?                     @default(now()) @db.DateTime(0)
+  attendancerecord                              attendancerecord[]
+  department_department_manager_idToemployee    department[]                  @relation("department_manager_idToemployee")
+  document                                      document[]
+  company                                       company                       @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "employee_ibfk_1")
+  positions                                     positions?                    @relation(fields: [position_id], references: [id], onUpdate: NoAction, map: "employee_ibfk_2")
+  department_employee_department_idTodepartment department?                   @relation("employee_department_idTodepartment", fields: [department_id], references: [id], onUpdate: NoAction, map: "employee_ibfk_3")
+  role                                          role?                         @relation(fields: [role_id], references: [id], onUpdate: NoAction, map: "employee_ibfk_4")
+  location                                      location?                     @relation(fields: [location_id], references: [id], onUpdate: NoAction, map: "employee_ibfk_5")
+  employeelocation                              employeelocation[]
+  leaveprofile                                  leaveprofile[]
+  leaverecord_leaverecord_employee_idToemployee leaverecord[]                 @relation("leaverecord_employee_idToemployee")
+  leaverecord_leaverecord_approved_byToemployee leaverecord[]                 @relation("leaverecord_approved_byToemployee")
+  overtime_overtime_employee_idToemployee       overtime[]                    @relation("overtime_employee_idToemployee")
+  overtime_overtime_approved_byToemployee       overtime[]                    @relation("overtime_approved_byToemployee")
+  user                                          user[]
+
+  @@index([is_active], map: "idx_employee_active")
+  @@index([company_id], map: "idx_employee_company")
+  @@index([department_id], map: "idx_employee_department")
+  @@index([location_id], map: "idx_employee_location")
+  @@index([first_name, last_name], map: "idx_employee_name")
+  @@index([position_id], map: "idx_employee_position")
+  @@index([relationship_status], map: "idx_employee_relationship")
+  @@index([role_id], map: "role_id")
+}
+
+model employeelocation {
+  id          Int       @id @default(autoincrement())
+  employee_id Int
+  location_id Int
+  created_at  DateTime? @default(now()) @db.DateTime(0)
+  updated_at  DateTime? @default(now()) @db.DateTime(0)
+  employee    employee  @relation(fields: [employee_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "employeelocation_ibfk_1")
+  location    location  @relation(fields: [location_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "employeelocation_ibfk_2")
+
+  @@unique([employee_id, location_id], map: "unique_employee_location")
+  @@index([employee_id], map: "idx_employeelocation_employee")
+  @@index([location_id], map: "idx_employeelocation_location")
+}
+
+model holiday {
+  id         Int       @id @default(autoincrement())
+  name       String    @db.VarChar(255)
+  start_date DateTime  @db.DateTime(0)
+  end_date   DateTime  @db.DateTime(0)
+  company_id Int
+  created_at DateTime? @default(now()) @db.DateTime(0)
+  updated_at DateTime? @default(now()) @db.DateTime(0)
+  company    company   @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "holiday_ibfk_1")
+
+  @@index([company_id], map: "idx_holiday_company")
+  @@index([start_date, end_date], map: "idx_holiday_dates")
+}
+
+model leaveprofile {
+  id            Int       @id @default(autoincrement())
+  employee_id   Int
+  leave_type_id Int
+  assignment    Int?      @default(0)
+  used          Int?      @default(0)
+  balance       Int
+  created_at    DateTime? @default(now()) @db.DateTime(0)
+  updated_at    DateTime? @default(now()) @db.DateTime(0)
+  employee      employee  @relation(fields: [employee_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "leaveprofile_ibfk_1")
+  leavetype     leavetype @relation(fields: [leave_type_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "leaveprofile_ibfk_2")
+
+  @@unique([employee_id, leave_type_id], map: "unique_employee_leavetype")
+  @@index([employee_id], map: "idx_leaveprofile_employee")
+  @@index([leave_type_id], map: "idx_leaveprofile_leavetype")
+}
+
+model leaverecord {
+  id                                         Int                 @id @default(autoincrement())
+  employee_id                                Int
+  leave_type_id                              Int
+  start_date                                 DateTime            @db.DateTime(0)
+  end_date                                   DateTime            @db.DateTime(0)
+  reason                                     String?             @db.Text
+  status                                     leaverecord_status? @default(pending)
+  approved_by                                Int?
+  request_at                                 DateTime?           @default(now()) @db.DateTime(0)
+  updated_at                                 DateTime?           @default(now()) @db.DateTime(0)
+  employee_leaverecord_employee_idToemployee employee            @relation("leaverecord_employee_idToemployee", fields: [employee_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "leaverecord_ibfk_1")
+  leavetype                                  leavetype           @relation(fields: [leave_type_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "leaverecord_ibfk_2")
+  employee_leaverecord_approved_byToemployee employee?           @relation("leaverecord_approved_byToemployee", fields: [approved_by], references: [id], onUpdate: NoAction, map: "leaverecord_ibfk_3")
+
+  @@index([approved_by], map: "approved_by")
+  @@index([start_date, end_date], map: "idx_leaverecord_dates")
+  @@index([employee_id], map: "idx_leaverecord_employee")
+  @@index([status], map: "idx_leaverecord_status")
+  @@index([leave_type_id], map: "leave_type_id")
+}
+
+model leavetype {
+  id              Int            @id @default(autoincrement())
+  name            String         @db.VarChar(255)
+  code            String         @db.VarChar(20)
+  default_balance Int            @default(0)
+  company_id      Int
+  created_at      DateTime?      @default(now()) @db.DateTime(0)
+  updated_at      DateTime?      @default(now()) @db.DateTime(0)
+  leaveprofile    leaveprofile[]
+  leaverecord     leaverecord[]
+  company         company        @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "leavetype_ibfk_1")
+
+  @@index([company_id], map: "idx_leavetype_company")
+}
+
+model location {
+  id               Int                @id @default(autoincrement())
+  name             String             @db.VarChar(255)
+  company_id       Int
+  longitude        String?            @db.VarChar(255)
+  latitude         String?            @db.VarChar(255)
+  radius           Int?
+  created_at       DateTime?          @default(now()) @db.DateTime(0)
+  updated_at       DateTime?          @default(now()) @db.DateTime(0)
+  employee         employee[]
+  employeelocation employeelocation[]
+  company          company            @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "location_ibfk_1")
+
+  @@index([company_id], map: "idx_location_company")
+}
+
+model notification {
+  id           Int       @id @default(autoincrement())
+  company_id   Int
+  title        String    @db.VarChar(255)
+  body         String    @db.Text
+  to_user_id   Int?
+  reference_id Int?
+  created_at   DateTime? @default(now()) @db.DateTime(0)
+  updated_at   DateTime? @default(now()) @db.DateTime(0)
+  company      company   @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "notification_ibfk_1")
+  user         user?     @relation(fields: [to_user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "notification_ibfk_2")
+
+  @@index([company_id], map: "idx_notification_company")
+  @@index([to_user_id], map: "idx_notification_user")
+}
+
+model overtime {
+  id                                      Int              @id @default(autoincrement())
+  employee_id                             Int
+  start_date                              DateTime         @db.DateTime(0)
+  end_date                                DateTime         @db.DateTime(0)
+  reason                                  String?          @db.Text
+  status                                  overtime_status? @default(pending)
+  approved_by                             Int?
+  created_at                              DateTime?        @default(now()) @db.DateTime(0)
+  updated_at                              DateTime?        @default(now()) @db.DateTime(0)
+  employee_overtime_employee_idToemployee employee         @relation("overtime_employee_idToemployee", fields: [employee_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "overtime_ibfk_1")
+  employee_overtime_approved_byToemployee employee?        @relation("overtime_approved_byToemployee", fields: [approved_by], references: [id], onUpdate: NoAction, map: "overtime_ibfk_2")
+
+  @@index([approved_by], map: "approved_by")
+  @@index([start_date, end_date], map: "idx_overtime_dates")
+  @@index([employee_id], map: "idx_overtime_employee")
+  @@index([status], map: "idx_overtime_status")
+}
+
+model positions {
+  id            Int         @id @default(autoincrement())
+  name          String      @db.VarChar(255)
+  department_id Int?
+  is_active     Boolean?    @default(true)
+  created_at    DateTime?   @default(now()) @db.DateTime(0)
+  updated_at    DateTime?   @default(now()) @db.DateTime(0)
+  employee      employee[]
+  department    department? @relation(fields: [department_id], references: [id], onUpdate: NoAction, map: "fk_position_department")
+
+  @@index([department_id], map: "idx_position_department")
+}
+
+model role {
+  id             Int              @id @default(autoincrement())
+  name           String           @db.VarChar(255)
+  company_id     Int
+  created_at     DateTime?        @default(now()) @db.DateTime(0)
+  updated_at     DateTime?        @default(now()) @db.DateTime(0)
+  employee       employee[]
+  company        company          @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "role_ibfk_1")
+  rolebaseaccess rolebaseaccess[]
+
+  @@unique([name, company_id], map: "unique_role_company")
+  @@index([company_id], map: "idx_role_company")
+}
+
+model rolebaseaccess {
+  id         Int       @id @default(autoincrement())
+  path_name  String    @db.VarChar(255)
+  path       String    @db.VarChar(500)
+  role_id    Int
+  created_at DateTime? @default(now()) @db.DateTime(0)
+  updated_at DateTime? @default(now()) @db.DateTime(0)
+  role       role      @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "rolebaseaccess_ibfk_1")
+
+  @@index([path(length: 255)], map: "idx_roleaccess_path")
+  @@index([role_id], map: "idx_roleaccess_role")
+}
+
+model timemode {
+  id               Int                @id @default(autoincrement())
+  name             String             @db.VarChar(255)
+  company_id       Int
+  remark           String?            @db.VarChar(255)
+  created_at       DateTime?          @default(now()) @db.DateTime(0)
+  updated_at       DateTime?          @default(now()) @db.DateTime(0)
+  attendancerecord attendancerecord[]
+  company          company            @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "timemode_ibfk_1")
+
+  @@index([company_id], map: "idx_timemode_company")
+}
+
+model user {
+  id            Int            @id @default(autoincrement())
+  employee_id   Int?
+  username      String         @unique(map: "username") @db.VarChar(255)
+  password      String         @db.VarChar(255)
+  token_version Int            @default(0)
+  created_at    DateTime?      @default(now()) @db.DateTime(0)
+  updated_at    DateTime?      @default(now()) @db.DateTime(0)
+  auditlog      auditlog[]
+  notification  notification[]
+  employee      employee?      @relation(fields: [employee_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "user_ibfk_1")
+
+  @@index([employee_id], map: "idx_user_employee")
+  @@index([username], map: "idx_user_username")
+}
+
+enum attendancerecord_status {
+  present
+  absent
+  late
+  half_day
+}
+
+enum employee_gender {
+  male
+  female
+  other
+}
+
+enum overtime_status {
+  pending
+  approved
+  rejected
+}
+
+enum leaverecord_status {
+  pending
+  approved
+  rejected
+}
+
+enum employee_is_active {
+  active
+  inactive
+}
+
+enum employee_relationship_status {
+  single
+  married
+  divorced
+  widowed
+  other
+}
+
+enum employee_father_life_status {
+  alive
+  deceased
+}
+
+enum employee_mother_life_status {
+  alive
+  deceased
+}

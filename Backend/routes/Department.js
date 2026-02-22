@@ -9,7 +9,7 @@ import {
 } from "../controller/Department.js";
 
 router.post("/add-department", addDepartmentController);
-router.get("/get-department/:company_id/:is_active", getDepartmentController);
+router.get("/get-department/:is_active", getDepartmentController);
 router.put("/update-department/:department_id", updatedDepartmentController);
 router.put(
   "/deactivate-department/:department_id",

@@ -59,6 +59,10 @@ app.use("/api/role", roleRoutes);
 app.use("/api/timemode", timemodeRoutes);
 app.use("/api/holiday", holidayRoutes);
 app.use("/api/user", userRoutes);
+app.use("/api/leavetype", leaveTypeRoutes);
+app.get("/", (req, res) => {
+  res.send("HR System API is running");
+});
 
 app.listen(8080, () => {
   console.log("http://localhost:8080");

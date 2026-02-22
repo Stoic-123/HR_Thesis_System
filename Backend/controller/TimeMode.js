@@ -1,12 +1,13 @@
-import { createTimeMode, getTimeMode } from "../model/TimeMode.js";
+import { createTimeMode, getTimeMode } from "../service/TimeMode.js";
 
 export const createTimeModeController = async (req, res) => {
   try {
-    const { name, company_id, remark } = req.body;
+    const { name, remark } = req.body;
+    const company_id = req.user.company_id;
     if (!name || !company_id) {
       return res.status(400).json({
         result: false,
-        message: "Name and company_id are required..!",
+        message: "Name and company context are required..!",
       });
     }
     const timemodeInsertData = await createTimeMode(name, company_id, remark);
@@ -18,11 +19,11 @@ export const createTimeModeController = async (req, res) => {
 };
 export const getTimeModeController = async (req, res) => {
   try {
-    const { company_id } = req.params;
+    const company_id = req.user.company_id;
     if (!company_id) {
       return res
         .status(400)
-        .json({ result: false, message: "Company_id is required..!" });
+        .json({ result: false, message: "Company context is required..!" });
     }
     const timeModeGetData = await getTimeMode(company_id);
     res.status(200).json(timeModeGetData);

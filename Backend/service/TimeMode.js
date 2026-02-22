@@ -1,15 +1,15 @@
-import { db } from "../config/db.js";
+import prisma from "../lib/prisma.js";
 
 export const createTimeMode = async (name, company_id, remark) => {
   try {
-    const sql = "INSERT INTO timemode (name,company_id,remark) VALUES(?,?,?)";
-    const [timeModeResult] = await db.execute(sql, [name, company_id, remark]);
-    if (timeModeResult.affectedRows === 0) {
-      return {
-        result: false,
-        message: "Failed to create timemode..!",
-      };
-    }
+    await prisma.timemode.create({
+      data: {
+        name,
+        company_id: parseInt(company_id),
+        remark,
+      },
+    });
+
     return {
       result: true,
       message: "Timemode created successfully.",
@@ -21,8 +21,12 @@ export const createTimeMode = async (name, company_id, remark) => {
 };
 export const getTimeMode = async (company_id) => {
   try {
-    const sql = "SELECT * FROM timemode WHERE company_id=?";
-    const [timeModeData] = await db.execute(sql, [company_id]);
+    const timeModeData = await prisma.timemode.findMany({
+      where: {
+        company_id: parseInt(company_id),
+      },
+    });
+
     if (timeModeData.length === 0) {
       return {
         result: false,

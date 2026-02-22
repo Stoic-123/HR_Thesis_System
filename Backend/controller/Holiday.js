@@ -3,15 +3,16 @@ import {
   deleteHoliday,
   getHoliday,
   updateHoliday,
-} from "../model/Holiday.js";
+} from "../service/Holiday.js";
 
 export const createHolidayController = async (req, res) => {
   try {
-    const { company_id, name, start_date, end_date } = req.body;
+    const { name, start_date, end_date } = req.body;
+    const company_id = req.user.company_id;
     if (!company_id || !name || !start_date || !end_date) {
       return res
         .status(400)
-        .json({ result: false, message: "All field are required..!" });
+        .json({ result: false, message: "All field and company context are required..!" });
     }
     const holidayInsertData = await createHoliday(
       company_id,
@@ -27,11 +28,12 @@ export const createHolidayController = async (req, res) => {
 };
 export const getHolidayController = async (req, res) => {
   try {
-    const { company_id, year } = req.params;
+    const { year } = req.params;
+    const company_id = req.user.company_id;
     if (!company_id) {
       return res
         .status(400)
-        .json({ result: false, message: "Company_id is required..!" });
+        .json({ result: false, message: "Company context is required..!" });
     }
     const holidayGetData = await getHoliday(
       company_id,
@@ -56,7 +58,8 @@ export const updateHolidayController = async (req, res) => {
       name,
       start_date,
       end_date,
-      holiday_id
+      holiday_id,
+      req.user.company_id
     );
     res.status(200).json(holidayUpdateData);
   } catch (error) {
@@ -72,7 +75,7 @@ export const deleteHolidayController = async (req, res) => {
         .status(400)
         .json({ result: false, message: "Holiday_id is required..!" });
     }
-    const holidayDeleteData = await deleteHoliday(holiday_id);
+    const holidayDeleteData = await deleteHoliday(holiday_id, req.user.company_id);
     res.status(200).json(holidayDeleteData);
   } catch (error) {
     console.log(error.message);

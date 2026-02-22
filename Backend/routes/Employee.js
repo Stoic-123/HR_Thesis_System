@@ -6,5 +6,5 @@ import {
 } from "../controller/Employee.js";
 
 router.post("/add-employee", addEmployeeController);
-router.get("/get-all-employee/:company_id", getAllEmployeeController);
+router.get("/get-all-employee", getAllEmployeeController);
 export default router;

@@ -3,7 +3,7 @@ import {
   deletePosition,
   getPosition,
   updatePosition,
-} from "../model/Position.js";
+} from "../service/Position.js";
 
 export const addPositionController = async (req, res) => {
   try {
@@ -14,7 +14,7 @@ export const addPositionController = async (req, res) => {
         message: "Name and Department_id are required..!",
       });
     }
-    const positionInsertData = await addPosition(name, department_id);
+    const positionInsertData = await addPosition(name, department_id, req.user.company_id);
     res.status(200).json(positionInsertData);
   } catch (error) {
     console.log(error.message);
@@ -24,11 +24,11 @@ export const addPositionController = async (req, res) => {
 
 export const getPositionController = async (req, res) => {
   try {
-    const { company_id } = req.params;
+    const company_id = req.user.company_id;
     if (!company_id) {
       return res
         .status(400)
-        .json({ result: false, message: "Company_id is required..!" });
+        .json({ result: false, message: "Company context is required..!" });
     }
     const positionGetData = await getPosition(company_id);
     res.status(200).json(positionGetData);
@@ -49,7 +49,8 @@ export const updatedPositionController = async (req, res) => {
     const positionUpdateData = await updatePosition(
       name,
       department_id,
-      position_id
+      position_id,
+      req.user.company_id
     );
     res.status(200).json(positionUpdateData);
   } catch (error) {
@@ -65,7 +66,7 @@ export const deletedPositionController = async (req, res) => {
         .status(400)
         .json({ result: false, message: "Position_id is required..!" });
     }
-    const positionDeleteData = await deletePosition(position_id);
+    const positionDeleteData = await deletePosition(position_id, req.user.company_id);
     res.status(200).json(positionDeleteData);
   } catch (error) {
     console.log(error.message);

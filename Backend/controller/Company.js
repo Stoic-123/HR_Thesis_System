@@ -1,4 +1,4 @@
-import { addCompany, getCompany, updateCompany } from "../model/Company.js";
+import { addCompany, getCompany, updateCompany } from "../service/Company.js";
 
 export const addCompanyController = async (req, res) => {
   try {
@@ -34,7 +34,7 @@ export const addCompanyController = async (req, res) => {
       secondary_color,
       logoPath,
       telegram_group_id,
-      telegram_bot_token
+      telegram_bot_token,
     );
     res.status(200).json(companyInsertData);
   } catch (error) {
@@ -44,7 +44,8 @@ export const addCompanyController = async (req, res) => {
 };
 export const getCompanyController = async (req, res) => {
   try {
-    const companyData = await getCompany();
+    const company_id = req.user.company_id;
+    const companyData = await getCompany(company_id);
     res.status(200).json(companyData);
   } catch (error) {
     console.log(error.message);
@@ -61,17 +62,17 @@ export const updateCompanyController = async (req, res) => {
       secondary_color,
       telegram_group_id,
       telegram_bot_token,
-      old_logo_path, 
+      old_logo_path,
     } = req.body;
-    const { company_id } = req.params;
+    const company_id = req.user.company_id;
     if (!company_id) {
       return res.status(400).json({
         result: false,
-        message: "Company ID is required!",
+        message: "Company ID context is required!",
       });
     }
 
-    let logo_path = old_logo_path; 
+    let logo_path = old_logo_path;
 
     if (req.files && req.files.logo_path) {
       const logo = req.files.logo_path;
@@ -101,7 +102,7 @@ export const updateCompanyController = async (req, res) => {
       logo_path,
       telegram_group_id,
       telegram_bot_token,
-      company_id
+      company_id,
     );
 
     res.status(200).json(result);

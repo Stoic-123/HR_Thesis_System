@@ -7,5 +7,5 @@ import {
 } from "../controller/Company.js";
 router.post("/add-company", addCompanyController);
 router.get("/get-company", getCompanyController);
-router.put("/update-company/:company_id", updateCompanyController);
+router.put("/update-company", updateCompanyController);
 export default router;

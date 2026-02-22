@@ -1,15 +1,14 @@
-import { db } from "../config/db.js";
+import prisma from "../lib/prisma.js";
 
 export const addDocumentType = async (name, company_id) => {
   try {
-    const sql = "INSERT INTO DocumentType (name,company_id) VALUE (?,?)";
-    const [docTypeResult] = await db.execute(sql, [name, company_id]);
-    if (docTypeResult.affectedRows === 0) {
-      return {
-        result: false,
-        message: "Failed to create document type..!",
-      };
-    }
+    await prisma.documenttype.create({
+      data: {
+        name,
+        company_id: parseInt(company_id),
+      },
+    });
+
     return {
       result: true,
       message: "Document type created successfully.",
@@ -20,24 +19,32 @@ export const addDocumentType = async (name, company_id) => {
   }
 };
 export const addDocument = async (
-  emloyee_id,
+  employee_id,
   document_type_id,
-  document_path
+  document_path,
+  company_id
 ) => {
   try {
-    const sql =
-      "INSERT INTO document (employee_id,document_type_id, document_path) VALUES(?,?,?)";
-    const [results] = await db.execute(sql, [
-      emloyee_id,
-      document_type_id,
-      document_path,
-    ]);
-    if (results.affectedRows === 0) {
-      return {
-        result: false,
-        message: "Failed to add document..!",
-      };
+    const eid = parseInt(employee_id);
+    const cid = parseInt(company_id);
+
+    // Verify employee belongs to company
+    const employee = await prisma.employee.findUnique({
+      where: { id: eid, company_id: cid },
+    });
+
+    if (!employee) {
+      return { result: false, message: "Employee not found in your company." };
     }
+
+    await prisma.document.create({
+      data: {
+        employee_id: eid,
+        document_type_id: parseInt(document_type_id),
+        document_path,
+      },
+    });
+
     return {
       result: true,
       message: "Document added successfully.",
@@ -49,8 +56,12 @@ export const addDocument = async (
 };
 export const getDocumentType = async (company_id) => {
   try {
-    const sql = "SELECT * FROM documenttype where company_id =?";
-    const [rows] = await db.execute(sql, [company_id]);
+    const rows = await prisma.documenttype.findMany({
+      where: {
+        company_id: parseInt(company_id),
+      },
+    });
+
     if (rows.length === 0) {
       return {
         result: false,

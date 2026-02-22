@@ -1,12 +1,13 @@
-import { addRole, getRole, updateRole } from "../model/Role.js";
+import { addRole, getRole, updateRole } from "../service/Role.js";
 
 export const addRoleController = async (req, res) => {
   try {
-    const { name, company_id } = req.body;
+    const { name } = req.body;
+    const company_id = req.user.company_id;
     if (!name || !company_id) {
       return res.status(400).json({
         result: false,
-        message: "Name and company_id are required..!",
+        message: "Name and company context are required..!",
       });
     }
 
@@ -19,11 +20,11 @@ export const addRoleController = async (req, res) => {
 };
 export const getRoleController = async (req, res) => {
   try {
-    const { company_id } = req.params;
+    const company_id = req.user.company_id;
     if (!company_id) {
       return res
         .status(400)
-        .json({ result: false, message: "Company_id is required..!" });
+        .json({ result: false, message: "Company context is required..!" });
     }
     const roleGetData = await getRole(company_id);
     res.status(200).json(roleGetData);
@@ -41,10 +42,10 @@ export const updateRoleController = async (req, res) => {
         .status(400)
         .json({ result: false, message: "Name and role_id are required..! " });
     }
-    const roleUpdateData = await updateRole(name, role_id);
+    const roleUpdateData = await updateRole(name, role_id, req.user.company_id);
     res.status(200).json(roleUpdateData);
   } catch (error) {
     console.log(error.message);
-    throw error;
+    res.status(500).json({ result: false, message: error.message });
   }
 };

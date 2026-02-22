@@ -5,7 +5,7 @@ import {
   employeeChecker,
   getCompanyID,
   InvalidateToken,
-} from "../model/Auth.js";
+} from "../service/Auth.js";
 dotenv.config();
 
 const generateToken = (id, username, company_id, token_version) => {

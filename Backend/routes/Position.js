@@ -8,7 +8,7 @@ import {
 } from "../controller/Position.js";
 
 router.post("/add-position", addPositionController);
-router.get("/get-position/:company_id", getPositionController);
+router.get("/get-position", getPositionController);
 router.put("/update-position/:position_id", updatedPositionController);
 router.delete("/delete-position/:position_id", deletedPositionController);
 export default router;

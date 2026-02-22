@@ -2,15 +2,16 @@ import {
   addDocument,
   addDocumentType,
   getDocumentType,
-} from "../model/Document.js";
+} from "../service/Document.js";
 
 export const addDocumentTypeController = async (req, res) => {
   try {
-    const { name, company_id } = req.body;
+    const { name } = req.body;
+    const company_id = req.user.company_id;
     if (!name || !company_id) {
       return res
         .status(400)
-        .json({ result: false, message: "Name or Company_id are required..!" });
+        .json({ result: false, message: "Name and company context are required..!" });
     }
     const documentInsertData = await addDocumentType(name, company_id);
     res.status(200).json(documentInsertData);
@@ -53,7 +54,8 @@ export const addDocumentController = async (req, res) => {
     const documentInsertData = await addDocument(
       employee_id,
       document_type_id,
-      document_path
+      document_path,
+      req.user.company_id
     );
 
     res.status(200).json(documentInsertData);
@@ -68,11 +70,11 @@ export const addDocumentController = async (req, res) => {
 
 export const getDocumentTypeController = async (req, res) => {
   try {
-    const { company_id } = req.body;
+    const company_id = req.user.company_id;
     if (!company_id) {
       return res
         .status(400)
-        .json({ result: false, message: "Company_id is required..!" });
+        .json({ result: false, message: "Company context is required..!" });
     }
     const documentTypeGetData = await getDocumentType(company_id);
     res.status(200).json(documentTypeGetData);

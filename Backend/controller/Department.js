@@ -4,16 +4,17 @@ import {
   deactivatedDepartment,
   getDepartment,
   updateDepartment,
-} from "../model/Department.js";
+} from "../service/Department.js";
 
 export const addDepartmentController = async (req, res) => {
   try {
-    const { name, manager_id, company_id } = req.body;
+    const { name, manager_id } = req.body;
+    const company_id = req.user.company_id;
 
     if (!name || !company_id) {
       return res.status(400).json({
         result: false,
-        message: "Name and company_id are required..!",
+        message: "Name and company context are required..!",
       });
     }
     const departmentInsertData = await addDepartment(
@@ -29,11 +30,13 @@ export const addDepartmentController = async (req, res) => {
 };
 export const getDepartmentController = async (req, res) => {
   try {
-    const { company_id, is_active } = req.params;
+    const { is_active } = req.params;
+    const company_id = req.user.company_id;
+
     if (!company_id) {
       return res
         .status(400)
-        .json({ result: false, message: "Company_id are required..!" });
+        .json({ result: false, message: "Company context is required..!" });
     }
     const departmentGetData = await getDepartment(
       company_id,
@@ -49,7 +52,9 @@ export const getDepartmentController = async (req, res) => {
 export const updatedDepartmentController = async (req, res) => {
   try {
     const { department_id } = req.params;
-    const { name, manager_id, company_id } = req.body;
+    const { name, manager_id } = req.body;
+    const company_id = req.user.company_id;
+
     if (!department_id) {
       return res
         .status(400)
@@ -77,7 +82,7 @@ export const deactivatedDepartmentController = async (req, res) => {
         .status(400)
         .json({ result: false, message: "id is required..!" });
     }
-    const departmentModifyResult = await deactivatedDepartment(department_id);
+    const departmentModifyResult = await deactivatedDepartment(department_id, req.user.company_id);
     res.status(200).json(departmentModifyResult);
   } catch (error) {
     console.log(error.message);
@@ -92,7 +97,7 @@ export const activatedDepartmentController = async (req, res) => {
         .status(400)
         .json({ result: false, message: "id is required..!" });
     }
-    const departmentModifyResult = await activatedDepartment(department_id);
+    const departmentModifyResult = await activatedDepartment(department_id, req.user.company_id);
     res.status(200).json(departmentModifyResult);
   } catch (error) {
     console.log(error.message);

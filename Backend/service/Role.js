@@ -1,15 +1,14 @@
-import { db } from "../config/db.js";
+import prisma from "../lib/prisma.js";
 
 export const addRole = async (name, company_id) => {
   try {
-    const sql = "INSERT INTO role (name,company_id) VALUES(?,?)";
-    const [roleResult] = await db.execute(sql, [name, company_id]);
-    if (roleResult.affectedRows === 0) {
-      return {
-        result: false,
-        message: "Failed to create role..!",
-      };
-    }
+    await prisma.role.create({
+      data: {
+        name,
+        company_id: parseInt(company_id),
+      },
+    });
+
     return {
       result: true,
       message: "Role created successfully.",
@@ -21,8 +20,12 @@ export const addRole = async (name, company_id) => {
 };
 export const getRole = async (company_id) => {
   try {
-    const sql = "SELECT * FROM role WHERE company_id=?";
-    const [roleData] = await db.execute(sql, [company_id]);
+    const roleData = await prisma.role.findMany({
+      where: {
+        company_id: parseInt(company_id),
+      },
+    });
+
     if (roleData.length === 0) {
       return {
         result: false,
@@ -39,16 +42,16 @@ export const getRole = async (company_id) => {
     throw error;
   }
 };
-export const updateRole = async (name, role_id) => {
+export const updateRole = async (name, role_id, company_id) => {
   try {
-    const sql = "UPDATE role SET name=? WHERE id=?";
-    const [roleResult] = await db.execute(sql, [name, role_id]);
-    if (roleResult.affectedRows === 0) {
-      return {
-        result: false,
-        message: "Failed to update role..!",
-      };
-    }
+    await prisma.role.update({
+      where: {
+        id: parseInt(role_id),
+        company_id: parseInt(company_id),
+      },
+      data: { name },
+    });
+
     return {
       result: true,
       message: "Role updated successfully.",

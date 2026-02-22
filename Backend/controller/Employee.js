@@ -1,4 +1,4 @@
-import { addEmployee, emailCheck, getAllEmployee } from "../model/Employee.js";
+import { addEmployee, emailCheck, getAllEmployee } from "../service/Employee.js";
 
 export const addEmployeeController = async (req, res) => {
   try {
@@ -43,9 +43,9 @@ export const addEmployeeController = async (req, res) => {
       role_id,
       telegram_username,
       joined_at,
-      company_id,
       is_active,
     } = req.body;
+    const company_id = req.user.company_id;
 
     const mailCheck = await emailCheck(email);
     if (mailCheck.result) {
@@ -81,11 +81,11 @@ export const addEmployeeController = async (req, res) => {
 };
 export const getAllEmployeeController = async (req, res) => {
   try {
-    const { company_id } = req.params;
+    const company_id = req.user.company_id;
     if (!company_id) {
       return res
         .status(400)
-        .json({ result: false, message: "Company_id is required..!" });
+        .json({ result: false, message: "Company context is required..!" });
     }
     const employeeGetData = await getAllEmployee(company_id);
     res.status(200).json(employeeGetData);

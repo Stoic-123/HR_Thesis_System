@@ -1,12 +1,12 @@
-import { getUser, updateUser } from "../model/User.js";
+import { getUser, updateUser } from "../service/User.js";
 
 export const getUserController = async (req, res) => {
   try {
-    const { company_id } = req.params;
+    const company_id = req.user.company_id;
     if (!company_id) {
       return res
         .status(400)
-        .json({ result: false, message: "Company_id is required..!" });
+        .json({ result: false, message: "Company context is required..!" });
     }
     const userGetData = await getUser(company_id);
     res.status(200).json(userGetData);
@@ -39,7 +39,8 @@ export const updateUserController = async (req, res) => {
       telegram_username,
       email,
       role_id,
-      user_id
+      user_id,
+      req.user.company_id
     );
     res.status(200).json(userUpdateData);
   } catch (error) {
