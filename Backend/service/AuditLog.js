@@ -1,16 +1,16 @@
 import prisma from "../lib/prisma.js";
 
-export const addAuditLog = async (auditLog) => {
+export const addAuditLog = async (user_id,company_id,module,action,description,details,ip_address,user_agent) => {
   try {
     const result = await prisma.auditlog.create({
       data: {
-        user_id: auditLog.user_id ? parseInt(auditLog.user_id) : null,
-        company_id: parseInt(auditLog.company_id),
-        module: auditLog.module,
-        action: auditLog.action,
-        description: auditLog.description || auditLog.details,
-        ip_address: auditLog.ip_address,
-        user_agent: auditLog.user_agent,
+        user_id: user_id ? parseInt(user_id) : null,
+        company_id: company_id ? parseInt(company_id) : null,
+        module: module,
+        action: action,
+        description: description || details,
+        ip_address: ip_address,
+        user_agent: user_agent,
       },
     });
     return result.id;

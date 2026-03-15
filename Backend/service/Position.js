@@ -6,7 +6,6 @@ export const addPosition = async (name, department_id, company_id) => {
     const cid = parseInt(company_id);
 
     if (did) {
-      // Verify department belongs to company
       const dept = await prisma.department.findUnique({
         where: { id: did, company_id: cid },
       });
@@ -65,7 +64,6 @@ export const updatePosition = async (name, department_id, position_id, company_i
     const cid = parseInt(company_id);
 
     if (did) {
-      // Verify department belongs to company
       const dept = await prisma.department.findUnique({
         where: { id: did, company_id: cid },
       });
