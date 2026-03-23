@@ -35,7 +35,7 @@ export const getCompanyID = async (employee_id) => {
       };
     }
 
-    return employee.company_id; 
+    return employee.company_id;
   } catch (error) {
     console.error(error.message);
     throw error;
