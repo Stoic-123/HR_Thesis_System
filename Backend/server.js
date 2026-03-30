@@ -19,7 +19,7 @@ import holidayRoutes from "./routes/Holiday.js";
 import leaveTypeRoutes from "./routes/LeaveType.js";
 import userRoutes from "./routes/User.js";
 import authRoutes from "./routes/Auth.js";
-
+import leaveRoute from "./routes/Leave.js";
 const app = express();
 
 //realtime log per request
@@ -60,6 +60,7 @@ app.use("/api/timemode", timemodeRoutes);
 app.use("/api/holiday", holidayRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/leavetype", leaveTypeRoutes);
+app.use("/api/leave", leaveRoute);
 app.get("/", (req, res) => {
   res.send("HR System API is running");
 });

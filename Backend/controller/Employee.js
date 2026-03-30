@@ -13,21 +13,6 @@ export const addEmployeeController = async (req, res) => {
         await profile.mv(uploadPath);
         profile_path = "/uploads/profiles/" + profileName;
       }
-
-      // if (req.files.document_path) {
-      //   const docs = Array.isArray(req.files.document_path)
-      //     ? req.files.document_path
-      //     : [req.files.document_path];
-      //   for (const doc of docs) {
-      //     const docName = Date.now() + "_" + doc.name;
-      //     const uploadPath = "./public/uploads/documents/" + docName;
-      //     await doc.mv(uploadPath);
-      //     documents.push({
-      //       path: "/uploads/documents/" + docName,
-      //       type: req.body.document_type_id || 1,
-      //     });
-      //   }
-      // }
     }
     const {
       first_name,

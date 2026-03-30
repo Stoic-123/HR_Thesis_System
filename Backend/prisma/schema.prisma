@@ -250,6 +250,7 @@ model leaverecord {
   approved_by                                Int?
   request_at                                 DateTime?           @default(now()) @db.DateTime(0)
   updated_at                                 DateTime?           @default(now()) @db.DateTime(0)
+  photo_path                                 String?             @db.VarChar(255)  // ← new column
   employee_leaverecord_employee_idToemployee employee            @relation("leaverecord_employee_idToemployee", fields: [employee_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "leaverecord_ibfk_1")
   leavetype                                  leavetype           @relation(fields: [leave_type_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "leaverecord_ibfk_2")
   employee_leaverecord_approved_byToemployee employee?           @relation("leaverecord_approved_byToemployee", fields: [approved_by], references: [id], onUpdate: NoAction, map: "leaverecord_ibfk_3")
