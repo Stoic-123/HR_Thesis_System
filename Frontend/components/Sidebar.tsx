@@ -108,9 +108,9 @@ export function Sidebar() {
 
       {/* Sidebar Header with ambient glow effect */}
       <div
-        className={`h-24 flex items-center transition-all duration-400 border-b border-sidebar-border/40 relative overflow-hidden ${isCollapsed ? "justify-center px-0" : "px-6"}`}
+        className={`h-24 flex items-center bg-primary-foreground  transition-all duration-400 border-b border-sidebar-border/90 relative overflow-hidden ${isCollapsed ? "justify-center px-0" : "px-6"}`}
       >
-        <div className="absolute -top-12 -left-12 w-32 h-32 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -top-12 -left-12 w-32 h-32  rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-10 -right-10 w-24 h-24 bg-secondary/15 rounded-full blur-2xl pointer-events-none" />
 
         <div
@@ -123,10 +123,7 @@ export function Sidebar() {
             className={`flex flex-col whitespace-nowrap overflow-hidden transition-all duration-400 ${isCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"}`}
           >
             <span className="text-xl font-extrabold bg-clip-text text-transparent bg-linear-to-r from-primary to-secondary leading-none tracking-tight">
-              Sarana
-            </span>
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mt-1.5 opacity-80">
-              Workspace
+              Voatmean
             </span>
           </div>
         </div>
@@ -136,11 +133,7 @@ export function Sidebar() {
       <div
         className={`flex-1 overflow-y-auto overflow-x-hidden py-8 space-y-2 custom-scrollbar transition-all duration-400 ${isCollapsed ? "px-3" : "px-4"}`}
       >
-        <div
-          className={`text-[10px] font-bold text-sidebar-foreground/40 uppercase tracking-[0.2em] xl:px-3 px-2 transition-all duration-400 whitespace-nowrap overflow-hidden ${isCollapsed ? "w-0 opacity-0 h-0 mb-0" : "w-auto opacity-100 mb-4 h-auto"}`}
-        >
-          Main Menu
-        </div>
+       
 
         {menuItems.map((item) => {
           const isActive =
@@ -162,8 +155,8 @@ export function Sidebar() {
                     className={`transition-all duration-300 group flex items-center relative overflow-hidden ${
                       isActive || openMenus[item.title]
                         ? isCollapsed
-                          ? "bg-primary/10 text-primary shadow-sm ring-1 ring-primary/30"
-                          : "bg-primary/5 text-primary font-semibold shadow-sm"
+                          ? " text-primary shadow-sm ring-1 ring-primary/30"
+                          : " text-primary font-semibold shadow-sm"
                         : "hover:bg-sidebar-accent/50 hover:text-primary text-sidebar-foreground/80 font-medium"
                     } ${isCollapsed ? "w-12 h-12 justify-center mx-auto rounded-full p-0 shrink-0" : "w-full px-3 py-3 justify-between rounded-4xl"}`}
                   >

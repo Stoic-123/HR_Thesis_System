@@ -46,7 +46,7 @@ export default function DashboardLayout({
             </div>
           </div>
         </header>
-        <div className="flex-1 overflow-y-auto p-8 bg-zinc-50/50 dark:bg-zinc-950/20">
+        <div className="flex-1 bg-body dark:bg-body overflow-y-auto p-8 ">
           {children}
         </div>
       </main>
