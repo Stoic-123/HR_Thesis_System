@@ -21,7 +21,8 @@ WORKDIR /app
 COPY package.json ./
 
 # Install dependencies using standard npm and clean cache to save space
-RUN npm install && npm cache clean --force
+# Skip downloading the massive CUDA GPU binaries since the VPS is CPU-only
+RUN onnxruntime_node_install_cuda=skip npm install && npm cache clean --force
 
 # Copy prisma schema and generate client
 COPY prisma ./prisma/
