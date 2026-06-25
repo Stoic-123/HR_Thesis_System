@@ -6,7 +6,7 @@ import {
   changePasswordController,
   forgotPasswordController,
   resetPasswordController,
-} from "../controller/Auth.js";
+} from "../controller/auth.js";
 import { requireAuth } from "../middleware/auth.js";
 const router = express.Router();
 
