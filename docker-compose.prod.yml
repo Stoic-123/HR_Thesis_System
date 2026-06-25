@@ -35,6 +35,7 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       EXPIRED_AT: ${EXPIRED_AT:-24h}
       SERVER_BASE_URL: https://api.bayonhr.shop
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-bayonhr.shop}
     # Internal only, reverse proxied via Caddy
     volumes:
       - uploads_data:/app/public/uploads
