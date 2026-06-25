@@ -200,6 +200,12 @@ export default function DashboardLayout({
     }
   }, [isLoading, isAuthorized, router]);
 
+  useEffect(() => {
+    if (isError) {
+      router.push("/login");
+    }
+  }, [isError, router]);
+
   if (showSplash) {
     return (
       <AnimatePresence>

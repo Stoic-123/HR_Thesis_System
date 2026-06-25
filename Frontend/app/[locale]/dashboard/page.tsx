@@ -375,7 +375,7 @@ const DashboardPage = () => {
                         <div>
                           <p className="font-semibold">{row.full_name}</p>
                           <p className="text-xs text-muted-foreground">
-                            {row.position?.name || "No Position"}
+                            {row.position_name || "No Position"}
                           </p>
                         </div>
                       </div>
