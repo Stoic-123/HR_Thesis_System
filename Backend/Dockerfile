@@ -20,8 +20,8 @@ WORKDIR /app
 # Copy package.json first for layer caching
 COPY package.json ./
 
-# Install dependencies using standard npm
-RUN npm install
+# Install dependencies using standard npm and clean cache to save space
+RUN npm install && npm cache clean --force
 
 # Copy prisma schema and generate client
 COPY prisma ./prisma/
