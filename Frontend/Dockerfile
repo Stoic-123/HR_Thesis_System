@@ -1,9 +1,9 @@
-FROM oven/bun:1-alpine AS builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-COPY package.json bun.lock ./
-RUN bun install
+COPY package.json ./
+RUN npm install --legacy-peer-deps
 
 COPY . .
 
@@ -13,10 +13,10 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ARG BACKEND_INTERNAL_URL=http://backend:8080
 ENV BACKEND_INTERNAL_URL=$BACKEND_INTERNAL_URL
 
-RUN bun run build
+RUN npm run build
 
 # ── Production image ──────────────────────────────────────────────────────────
-FROM oven/bun:1-alpine AS runner
+FROM node:20-alpine AS runner
 
 WORKDIR /app
 
@@ -28,4 +28,4 @@ COPY --from=builder /app/public ./public
 
 EXPOSE 3000
 
-CMD ["bun", "server.js"]
+CMD ["node", "server.js"]
