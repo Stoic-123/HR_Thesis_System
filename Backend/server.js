@@ -23,7 +23,7 @@ import timemodeRoutes from "./routes/TimeMode.js";
 import holidayRoutes from "./routes/Holiday.js";
 import leaveTypeRoutes from "./routes/LeaveType.js";
 import userRoutes from "./routes/User.js";
-import authRoutes from "./routes/Auth.js";
+import authRoutes from "./routes/auth.js";
 import leaveRoute from "./routes/Leave.js";
 import auditLogRoutes from "./routes/AuditLog.js";
 import scannerRoutes from "./routes/Scanner.js";
