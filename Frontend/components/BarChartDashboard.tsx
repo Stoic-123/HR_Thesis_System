@@ -49,21 +49,21 @@ const RangedStackedBarChart = ({
     <BarStack radius={25}>
       <Bar
         dataKey="value1"
-        maxBarSize={50}
+        maxBarSize={20}
         fill="#8884d8"
         isAnimationActive={isAnimationActive}
         activeBar={{ fill: "#5550bd" }}
       />
       <Bar
         dataKey="value2"
-        maxBarSize={50}
+        maxBarSize={20}
         fill="#82ca9d"
         isAnimationActive={isAnimationActive}
         activeBar={{ fill: "#55bd50" }}
       />
       <Bar
         dataKey="value3"
-        maxBarSize={50}
+        maxBarSize={20}
         fill="#ffc658"
         isAnimationActive={isAnimationActive}
         activeBar={{ fill: "#ffc658" }}

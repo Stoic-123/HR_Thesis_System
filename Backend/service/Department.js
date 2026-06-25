@@ -18,7 +18,7 @@ export const addDepartment = async (name, manager_id = null, company_id) => {
     throw error;
   }
 };
-export const getDepartment = async (company_id, is_active = null) => {
+export const getDepartment = async (company_id, is_active = null, page = 1, limit = 10) => {
   try {
     const where = {
       company_id: parseInt(company_id),
@@ -28,11 +28,26 @@ export const getDepartment = async (company_id, is_active = null) => {
       where.is_active = is_active === 1 || is_active === "1" || is_active === true;
     }
 
-    const departmentResult = await prisma.department.findMany({
-      where,
-    });
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const take = parseInt(limit);
 
-    if (departmentResult.length === 0) {
+    const [data, total] = await Promise.all([
+      prisma.department.findMany({
+        where,
+        include: {
+          employee_department_manager_idToemployee: {
+            select: { id: true, first_name: true, last_name: true, profile_path: true },
+          },
+        },
+        skip,
+        take,
+      }),
+      prisma.department.count({
+        where,
+      }),
+    ]);
+
+    if (data.length === 0) {
       return {
         result: false,
         message: "No Department data in database..!",
@@ -41,7 +56,13 @@ export const getDepartment = async (company_id, is_active = null) => {
     return {
       result: true,
       message: "Get Department data successfully.",
-      data: departmentResult,
+      data,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: take,
+        totalPages: Math.ceil(total / take),
+      },
     };
   } catch (error) {
     console.log(error.message);

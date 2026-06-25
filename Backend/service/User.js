@@ -1,23 +1,35 @@
 import prisma from "../lib/prisma.js";
 
-export const getUser = async (company_id) => {
+export const getUser = async (company_id, page = 1, limit = 10) => {
   try {
-    const users = await prisma.user.findMany({
-      where: {
-        employee: {
-          company_id: parseInt(company_id),
-        },
+    const where = {
+      employee: {
+        company_id: parseInt(company_id),
       },
-      include: {
-        employee: {
-          include: {
-            positions: true,
-            department_employee_department_idTodepartment: true,
-            role: true,
+    };
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const take = parseInt(limit);
+
+    const [users, total] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        include: {
+          employee: {
+            include: {
+              positions: true,
+              department_employee_department_idTodepartment: true,
+              role: true,
+            },
           },
         },
-      },
-    });
+        skip,
+        take,
+      }),
+      prisma.user.count({
+        where,
+      }),
+    ]);
 
     if (users.length === 0) {
       return {
@@ -34,12 +46,19 @@ export const getUser = async (company_id) => {
       telegram_username: u.employee?.telegram_username || null,
       email: u.employee?.email || null,
       name: u.employee?.role?.name || null,
+      is_active: u.employee?.is_active || 'inactive',
     }));
 
     return {
       result: true,
       message: "Get user data successfully.",
       data: result,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: take,
+        totalPages: Math.ceil(total / take),
+      },
     };
   } catch (error) {
     console.log(error.message);

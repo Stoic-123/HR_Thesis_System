@@ -1,4 +1,4 @@
-import { addRole, getRole, updateRole } from "../service/Role.js";
+import { addRole, getRole, updateRole, updateRolePermissions } from "../service/Role.js";
 
 export const addRoleController = async (req, res) => {
   try {
@@ -21,12 +21,13 @@ export const addRoleController = async (req, res) => {
 export const getRoleController = async (req, res) => {
   try {
     const company_id = req.user.company_id;
+    const { page, limit } = req.query;
     if (!company_id) {
       return res
-        .status(400)
-        .json({ result: false, message: "Company context is required..!" });
+          .status(400)
+          .json({ result: false, message: "Company context is required..!" });
     }
-    const roleGetData = await getRole(company_id);
+    const roleGetData = await getRole(company_id, page, limit);
     res.status(200).json(roleGetData);
   } catch (error) {
     console.log(error.message);
@@ -39,8 +40,8 @@ export const updateRoleController = async (req, res) => {
     const { role_id } = req.params;
     if (!name || !role_id) {
       return res
-        .status(400)
-        .json({ result: false, message: "Name and role_id are required..! " });
+          .status(400)
+          .json({ result: false, message: "Name and role_id are required..! " });
     }
     const roleUpdateData = await updateRole(name, role_id, req.user.company_id);
     res.status(200).json(roleUpdateData);
@@ -49,3 +50,22 @@ export const updateRoleController = async (req, res) => {
     res.status(500).json({ result: false, message: error.message });
   }
 };
+
+export const updateRolePermissionsController = async (req, res) => {
+  try {
+    const { permissions } = req.body;
+    const { role_id } = req.params;
+    if (!permissions || !role_id) {
+      return res.status(400).json({
+        result: false,
+        message: "Permissions array and role_id are required.",
+      });
+    }
+    const result = await updateRolePermissions(role_id, permissions, req.user.company_id);
+    res.status(200).json(result);
+  } catch (error) {
+    console.log(error.message);
+    res.status(500).json({ result: false, message: error.message });
+  }
+};
+

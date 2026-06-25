@@ -20,7 +20,7 @@ export const createHoliday = async (company_id, name, start_date, end_date) => {
     throw error;
   }
 };
-export const getHoliday = async (company_id, year = null) => {
+export const getHoliday = async (company_id, year = null, page = 1, limit = 10) => {
   try {
     const where = {
       company_id: parseInt(company_id),
@@ -36,16 +36,32 @@ export const getHoliday = async (company_id, year = null) => {
       ];
     }
 
-    const holidays = await prisma.holiday.findMany({
-      where,
-      orderBy: {
-        start_date: "asc",
-      },
-    });
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const take = parseInt(limit);
+
+    const [data, total] = await Promise.all([
+      prisma.holiday.findMany({
+        where,
+        orderBy: {
+          start_date: "asc",
+        },
+        skip,
+        take,
+      }),
+      prisma.holiday.count({
+        where,
+      }),
+    ]);
 
     return {
       result: true,
-      data: holidays,
+      data,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: take,
+        totalPages: Math.ceil(total / take),
+      },
     };
   } catch (error) {
     console.log(error.message);

@@ -1,262 +1,531 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname } from "@/src/i18n/routing";
+import { Link } from "@/src/i18n/routing";
+import { useTranslations } from "next-intl";
+import { motion, AnimatePresence } from "framer-motion";
+
 import {
   LayoutDashboard,
   Clock,
   CalendarDays,
+  Building2,
+  BriefcaseBusiness,
+  UsersRound,
+  Shield,
+  FileArchive,
+  CalendarCheck2,
   Timer,
   Settings,
   ChevronDown,
   ChevronRight,
-  ChevronLeft,
   FileText,
   Wrench,
-  MoreVertical,
+  Banknote,
+  CalendarClock,
+  Target,
+  Laptop,
+  Megaphone,
 } from "lucide-react";
+import { useMe } from "@/hooks/useMe";
+import { useCompany } from "@/hooks/useCompany";
 
-const menuItems = [
+type SubMenuItem = {
+  title: string;
+  labelKey: string;
+  icon: React.ComponentType<{ className?: string }>;
+  href: string;
+  permission?: string;
+};
+
+type MenuItem = {
+  title: string;
+  labelKey: string;
+  icon: React.ComponentType<{ className?: string }>;
+  href?: string;
+  submenu?: SubMenuItem[];
+  permission?: string;
+};
+
+const menuItems: MenuItem[] = [
   {
-    title: "Overviews",
+    title: "Overview",
+    labelKey: "overview",
     icon: LayoutDashboard,
     href: "/dashboard",
   },
   {
+    title: "Announcements",
+    labelKey: "announcements",
+    icon: Megaphone,
+    href: "/dashboard/announcement",
+  },
+  {
+    title: "Organization",
+    labelKey: "organization",
+    icon: Building2,
+    submenu: [
+      {
+        title: "Company",
+        labelKey: "company",
+        icon: Building2,
+        href: "/dashboard/company",
+        permission: "employee:manage",
+      },
+      {
+        title: "Department",
+        labelKey: "department",
+        icon: BriefcaseBusiness,
+        href: "/dashboard/department",
+        permission: "department:manage",
+      },
+      {
+        title: "Position",
+        labelKey: "position",
+        icon: BriefcaseBusiness,
+        href: "/dashboard/position",
+        permission: "department:manage",
+      },
+    ],
+  },
+  {
+    title: "People",
+    labelKey: "people",
+    icon: UsersRound,
+    submenu: [
+      {
+        title: "Employee",
+        labelKey: "employee",
+        icon: UsersRound,
+        href: "/dashboard/employee",
+        permission: "employee:manage",
+      },
+      {
+        title: "User",
+        labelKey: "user",
+        icon: UsersRound,
+        href: "/dashboard/user",
+        permission: "role:manage",
+      },
+      {
+        title: "Role",
+        labelKey: "role",
+        icon: Shield,
+        href: "/dashboard/role",
+        permission: "role:manage",
+      },
+    ],
+  },
+  {
     title: "Time Attendance",
+    labelKey: "timeAttendance",
     icon: Clock,
     submenu: [
       {
         title: "Report",
+        labelKey: "report",
         icon: FileText,
         href: "/dashboard/time-attendance/report",
+        permission: "leave:approve",
       },
       {
         title: "Setup",
+        labelKey: "setup",
         icon: Wrench,
         href: "/dashboard/time-attendance/setup",
+        permission: "department:manage",
+      },
+      {
+        title: "Time Mode",
+        labelKey: "timeMode",
+        icon: Clock,
+        href: "/dashboard/timemode",
+        permission: "department:manage",
       },
     ],
   },
   {
     title: "Leave Management",
+    labelKey: "leaveManagement",
     icon: CalendarDays,
     submenu: [
-      { title: "Report", icon: FileText, href: "/dashboard/leave/report" },
-      { title: "Setup", icon: Wrench, href: "/dashboard/leave/setup" },
+      {
+        title: "Leave Requests",
+        labelKey: "leaveRequests",
+        icon: CalendarDays,
+        href: "/dashboard/leave",
+        permission: "leave:approve",
+      },
+      {
+        title: "Report",
+        labelKey: "report",
+        icon: FileText,
+        href: "/dashboard/leave/report",
+        permission: "leave:approve",
+      },
+      {
+        title: "Setup",
+        labelKey: "setup",
+        icon: Wrench,
+        href: "/dashboard/leave/setup",
+        permission: "role:manage",
+      },
+      {
+        title: "Leave Profile",
+        labelKey: "leaveProfile",
+        icon: UsersRound,
+        href: "/dashboard/leave/profile",
+        permission: "employee:manage",
+      },
+    ],
+  },
+  {
+    title: "Documents",
+    labelKey: "documents",
+    icon: FileArchive,
+    submenu: [
+      {
+        title: "Document Type",
+        labelKey: "documentType",
+        icon: FileText,
+        href: "/dashboard/document-type",
+        permission: "role:manage",
+      },
+      {
+        title: "Holiday",
+        labelKey: "holiday",
+        icon: CalendarDays,
+        href: "/dashboard/holiday",
+        permission: "department:manage",
+      },
     ],
   },
   {
     title: "Overtime",
+    labelKey: "overtime",
     icon: Timer,
     href: "/dashboard/overtime",
+    permission: "overtime:approve",
   },
   {
-    title: "Setting",
-    icon: Settings,
-    href: "/dashboard/setting",
+    title: "Payroll",
+    labelKey: "payroll",
+    icon: Banknote,
+    submenu: [
+      {
+        title: "Dashboard",
+        labelKey: "payrollDashboard",
+        icon: Banknote,
+        href: "/dashboard/payroll",
+        permission: "payroll:view",
+      },
+      {
+        title: "Review",
+        labelKey: "payrollReview",
+        icon: FileText,
+        href: "/dashboard/payroll/review",
+        permission: "payroll:manage",
+      },
+      {
+        title: "Reports",
+        labelKey: "payrollReports",
+        icon: FileText,
+        href: "/dashboard/payroll/reports",
+        permission: "payroll:view",
+      },
+      {
+        title: "Periods",
+        labelKey: "payrollPeriods",
+        icon: CalendarClock,
+        href: "/dashboard/payroll/periods",
+        permission: "payroll:manage",
+      },
+    ],
+  },
+  {
+    title: "KPI",
+    labelKey: "kpi",
+    icon: Target,
+    submenu: [
+      {
+        title: "Dashboard",
+        labelKey: "kpiDashboard",
+        icon: LayoutDashboard,
+        href: "/dashboard/kpi",
+        permission: "kpi:evaluate",
+      },
+      {
+        title: "Cycles",
+        labelKey: "kpiCycles",
+        icon: Target,
+        href: "/dashboard/kpi/cycles",
+        permission: "role:manage",
+      },
+      {
+        title: "Templates",
+        labelKey: "kpiTemplates",
+        icon: FileText,
+        href: "/dashboard/kpi/templates",
+        permission: "role:manage",
+      },
+      {
+        title: "Assign",
+        labelKey: "kpiAssign",
+        icon: UsersRound,
+        href: "/dashboard/kpi/assign",
+        permission: "kpi:evaluate",
+      },
+    ],
+  },
+  {
+    title: "System",
+    labelKey: "system",
+    icon: Shield,
+    submenu: [
+      {
+        title: "Audit Log",
+        labelKey: "auditLog",
+        icon: FileText,
+        href: "/dashboard/audit-log",
+        permission: "role:manage",
+      },
+      {
+        title: "Setting",
+        labelKey: "setting",
+        icon: Settings,
+        href: "/dashboard/setting",
+        permission: "role:manage",
+      },
+    ],
+  },
+  {
+    title: "Asset",
+    labelKey: "asset",
+    icon: Laptop,
+    submenu: [
+      {
+        title: "Dashboard",
+        labelKey: "assetDashboard",
+        icon: LayoutDashboard,
+        href: "/dashboard/asset",
+        permission: "asset:approve",
+      },
+      {
+        title: "Inventory",
+        labelKey: "assetInventory",
+        icon: FileText,
+        href: "/dashboard/asset/inventory",
+        permission: "asset:approve",
+      },
+      {
+        title: "Categories",
+        labelKey: "assetCategories",
+        icon: FileText,
+        href: "/dashboard/asset/categories",
+        permission: "role:manage",
+      },
+      {
+        title: "Requests",
+        labelKey: "assetRequests",
+        icon: FileText,
+        href: "/dashboard/asset/requests",
+        permission: "asset:approve",
+      },
+    ],
   },
 ];
 
-export function Sidebar() {
+export function Sidebar({ collapsed = false }: { collapsed?: boolean }) {
   const pathname = usePathname();
-  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({
-    "Time Attendance": false,
-    "Leave Management": false,
-  });
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
+  const { data: user, isLoading: isLoadingUser } = useMe();
+  const { data: companyRes, isLoading: isLoadingCompany } = useCompany();
+  const company = companyRes?.data;
+  const isLoading = isLoadingUser || isLoadingCompany;
+  const t = useTranslations("sidebar");
 
-  // Automatically open menu if a submenu item is active
+  const filteredMenuItems = menuItems
+    .map((item) => {
+      if (item.submenu) {
+        const visibleSubmenu = item.submenu.filter((sub) => {
+          if (!sub.permission) return true;
+          if (user?.employee?.role === "Admin") return true;
+          return user?.employee?.permissions?.includes(sub.permission);
+        });
+        return { ...item, submenu: visibleSubmenu };
+      }
+      if (!item.permission) return item;
+      if (user?.employee?.role === "Admin") return item;
+      const hasPerm = user?.employee?.permissions?.includes(item.permission);
+      return hasPerm ? item : null;
+    })
+    .filter((item): item is MenuItem => item !== null && (!item.submenu || item.submenu.length > 0));
+
   useEffect(() => {
-    menuItems.forEach((item) => {
+    filteredMenuItems.forEach((item) => {
       if (item.submenu) {
         const isSubActive = item.submenu.some((sub) =>
           pathname.startsWith(sub.href),
         );
-        if (isSubActive) {
-          setOpenMenus((prev) => ({ ...prev, [item.title]: true }));
+        const isOnSetupPages =
+          pathname.startsWith("/dashboard/timesheet") ||
+          pathname.startsWith("/dashboard/dayofweek") ||
+          pathname.startsWith("/dashboard/employeeworkingprofile");
+        if (
+          isSubActive ||
+          (item.title === "Time Attendance" && isOnSetupPages)
+        ) {
+          setOpenMenus({ [item.title]: true });
         }
       }
     });
-  }, [pathname]);
+  }, [pathname, isLoadingUser]);
 
   const toggleMenu = (title: string) => {
-    if (isCollapsed) {
-      setIsCollapsed(false);
-      setOpenMenus((prev) => ({ ...prev, [title]: true }));
-    } else {
-      setOpenMenus((prev) => ({ ...prev, [title]: !prev[title] }));
-    }
+    setOpenMenus((prev) => {
+      if (prev[title]) {
+        return { [title]: false };
+      }
+      return { [title]: true };
+    });
   };
+
+  if (isLoading) {
+    return (
+      <aside className="w-64 h-screen border-r border-gray-200 bg-white flex flex-col">
+        <div className="p-6">
+          <div className="h-10 bg-gray-100 rounded-lg" />
+        </div>
+        <div className="flex-1 space-y-1 px-3 py-4">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="h-10 bg-gray-100 rounded-lg" />
+          ))}
+        </div>
+      </aside>
+    );
+  }
+
+  const isExpanded = !collapsed;
 
   return (
     <aside
-      className={`flex flex-col h-screen bg-sidebar text-sidebar-foreground border-r border-sidebar-border shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-10 relative transition-all duration-400 ease-[cubic-bezier(0.25,0.8,0.25,1)] ${isCollapsed ? "w-24" : "w-70"}`}
+      className={`h-screen border-r border-gray-200 bg-white flex flex-col transition-all duration-300 ${
+        isExpanded ? "w-64" : "w-16"
+      }`}
     >
-      {/* Collapse Toggle Button - Realigned below header to avoid overlapping logo */}
-      <button
-        onClick={() => setIsCollapsed(!isCollapsed)}
-        className="absolute -right-3.5 top-22.5 w-7 h-7 flex items-center justify-center bg-background border border-sidebar-border shadow-md text-sidebar-foreground hover:text-primary rounded-full z-50 transition-colors ring-4 ring-background cursor-pointer"
-      >
-        {isCollapsed ? (
-          <ChevronRight className="w-4 h-4 ml-0.5 opacity-80" />
-        ) : (
-          <ChevronLeft className="w-4 h-4 mr-0.5 opacity-80" />
-        )}
-      </button>
-
-      {/* Sidebar Header with ambient glow effect */}
       <div
-        className={`h-24 flex items-center bg-primary-foreground  transition-all duration-400 border-b border-sidebar-border/90 relative overflow-hidden ${isCollapsed ? "justify-center px-0" : "px-6"}`}
+        className={`relative p-4 border-b border-gray-100 flex items-center ${
+          isExpanded ? "justify-start gap-3" : "justify-center"
+        }`}
       >
-        <div className="absolute -top-12 -left-12 w-32 h-32  rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-10 -right-10 w-24 h-24 bg-secondary/15 rounded-full blur-2xl pointer-events-none" />
-
-        <div
-          className={`flex items-center relative z-10 transition-all duration-400 ${isCollapsed ? "w-auto justify-center" : "w-full gap-4 px-2"}`}
-        >
-          <div className="w-12 h-12 shrink-0 rounded-2xl bg-linear-to-br from-primary to-secondary text-primary-foreground flex items-center justify-center font-bold text-lg shadow-[0_4px_16px_0_rgba(99,103,255,0.4)] ring-1 ring-primary/20">
-            HR
-          </div>
-          <div
-            className={`flex flex-col whitespace-nowrap overflow-hidden transition-all duration-400 ${isCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"}`}
-          >
-            <span className="text-xl font-extrabold bg-clip-text text-transparent bg-linear-to-r from-primary to-secondary leading-none tracking-tight">
-              Voatmean
-            </span>
-          </div>
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-xl font-bold text-white overflow-hidden shrink-0">
+          {company?.logo_path ? (
+            <img 
+              src={`${process.env.NEXT_PUBLIC_API_URL}${company.logo_path}`} 
+              alt={company.name} 
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            company?.name?.charAt(0).toUpperCase() || "C"
+          )}
         </div>
+        {isExpanded && (
+          <div className="min-w-0">
+            <div className="font-semibold text-gray-900 truncate">{company?.name || "Company"}</div>
+            <div className="text-xs text-gray-500">{t("adminPanel")}</div>
+          </div>
+        )}
       </div>
 
-      {/* Navigation Links */}
-      <div
-        className={`flex-1 overflow-y-auto overflow-x-hidden py-8 space-y-2 custom-scrollbar transition-all duration-400 ${isCollapsed ? "px-3" : "px-4"}`}
-      >
-       
-
-        {menuItems.map((item) => {
+      <div className="flex-1 overflow-y-auto px-2 py-4 space-y-1 custom-scrollbar">
+        {filteredMenuItems.map((item) => {
           const isActive =
             item.href === pathname ||
             (item.submenu &&
               item.submenu.some((sub) => pathname.startsWith(sub.href)));
-          const isOpen = openMenus[item.title] && !isCollapsed;
+          const isOpen = openMenus[item.title] && isExpanded;
 
           return (
-            <div
-              key={item.title}
-              className="mb-2 flex flex-col relative w-full"
-            >
+            <div key={item.title} className="relative">
               {item.submenu ? (
                 <div>
-                  <button
-                    onClick={() => toggleMenu(item.title)}
-                    title={isCollapsed ? item.title : ""}
-                    className={`transition-all duration-300 group flex items-center relative overflow-hidden ${
-                      isActive || openMenus[item.title]
-                        ? isCollapsed
-                          ? " text-primary shadow-sm ring-1 ring-primary/30"
-                          : " text-primary font-semibold shadow-sm"
-                        : "hover:bg-sidebar-accent/50 hover:text-primary text-sidebar-foreground/80 font-medium"
-                    } ${isCollapsed ? "w-12 h-12 justify-center mx-auto rounded-full p-0 shrink-0" : "w-full px-3 py-3 justify-between rounded-4xl"}`}
-                  >
-                    <div className="flex items-center gap-3 w-full h-full">
-                      <div
-                        className={`flex shrink-0 items-center justify-center transition-all duration-300 ${isCollapsed ? "w-full h-full rounded-full" : "p-1.5 rounded-lg"} ${!isCollapsed && (isActive || openMenus[item.title]) ? "bg-primary/10 text-primary shadow-sm" : isCollapsed ? "" : "bg-transparent text-sidebar-foreground/50 group-hover:text-primary group-hover:bg-primary/5"}`}
-                      >
-                        <item.icon
-                          className={`transition-transform duration-300 ${isCollapsed ? "w-5.5 h-5.5" : "w-5 h-5"}`}
-                        />
+                  {isExpanded ? (
+                    <button
+                      onClick={() => toggleMenu(item.title)}
+                      className={`flex w-full items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                        isActive || isOpen
+                          ? "bg-gray-50 text-gray-900"
+                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                      }`}
+                      type="button"
+                    >
+                      <div className="flex items-center gap-3">
+                        <item.icon className="h-4.5 w-4.5" />
+                        {t(item.labelKey)}
                       </div>
-                      <span
-                        className={`text-[14px] whitespace-nowrap overflow-hidden transition-all duration-400 ${isCollapsed ? "w-0 opacity-0 hidden" : "w-auto opacity-100 group-hover:translate-x-1 block"}`}
-                      >
-                        {item.title}
-                      </span>
-                    </div>
-                    {!isCollapsed &&
-                      (openMenus[item.title] ? (
-                        <ChevronDown className="w-4 h-4 shrink-0 opacity-60 transition-transform duration-300 ml-2" />
+                      {isOpen ? (
+                        <ChevronDown className="h-4 w-4" />
                       ) : (
-                        <ChevronRight className="w-4 h-4 shrink-0 opacity-40 transition-transform duration-300 ml-2" />
-                      ))}
-                  </button>
+                        <ChevronRight className="h-4 w-4" />
+                      )}
+                    </button>
+                  ) : (
+                    <Link
+                      href={item.submenu[0]?.href || "#"}
+                      className={`flex w-full items-center justify-center rounded-lg py-2.5 transition-colors ${
+                        isActive
+                          ? "bg-primary text-white"
+                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                      }`}
+                    >
+                      <item.icon className="h-4.5 w-4.5" />
+                    </Link>
+                  )}
 
-                  {/* Enhanced Submenu visualization */}
-                  <div
-                    className={`overflow-hidden transition-all duration-400 ease-[cubic-bezier(0.23,1,0.32,1)] drop-shadow-sm ${
-                      isOpen
-                        ? "max-h-75 opacity-100 mt-1"
-                        : "max-h-0 opacity-0 hidden"
-                    }`}
-                  >
-                    <div className="pl-4 ml-6 border-l border-sidebar-border/60 py-2 space-y-1.5 relative">
-                      {item.submenu.map((subItem) => {
-                        const isSubActive =
-                          pathname === subItem.href ||
-                          pathname.startsWith(subItem.href + "/");
-                        return (
-                          <Link
-                            key={subItem.title}
-                            href={subItem.href}
-                            className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-all duration-200 text-sm group relative whitespace-nowrap ${
-                              isSubActive
-                                ? "text-primary font-bold bg-primary/10 shadow-sm"
-                                : "hover:text-primary hover:bg-sidebar-accent/30 text-sidebar-foreground/70 font-medium"
-                            }`}
-                          >
-                            {/* Branch horizontal line joining submenu */}
-                            <div
-                              className={`absolute -left-4.25 top-1/2 -translate-y-1/2 w-4 h-0.5 transition-colors rounded-r-full ${isSubActive ? "bg-primary" : "bg-sidebar-border/60 group-hover:bg-primary/40"}`}
-                            />
-
-                            {/* Active dot indicator */}
-                            {isSubActive && (
-                              <div className="absolute -left-5 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-primary ring-4 ring-primary/20 shadow-[0_0_8px_rgba(99,103,255,0.6)]" />
-                            )}
-
-                            <subItem.icon
-                              className={`w-3.75 h-3.75 shrink-0 transition-transform duration-300 group-hover:scale-110 ${isSubActive ? "text-primary" : "opacity-50"}`}
-                            />
-                            <span
-                              className={`transform transition-transform duration-300 ${isSubActive ? "" : "group-hover:translate-x-0.5"}`}
+                  <AnimatePresence initial={false}>
+                    {isOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2, ease: "easeInOut" }}
+                        className="ml-3 mt-1 space-y-1 border-l border-gray-200 pl-3 overflow-hidden"
+                      >
+                        {item.submenu.map((subItem) => {
+                          const isSubActive =
+                            pathname === subItem.href ||
+                            pathname.startsWith(subItem.href + "/");
+                          return (
+                            <Link
+                              key={subItem.title}
+                              href={subItem.href}
+                              className={`flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors ${
+                                isSubActive
+                                  ? "bg-primary/10 text-primary font-medium"
+                                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                              }`}
                             >
-                              {subItem.title}
-                            </span>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  </div>
+                              <subItem.icon className="h-4 w-4" />
+                              {t(subItem.labelKey)}
+                            </Link>
+                          );
+                        })}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               ) : (
                 <Link
                   href={item.href || "#"}
-                  title={isCollapsed ? item.title : ""}
-                  className={`transition-all duration-300 group flex items-center relative overflow-hidden ${
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                     isActive
-                      ? isCollapsed
-                        ? "bg-primary text-primary-foreground font-semibold shadow-[0_4px_16px_rgba(99,103,255,0.4)]"
-                        : "bg-primary text-primary-foreground font-semibold shadow-[0_4px_16px_rgba(99,103,255,0.3)]"
-                      : "hover:bg-sidebar-accent/50 hover:text-primary text-sidebar-foreground/80 font-medium"
-                  } ${isCollapsed ? "w-12 h-12 justify-center mx-auto rounded-full p-0 shrink-0" : "w-full px-3 py-3 gap-3 rounded-4xl"}`}
+                      ? "bg-primary text-white"
+                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  } ${!isExpanded ? "justify-center px-0" : ""}`}
                 >
-                  {!isActive && !isCollapsed && (
-                    <div className="absolute inset-0 bg-linear-to-r from-primary/5 to-transparent -translate-x-full group-hover:translate-x-0 transition-transform duration-500 ease-out" />
-                  )}
-
-                  <div
-                    className={`flex items-center justify-center shrink-0 transition-colors ${isCollapsed ? "w-full h-full rounded-full" : "p-1.5 rounded-lg z-10"} ${isActive ? (isCollapsed ? "text-primary-foreground" : "bg-white/20 text-white shadow-inner") : "text-sidebar-foreground/50 group-hover:text-primary group-hover:bg-primary/5"}`}
-                  >
-                    <item.icon
-                      className={`transition-transform duration-300 z-10 ${isCollapsed ? "w-5.5 h-5.5 group-hover:scale-110" : "w-5 h-5"}`}
-                    />
-                  </div>
-                  <span
-                    className={`text-[14px] whitespace-nowrap overflow-hidden z-10 transform transition-all duration-400 ${isCollapsed ? "w-0 opacity-0 hidden" : "w-auto opacity-100 block"} ${isActive ? "" : "group-hover:translate-x-1"}`}
-                  >
-                    {item.title}
-                  </span>
+                  <item.icon className="h-4.5 w-4.5" />
+                  {isExpanded && t(item.labelKey)}
                 </Link>
               )}
             </div>
@@ -264,36 +533,61 @@ export function Sidebar() {
         })}
       </div>
 
-      {/* Footer User Profile Area */}
-      <div
-        className={`p-4 border-t border-sidebar-border/40 bg-sidebar/50 backdrop-blur-sm transition-all duration-400 ${isCollapsed ? "flex justify-center px-2" : ""}`}
-      >
-        <button
-          className={`flex items-center rounded-2xl hover:bg-sidebar-accent/60 transition-all duration-300 group border border-transparent hover:border-sidebar-border/50 shadow-sm ${isCollapsed ? "justify-center w-12 h-12 p-0 shadow-none bg-transparent hover:bg-sidebar-accent/50 mx-auto rounded-full ring-2 ring-transparent hover:ring-primary/20" : "w-full justify-between p-2.5"}`}
+      <div className="p-4 border-t border-gray-100">
+        <div
+          className={`flex items-center ${!isExpanded ? "justify-center" : ""}`}
         >
-          <div className="flex items-center gap-3">
-            <div
-              className={`w-10 h-10 shrink-0 rounded-full bg-linear-to-tr from-accent to-secondary/80 text-background flex items-center justify-center font-bold text-xs shadow-[0_2px_8px_rgba(0,0,0,0.1)] transition-all duration-300 ${isCollapsed ? "w-11 h-11 text-[13px] shadow-md ring-2 ring-background" : "ring-2 ring-background shadow-inner"}`}
-            >
-              AD
-            </div>
-            <div
-              className={`flex flex-col text-left whitespace-nowrap overflow-hidden transition-all duration-400 ${isCollapsed ? "w-0 opacity-0 hidden" : "w-auto opacity-100 block"}`}
-            >
-              <span className="text-sm font-bold truncate leading-tight group-hover:text-primary transition-colors">
-                Admin User
-              </span>
-              <span className="text-[11px] opacity-60 font-semibold mt-0.5">
-                admin@sarana.com
-              </span>
-            </div>
-          </div>
-          {!isCollapsed && (
-            <div className="p-1.5 rounded-lg bg-transparent transition-colors text-sidebar-foreground/40 group-hover:text-primary group-hover:bg-primary/10">
-              <MoreVertical className="w-5 h-5 shrink-0" />
+          {isExpanded && (
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-base font-semibold text-gray-900 overflow-hidden">
+                {user?.employee?.profile_path ? (
+                  <img
+                    src={`${process.env.NEXT_PUBLIC_API_URL}${user.employee.profile_path}`}
+                    alt={user.employee.full_name}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span>
+                    {user?.employee?.full_name
+                      ? user.employee.full_name
+                          .split(" ")
+                          .map((n: any) => n[0])
+                          .join("")
+                      : "UN"}
+                  </span>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="truncate text-sm font-semibold text-gray-900">
+                  {user?.username}
+                </div>
+                <div className="truncate text-xs text-gray-500">
+                  {user?.employee?.email}
+                </div>
+              </div>
             </div>
           )}
-        </button>
+          {!isExpanded && (
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-base font-semibold text-gray-900 overflow-hidden">
+              {user?.employee?.profile_path ? (
+                <img
+                  src={`${process.env.NEXT_PUBLIC_API_URL}${user.employee.profile_path}`}
+                  alt={user.employee.full_name}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <span>
+                  {user?.employee?.full_name
+                    ? user.employee.full_name
+                        .split(" ")
+                        .map((n: any) => n[0])
+                        .join("")
+                    : "UN"}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </aside>
   );

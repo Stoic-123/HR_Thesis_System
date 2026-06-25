@@ -3,3 +3,6 @@ node_modules
 .env
 
 /generated/prisma
+
+# Database seed — contains real data, generate fresh with: mysqldump -u root hrms > prisma/seed.sql
+prisma/seed.sql

@@ -1,0 +1,11 @@
+# Production Caddy Configuration
+
+bayonhr.shop {
+    # Reverse proxy to the frontend container
+    reverse_proxy frontend:3000
+}
+
+api.bayonhr.shop {
+    # Reverse proxy to the backend container
+    reverse_proxy backend:8080
+}

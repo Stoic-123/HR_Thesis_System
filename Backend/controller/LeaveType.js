@@ -30,12 +30,13 @@ export const createLeaveTypeController = async (req, res) => {
 export const getLeaveTypeController = async (req, res) => {
   try {
     const company_id = req.user.company_id;
+    const { page, limit } = req.query;
     if (!company_id) {
       return res
         .status(400)
         .json({ result: false, message: "Company context is required..!" });
     }
-    const leaveTypeGetData = await getLeaveType(company_id);
+    const leaveTypeGetData = await getLeaveType(company_id, page, limit);
     res.status(200).json(leaveTypeGetData);
   } catch (error) {
     console.error(error.message);

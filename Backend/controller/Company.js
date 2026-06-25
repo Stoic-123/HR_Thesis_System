@@ -1,4 +1,8 @@
 import { addCompany, getCompany, updateCompany } from "../service/Company.js";
+import { addAuditLog } from "../service/AuditLog.js";
+import path from "path";
+import fs from "fs";
+
 
 export const addCompanyController = async (req, res) => {
   try {
@@ -19,6 +23,10 @@ export const addCompanyController = async (req, res) => {
       primary_color,
       secondary_color,
       telegram_group_id,
+      telegram_attendance_group_id,
+      telegram_leave_group_id,
+      telegram_overtime_group_id,
+      telegram_announcement_group_id,
       telegram_bot_token,
     } = req.body;
     if (!name) {
@@ -34,8 +42,25 @@ export const addCompanyController = async (req, res) => {
       secondary_color,
       logoPath,
       telegram_group_id,
+      telegram_attendance_group_id,
+      telegram_leave_group_id,
+      telegram_overtime_group_id,
+      telegram_announcement_group_id,
       telegram_bot_token,
     );
+
+    // Audit Log
+    await addAuditLog(
+      req.user.id,
+      companyInsertData.id,
+      "Company",
+      "CREATE",
+      `Created new company: ${name}`,
+      null,
+      req.ip,
+      req.headers["user-agent"]
+    );
+
     res.status(200).json(companyInsertData);
   } catch (error) {
     console.log(error.message);
@@ -61,10 +86,16 @@ export const updateCompanyController = async (req, res) => {
       primary_color,
       secondary_color,
       telegram_group_id,
+      telegram_attendance_group_id,
+      telegram_leave_group_id,
+      telegram_overtime_group_id,
+      telegram_announcement_group_id,
       telegram_bot_token,
       old_logo_path,
     } = req.body;
     const company_id = req.user.company_id;
+    const user_id = req.user.id;
+
     if (!company_id) {
       return res.status(400).json({
         result: false,
@@ -101,8 +132,24 @@ export const updateCompanyController = async (req, res) => {
       secondary_color,
       logo_path,
       telegram_group_id,
+      telegram_attendance_group_id,
+      telegram_leave_group_id,
+      telegram_overtime_group_id,
+      telegram_announcement_group_id,
       telegram_bot_token,
+      company_id
+    );
+
+    // Audit Log
+    await addAuditLog(
+      user_id,
       company_id,
+      "Company",
+      "UPDATE",
+      `Updated company information for ${name}`,
+      null,
+      req.ip,
+      req.headers["user-agent"]
     );
 
     res.status(200).json(result);

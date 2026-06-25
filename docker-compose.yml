@@ -1,0 +1,121 @@
+services:
+  # ── MySQL database ───────────────────────────────────────────────────────────
+  db:
+    image: mysql:8.0
+    container_name: hrms_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-}
+      MYSQL_DATABASE: ${DB_NAME:-hrms}
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+    # No host port mapping — only backend/frontend need to reach the DB
+    # and they connect via the internal Docker network (db:3306).
+    # Uncomment the line below if you want to inspect the DB with a GUI tool:
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      # Seed file — only runs once on a fresh/empty volume
+      - ./Backend/prisma/seed.sql:/docker-entrypoint-initdb.d/seed.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ── Backend (Express + Prisma) ───────────────────────────────────────────────
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    container_name: hrms_backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: mysql://${DB_USER:-root}:${DB_PASSWORD:-}@db:3306/${DB_NAME:-hrms}
+      JWT_SECRET: ${JWT_SECRET:-changeme_use_a_long_random_secret}
+      EXPIRED_AT: ${EXPIRED_AT:-2h}
+      SERVER_BASE_URL: ${SERVER_BASE_URL:-http://localhost:8080}
+      OLLAMA_HOST: ${OLLAMA_HOST:-http://host.docker.internal:11434}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8080:8080"
+    volumes:
+      # Persist uploaded files outside the container
+      - uploads_data:/app/public/uploads
+
+  # ── Frontend (Next.js) ───────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ""
+        BACKEND_INTERNAL_URL: "http://backend:8080"
+    container_name: hrms_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      NEXT_PUBLIC_API_URL: ""
+      HOSTNAME: "0.0.0.0"
+      BACKEND_INTERNAL_URL: http://backend:8080
+    ports:
+      - "3000:3000"
+
+  # ── Mekong Frontend Tunnel ──────────────────────────────────────────────────
+  mekong-frontend:
+    image: alpine:latest
+    container_name: hrms_mekong_frontend
+    restart: unless-stopped
+    depends_on:
+      - frontend
+    network_mode: service:frontend
+    volumes:
+      - ~/.mekong:/root/.mekong:ro
+    environment:
+      MEKONG_FRONTEND_SUBDOMAIN: ${MEKONG_FRONTEND_SUBDOMAIN:-}
+    entrypoint: >
+      sh -c "
+      apk add --no-cache curl libc6-compat &&
+      curl -fsSL https://mekongtunnel.dev/install.sh | sh &&
+      echo 'Waiting for frontend to start...' &&
+      until curl -s http://localhost:3000 > /dev/null; do sleep 1; done &&
+      if [ -n \"$$MEKONG_FRONTEND_SUBDOMAIN\" ]; then
+        mekong 3000 --subdomain \"$$MEKONG_FRONTEND_SUBDOMAIN\"
+      else
+        mekong 3000
+      fi
+      "
+
+  # ── Mekong Backend Tunnel ───────────────────────────────────────────────────
+  mekong-backend:
+    image: alpine:latest
+    container_name: hrms_mekong_backend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    network_mode: service:backend
+    volumes:
+      - ~/.mekong:/root/.mekong:ro
+    environment:
+      MEKONG_BACKEND_SUBDOMAIN: ${MEKONG_BACKEND_SUBDOMAIN:-}
+    entrypoint: >
+      sh -c "
+      apk add --no-cache curl libc6-compat &&
+      curl -fsSL https://mekongtunnel.dev/install.sh | sh &&
+      echo 'Waiting for backend to start...' &&
+      until curl -s http://localhost:8080 > /dev/null; do sleep 1; done &&
+      if [ -n \"$$MEKONG_BACKEND_SUBDOMAIN\" ]; then
+        mekong 8080 --subdomain \"$$MEKONG_BACKEND_SUBDOMAIN\"
+      else
+        mekong 8080
+      fi
+      "
+
+volumes:
+  mysql_data:
+  uploads_data:

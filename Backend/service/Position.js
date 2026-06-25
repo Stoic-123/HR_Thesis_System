@@ -31,18 +31,37 @@ export const addPosition = async (name, department_id, company_id) => {
   }
 };
 
-export const getPosition = async (company_id) => {
+export const getPosition = async (company_id, page = 1, limit = 10, department_id = null) => {
   try {
-    const positionResult = await prisma.positions.findMany({
-      where: {
-        is_active: true,
-        department: {
-          company_id: parseInt(company_id),
-        },
+    const where = {
+      is_active: true,
+      department: {
+        company_id: parseInt(company_id),
       },
-    });
+    };
 
-    if (positionResult.length === 0) {
+    if (department_id) {
+      where.department_id = parseInt(department_id);
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const take = parseInt(limit);
+
+    const [data, total] = await Promise.all([
+      prisma.positions.findMany({
+        where,
+        include: {
+          department: true,
+        },
+        skip,
+        take,
+      }),
+      prisma.positions.count({
+        where,
+      }),
+    ]);
+
+    if (data.length === 0) {
       return {
         result: false,
         message: "No position data in database..!",
@@ -50,7 +69,13 @@ export const getPosition = async (company_id) => {
     }
     return {
       result: true,
-      data: positionResult,
+      data,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: take,
+        totalPages: Math.ceil(total / take),
+      },
     };
   } catch (error) {
     console.error("DB ERROR:", error);

@@ -25,12 +25,19 @@ export const addPositionController = async (req, res) => {
 export const getPositionController = async (req, res) => {
   try {
     const company_id = req.user.company_id;
+    const { page, limit, department_id } = req.query;
     if (!company_id) {
       return res
         .status(400)
         .json({ result: false, message: "Company context is required..!" });
     }
-    const positionGetData = await getPosition(company_id);
+    
+    let deptId = null;
+    if (department_id && department_id !== "null" && department_id !== "undefined") {
+      deptId = Number(department_id);
+    }
+
+    const positionGetData = await getPosition(company_id, page, limit, deptId);
     res.status(200).json(positionGetData);
   } catch (error) {
     console.log(error.message);

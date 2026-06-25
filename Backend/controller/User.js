@@ -3,12 +3,13 @@ import { getUser, updateUser } from "../service/User.js";
 export const getUserController = async (req, res) => {
   try {
     const company_id = req.user.company_id;
+    const { page, limit } = req.query;
     if (!company_id) {
       return res
         .status(400)
         .json({ result: false, message: "Company context is required..!" });
     }
-    const userGetData = await getUser(company_id);
+    const userGetData = await getUser(company_id, page, limit);
     res.status(200).json(userGetData);
   } catch (error) {
     console.log(error.message);

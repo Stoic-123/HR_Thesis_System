@@ -25,14 +25,27 @@ export const createLeaveType = async (
     throw error;
   }
 };
-export const getLeaveType = async (company_id) => {
+export const getLeaveType = async (company_id, page = 1, limit = 10) => {
   try {
-    const leaveType = await prisma.leavetype.findMany({
-      where: {
-        company_id: parseInt(company_id),
-      },
-    });
-    if (leaveType.length === 0) {
+    const where = {
+      company_id: parseInt(company_id),
+    };
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const take = parseInt(limit);
+
+    const [data, total] = await Promise.all([
+      prisma.leavetype.findMany({
+        where,
+        skip,
+        take,
+      }),
+      prisma.leavetype.count({
+        where,
+      }),
+    ]);
+
+    if (data.length === 0) {
       return {
         result: false,
         message: "No leavetype data in database..!",
@@ -41,7 +54,13 @@ export const getLeaveType = async (company_id) => {
     return {
       result: true,
       message: "Get leavetype data successfully.",
-      data: leaveType,
+      data,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: take,
+        totalPages: Math.ceil(total / take),
+      },
     };
   } catch (error) {
     console.error({ result: false, message: error.message });

@@ -8,6 +8,10 @@ export const addCompany = async (
   secondary_color,
   logo_path,
   telegram_group_id,
+  telegram_attendance_group_id,
+  telegram_leave_group_id,
+  telegram_overtime_group_id,
+  telegram_announcement_group_id,
   telegram_bot_token
 ) => {
   try {
@@ -20,6 +24,10 @@ export const addCompany = async (
         secondary_color,
         logo_path,
         telegram_group_id,
+        telegram_attendance_group_id,
+        telegram_leave_group_id,
+        telegram_overtime_group_id,
+        telegram_announcement_group_id,
         telegram_bot_token,
       },
     });
@@ -79,6 +87,10 @@ export const updateCompany = async (
   secondary_color,
   logo_path,
   telegram_group_id,
+  telegram_attendance_group_id,
+  telegram_leave_group_id,
+  telegram_overtime_group_id,
+  telegram_announcement_group_id,
   telegram_bot_token,
   company_id
 ) => {
@@ -93,6 +105,10 @@ export const updateCompany = async (
         secondary_color,
         logo_path,
         telegram_group_id,
+        telegram_attendance_group_id,
+        telegram_leave_group_id,
+        telegram_overtime_group_id,
+        telegram_announcement_group_id,
         telegram_bot_token,
       },
     });

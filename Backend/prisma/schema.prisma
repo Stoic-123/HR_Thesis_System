@@ -8,13 +8,16 @@ datasource db {
 }
 
 model announcement {
-  id           Int       @id @default(autoincrement())
-  company_id   Int
-  title        String    @db.VarChar(255)
-  announcement String    @db.Text
-  created_at   DateTime? @default(now()) @db.DateTime(0)
-  updated_at   DateTime? @default(now()) @db.DateTime(0)
-  company      company   @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "announcement_ibfk_1")
+  id                  Int       @id @default(autoincrement())
+  company_id          Int
+  title               String    @db.VarChar(255)
+  announcement        String    @db.Text
+  dates               Json?
+  target_employee_ids Json?
+  telegram_message_id Int?
+  created_at          DateTime? @default(now()) @db.DateTime(0)
+  updated_at          DateTime? @default(now()) @db.DateTime(0)
+  company             company   @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "announcement_ibfk_1")
 
   @@index([company_id], map: "idx_announcement_company")
 }
@@ -24,6 +27,7 @@ model attendancerecord {
   employee_id  Int
   time_mode_id Int
   status       attendancerecord_status
+  type         String                  @default("FINGER") @db.VarChar(20) // FINGER or ONLINE
   work_at      DateTime                @db.DateTime(0)
   is_late      Boolean?                @default(false)
   is_early     Boolean?                @default(false)
@@ -36,6 +40,116 @@ model attendancerecord {
   @@index([status], map: "idx_attendance_status")
   @@index([time_mode_id], map: "idx_attendance_timemode")
   @@index([work_at], map: "idx_attendance_work_at")
+}
+
+model onlineattendancepending {
+  id              Int       @id @default(autoincrement())
+  company_id      Int
+  employee_id     Int
+  online_id       Int
+  time_mode_id    Int?
+  photo_path      String?   @db.VarChar(500)
+  remark          String?   @db.Text
+  latitude        String    @db.VarChar(255)
+  longitude       String    @db.VarChar(255)
+  has_activity    Boolean   @default(false)
+  status          String    @default("pending") @db.VarChar(20)
+  telegram_message_id Int?
+  manager_telegram_username String? @db.VarChar(255)
+  computed_meta   Json?
+  created_at      DateTime? @default(now()) @db.DateTime(0)
+  updated_at      DateTime? @default(now()) @db.DateTime(0)
+  employee        employee  @relation(fields: [employee_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([status], map: "idx_pending_status")
+  @@index([company_id], map: "idx_pending_company")
+  @@index([employee_id], map: "idx_pending_employee")
+}
+
+model onlineattendance {
+  id              Int       @id @default(autoincrement())
+  employee_id     Int
+  photo_path      String?   @db.VarChar(500)
+  remark          String?   @db.Text
+  latitude        String    @db.VarChar(255)
+  longitude       String    @db.VarChar(255)
+  has_activity    Boolean   @default(false)
+  created_at      DateTime? @default(now()) @db.DateTime(0)
+  updated_at      DateTime? @default(now()) @db.DateTime(0)
+  employee        employee  @relation(fields: [employee_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "onlineattendance_ibfk_1")
+
+  @@index([employee_id], map: "idx_onlineattendance_employee")
+  @@index([created_at], map: "idx_onlineattendance_created")
+}
+
+model timesheet {
+  id                    Int               @id @default(autoincrement())
+  company_id            Int
+  name                  String            @db.VarChar(255)
+  code                  String            @db.VarChar(50)
+  time_in               String?           @db.VarChar(10)
+  lunch_out             String?           @db.VarChar(10)
+  lunch_in              String?           @db.VarChar(10)
+  time_out              String?           @db.VarChar(10)
+  require_time_in       Boolean?          @default(true)
+  require_lunch_out     Boolean?          @default(false)
+  require_lunch_in      Boolean?          @default(false)
+  require_time_out      Boolean?          @default(true)
+  created_at            DateTime?         @default(now()) @db.DateTime(0)
+  updated_at            DateTime?         @default(now()) @db.DateTime(0)
+  company               company           @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "timesheet_ibfk_1")
+  dayofweek_monday      dayofweek[]       @relation("dayofweek_mondayTotimesheet")
+  dayofweek_tuesday     dayofweek[]       @relation("dayofweek_tuesdayTotimesheet")
+  dayofweek_wednesday   dayofweek[]       @relation("dayofweek_wednesdayTotimesheet")
+  dayofweek_thursday    dayofweek[]       @relation("dayofweek_thursdayTotimesheet")
+  dayofweek_friday      dayofweek[]       @relation("dayofweek_fridayTotimesheet")
+  dayofweek_saturday    dayofweek[]       @relation("dayofweek_saturdayTotimesheet")
+  dayofweek_sunday      dayofweek[]       @relation("dayofweek_sundayTotimesheet")
+
+  @@index([company_id], map: "idx_timesheet_company")
+}
+
+model dayofweek {
+  id               Int       @id @default(autoincrement())
+  company_id       Int
+  name             String    @db.VarChar(255)
+  code             String    @db.VarChar(50)
+  is_default       Boolean?  @default(false)
+  monday_id        Int?
+  tuesday_id       Int?
+  wednesday_id     Int?
+  thursday_id      Int?
+  friday_id        Int?
+  saturday_id      Int?
+  sunday_id        Int?
+  created_at       DateTime? @default(now()) @db.DateTime(0)
+  updated_at       DateTime? @default(now()) @db.DateTime(0)
+  company          company   @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "dayofweek_ibfk_1")
+  monday           timesheet? @relation("dayofweek_mondayTotimesheet", fields: [monday_id], references: [id], onUpdate: NoAction, onDelete: SetNull)
+  tuesday          timesheet? @relation("dayofweek_tuesdayTotimesheet", fields: [tuesday_id], references: [id], onUpdate: NoAction, onDelete: SetNull)
+  wednesday        timesheet? @relation("dayofweek_wednesdayTotimesheet", fields: [wednesday_id], references: [id], onUpdate: NoAction, onDelete: SetNull)
+  thursday         timesheet? @relation("dayofweek_thursdayTotimesheet", fields: [thursday_id], references: [id], onUpdate: NoAction, onDelete: SetNull)
+  friday           timesheet? @relation("dayofweek_fridayTotimesheet", fields: [friday_id], references: [id], onUpdate: NoAction, onDelete: SetNull)
+  saturday         timesheet? @relation("dayofweek_saturdayTotimesheet", fields: [saturday_id], references: [id], onUpdate: NoAction, onDelete: SetNull)
+  sunday           timesheet? @relation("dayofweek_sundayTotimesheet", fields: [sunday_id], references: [id], onUpdate: NoAction, onDelete: SetNull)
+  employeeworkingprofile employeeworkingprofile[]
+
+  @@index([company_id], map: "idx_dayofweek_company")
+}
+
+model employeeworkingprofile {
+  id                           Int       @id @default(autoincrement())
+  employee_id                  Int
+  day_of_week_id               Int
+  allow_online_bypass_location Boolean   @default(false)
+  created_at                   DateTime? @default(now()) @db.DateTime(0)
+  updated_at                   DateTime? @default(now()) @db.DateTime(0)
+  employee                     employee  @relation(fields: [employee_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "employeeworkingprofile_ibfk_1")
+  dayofweek                    dayofweek @relation(fields: [day_of_week_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "employeeworkingprofile_ibfk_2")
+
+  @@unique([employee_id], map: "unique_employee_working_profile")
+  @@index([employee_id], map: "idx_employeeworkingprofile_employee")
+  @@index([day_of_week_id], map: "idx_employeeworkingprofile_dayofweek")
 }
 
 model auditlog {
@@ -66,6 +180,10 @@ model company {
   secondary_color    String?        @db.VarChar(50)
   logo_path          String?        @db.VarChar(500)
   telegram_group_id  String?        @db.VarChar(255)
+  telegram_attendance_group_id String?        @db.VarChar(255)
+  telegram_leave_group_id      String?        @db.VarChar(255)
+  telegram_overtime_group_id   String?        @db.VarChar(255)
+  telegram_announcement_group_id String?      @db.VarChar(255)
   telegram_bot_token String?        @db.VarChar(255)
   created_at         DateTime?      @default(now()) @db.DateTime(0)
   updated_at         DateTime?      @default(now()) @db.DateTime(0)
@@ -80,7 +198,17 @@ model company {
   notification       notification[]
   role               role[]
   timemode           timemode[]
+  timesheet          timesheet[]
+  dayofweek          dayofweek[]
+  payrollperiod      payrollperiod[]
+  payroll            payroll[]
 
+  kpicycle           kpicycle[]
+  kpitemplate        kpitemplate[]
+  assetcategory      assetcategory[]
+  asset              asset[]
+  assethistory       assethistory[]
+  assetrequest       assetrequest[]
   @@index([name], map: "idx_company_name")
 }
 
@@ -143,6 +271,7 @@ model employee {
   role_id                                       Int?
   location_id                                   Int?
   telegram_username                             String?                       @db.VarChar(255)
+  telegram_chat_id                              String?                       @db.VarChar(255)
   joined_at                                     DateTime?                     @db.DateTime(0)
   company_id                                    Int
   is_active                                     employee_is_active?           @default(active)
@@ -183,7 +312,18 @@ model employee {
   overtime_overtime_employee_idToemployee       overtime[]                    @relation("overtime_employee_idToemployee")
   overtime_overtime_approved_byToemployee       overtime[]                    @relation("overtime_approved_byToemployee")
   user                                          user[]
+  onlineattendance                              onlineattendance[]
+  onlineattendancepending                       onlineattendancepending[]
+  employeeworkingprofile                        employeeworkingprofile?
+  base_salary                                   String?                       @default("0") @db.VarChar(500)
+  payroll                                       payroll[]
 
+  employeekpi                  employeekpi[]
+  kpireview_kpireview_reviewer kpireview[]   @relation("kpireview_reviewer")
+  asset                        asset[]
+  assethistory                 assethistory[]
+  assetrequest_requested_by    assetrequest[] @relation("assetrequest_requested_by")
+  assetrequest_manager_id      assetrequest[] @relation("assetrequest_manager_id")
   @@index([is_active], map: "idx_employee_active")
   @@index([company_id], map: "idx_employee_company")
   @@index([department_id], map: "idx_employee_department")
@@ -250,7 +390,10 @@ model leaverecord {
   approved_by                                Int?
   request_at                                 DateTime?           @default(now()) @db.DateTime(0)
   updated_at                                 DateTime?           @default(now()) @db.DateTime(0)
-  photo_path                                 String?             @db.VarChar(255)  // ← new column
+  photo_path                                 String?             @db.VarChar(255)
+  telegram_message_id                        Int?
+  telegram_chat_id                           String?             @db.VarChar(255)
+  manager_telegram_username                  String?             @db.VarChar(255)
   employee_leaverecord_employee_idToemployee employee            @relation("leaverecord_employee_idToemployee", fields: [employee_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "leaverecord_ibfk_1")
   leavetype                                  leavetype           @relation(fields: [leave_type_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "leaverecord_ibfk_2")
   employee_leaverecord_approved_byToemployee employee?           @relation("leaverecord_approved_byToemployee", fields: [approved_by], references: [id], onUpdate: NoAction, map: "leaverecord_ibfk_3")
@@ -300,6 +443,7 @@ model notification {
   body         String    @db.Text
   to_user_id   Int?
   reference_id Int?
+  is_read      Boolean   @default(false)
   created_at   DateTime? @default(now()) @db.DateTime(0)
   updated_at   DateTime? @default(now()) @db.DateTime(0)
   company      company   @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "notification_ibfk_1")
@@ -317,6 +461,8 @@ model overtime {
   reason                                  String?          @db.Text
   status                                  overtime_status? @default(pending)
   approved_by                             Int?
+  telegram_message_id                     Int?
+  telegram_chat_id                        Int?
   created_at                              DateTime?        @default(now()) @db.DateTime(0)
   updated_at                              DateTime?        @default(now()) @db.DateTime(0)
   employee_overtime_employee_idToemployee employee         @relation("overtime_employee_idToemployee", fields: [employee_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "overtime_ibfk_1")
@@ -382,16 +528,18 @@ model timemode {
 }
 
 model user {
-  id            Int            @id @default(autoincrement())
-  employee_id   Int?
-  username      String         @unique(map: "username") @db.VarChar(255)
-  password      String         @db.VarChar(255)
-  token_version Int            @default(0)
-  created_at    DateTime?      @default(now()) @db.DateTime(0)
-  updated_at    DateTime?      @default(now()) @db.DateTime(0)
-  auditlog      auditlog[]
-  notification  notification[]
-  employee      employee?      @relation(fields: [employee_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "user_ibfk_1")
+  id                 Int            @id @default(autoincrement())
+  employee_id        Int?
+  username           String         @unique(map: "username") @db.VarChar(255)
+  password           String         @db.VarChar(255)
+  is_default_password Boolean       @default(true)
+  token_version      Int            @default(0)
+  created_at         DateTime?      @default(now()) @db.DateTime(0)
+  updated_at         DateTime?      @default(now()) @db.DateTime(0)
+  auditlog           auditlog[]
+  notification       notification[]
+  payrolladjustment  payrolladjustment[]
+  employee           employee?      @relation(fields: [employee_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "user_ibfk_1")
 
   @@index([employee_id], map: "idx_user_employee")
   @@index([username], map: "idx_user_username")
@@ -402,6 +550,105 @@ enum attendancerecord_status {
   absent
   late
   half_day
+}
+
+model payrollperiod {
+  id         Int                   @id @default(autoincrement())
+  company_id Int
+  name       String                @db.VarChar(255)
+  start_date DateTime              @db.DateTime(0)
+  end_date   DateTime              @db.DateTime(0)
+  pay_date   DateTime              @db.DateTime(0)
+  status     payroll_period_status @default(draft)
+  created_at DateTime?             @default(now()) @db.DateTime(0)
+  updated_at DateTime?             @default(now()) @db.DateTime(0)
+  company    company               @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "payrollperiod_ibfk_1")
+  payroll    payroll[]
+
+  @@index([company_id], map: "idx_payrollperiod_company")
+  @@index([pay_date], map: "idx_payrollperiod_pay_date")
+  @@index([status], map: "idx_payrollperiod_status")
+}
+
+model payroll {
+  id                Int             @id @default(autoincrement())
+  company_id        Int
+  payroll_period_id Int
+  employee_id       Int
+  base_salary       Decimal         @default(0) @db.Decimal(12, 2)
+  allowance         Decimal         @default(0) @db.Decimal(12, 2)
+  overtime          Decimal         @default(0) @db.Decimal(12, 2)
+  bonus             Decimal         @default(0) @db.Decimal(12, 2)
+  deduction         Decimal         @default(0) @db.Decimal(12, 2)
+  tax               Decimal         @default(0) @db.Decimal(12, 2)
+  gross_salary      Decimal         @default(0) @db.Decimal(12, 2)
+  net_salary        Decimal         @default(0) @db.Decimal(12, 2)
+  status            payroll_status  @default(draft)
+  payslip_path      String?         @db.VarChar(500)
+  created_at        DateTime?       @default(now()) @db.DateTime(0)
+  updated_at        DateTime?       @default(now()) @db.DateTime(0)
+  company           company         @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "payroll_ibfk_1")
+  payrollperiod     payrollperiod   @relation(fields: [payroll_period_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "payroll_ibfk_2")
+  employee          employee        @relation(fields: [employee_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "payroll_ibfk_3")
+  payrollitem       payrollitem[]
+  payrolladjustment payrolladjustment[]
+
+  @@unique([payroll_period_id, employee_id], map: "unique_payroll_period_employee")
+  @@index([company_id, payroll_period_id], map: "idx_payroll_company_period")
+  @@index([employee_id], map: "idx_payroll_employee")
+  @@index([status], map: "idx_payroll_status")
+}
+
+model payrollitem {
+  id         Int               @id @default(autoincrement())
+  payroll_id Int
+  type       payroll_item_type
+  label      String            @db.VarChar(255)
+  amount     Decimal           @db.Decimal(12, 2)
+  created_at DateTime?         @default(now()) @db.DateTime(0)
+  payroll    payroll           @relation(fields: [payroll_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "payrollitem_ibfk_1")
+
+  @@index([payroll_id], map: "idx_payrollitem_payroll")
+  @@index([type], map: "idx_payrollitem_type")
+}
+
+model payrolladjustment {
+  id          Int       @id @default(autoincrement())
+  payroll_id  Int
+  field       String    @db.VarChar(100)
+  old_value   Decimal?  @db.Decimal(12, 2)
+  new_value   Decimal?  @db.Decimal(12, 2)
+  reason      String?   @db.Text
+  adjusted_by Int?
+  created_at  DateTime? @default(now()) @db.DateTime(0)
+  payroll     payroll   @relation(fields: [payroll_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "payrolladjustment_ibfk_1")
+  user        user?     @relation(fields: [adjusted_by], references: [id], onUpdate: NoAction, map: "payrolladjustment_ibfk_2")
+
+  @@index([payroll_id], map: "idx_payrolladjustment_payroll")
+  @@index([adjusted_by], map: "idx_payrolladjustment_user")
+}
+
+enum payroll_period_status {
+  draft
+  generated
+  approved
+  paid
+}
+
+enum payroll_status {
+  draft
+  generated
+  approved
+  paid
+}
+
+enum payroll_item_type {
+  base_salary
+  allowance
+  overtime
+  bonus
+  deduction
+  tax
 }
 
 enum employee_gender {
@@ -443,4 +690,226 @@ enum employee_father_life_status {
 enum employee_mother_life_status {
   alive
   deceased
+}
+
+model kpicycle {
+  id          Int           @id @default(autoincrement())
+  company_id  Int
+  name        String        @db.VarChar(255)
+  start_date  DateTime      @db.DateTime(0)
+  end_date    DateTime      @db.DateTime(0)
+  status      String        @default("draft") @db.VarChar(20) // draft, active, closed
+  created_at  DateTime?     @default(now()) @db.DateTime(0)
+  updated_at  DateTime?     @default(now()) @db.DateTime(0)
+  company     company       @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  employeekpi employeekpi[]
+  
+  @@index([company_id], map: "idx_kpicycle_company")
+}
+
+model kpitemplate {
+  id              Int               @id @default(autoincrement())
+  company_id      Int
+  name            String            @db.VarChar(255)
+  description     String?           @db.Text
+  created_at      DateTime?         @default(now()) @db.DateTime(0)
+  updated_at      DateTime?         @default(now()) @db.DateTime(0)
+  company         company           @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  kpitemplategoal kpitemplategoal[]
+  
+  @@index([company_id], map: "idx_kpitemplate_company")
+}
+
+model kpitemplategoal {
+  id           Int         @id @default(autoincrement())
+  template_id  Int
+  category     String      @db.VarChar(50)
+  title        String      @db.VarChar(255)
+  target_value Float
+  target_unit  String      @db.VarChar(20)
+  weight       Float
+  created_at   DateTime?   @default(now()) @db.DateTime(0)
+  updated_at   DateTime?   @default(now()) @db.DateTime(0)
+  kpitemplate  kpitemplate @relation(fields: [template_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  
+  @@index([template_id], map: "idx_kpitemplategoal_template")
+}
+
+model employeekpi {
+  id                Int         @id @default(autoincrement())
+  employee_id       Int
+  cycle_id          Int
+  total_score       Float?
+  rating            String?     @db.VarChar(50)
+  status            String      @default("active") @db.VarChar(20) // active, finalized
+  evaluation_status String      @default("pending_manager") @db.VarChar(50) // pending_manager, pending_hr, completed
+  created_at        DateTime?   @default(now()) @db.DateTime(0)
+  updated_at        DateTime?   @default(now()) @db.DateTime(0)
+  employee          employee    @relation(fields: [employee_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  kpicycle          kpicycle    @relation(fields: [cycle_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  kpigoal           kpigoal[]
+  kpireview         kpireview[]
+  
+  @@unique([employee_id, cycle_id], map: "unique_employee_cycle")
+  @@index([employee_id], map: "idx_employeekpi_employee")
+  @@index([cycle_id], map: "idx_employeekpi_cycle")
+}
+
+model kpigoal {
+  id               Int               @id @default(autoincrement())
+  employee_kpi_id  Int
+  category         String            @db.VarChar(50)
+  title            String            @db.VarChar(255)
+  target_value     Float
+  target_unit      String            @db.VarChar(20)
+  weight           Float
+  current_progress Float             @default(0)
+  manager_score    Float             @default(0)
+  hr_score         Float             @default(0)
+  created_at       DateTime?         @default(now()) @db.DateTime(0)
+  updated_at       DateTime?         @default(now()) @db.DateTime(0)
+  employeekpi      employeekpi       @relation(fields: [employee_kpi_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  kpigoalprogress  kpigoalprogress[]
+  
+  @@index([employee_kpi_id], map: "idx_kpigoal_employeekpi")
+}
+
+model kpireview {
+  id                       Int               @id @default(autoincrement())
+  employee_kpi_id          Int
+  reviewer_id              Int
+  quarter                  String            @db.VarChar(10) // Q1, Q2, Q3, Q4
+  overall_manager_comment  String?           @db.Text
+  overall_employee_comment String?           @db.Text
+  status                   String            @default("pending") @db.VarChar(20) // pending, completed
+  review_date              DateTime?         @db.DateTime(0)
+  created_at               DateTime?         @default(now()) @db.DateTime(0)
+  updated_at               DateTime?         @default(now()) @db.DateTime(0)
+  employeekpi              employeekpi       @relation(fields: [employee_kpi_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  reviewer                 employee          @relation("kpireview_reviewer", fields: [reviewer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  kpigoalprogress          kpigoalprogress[]
+  
+  @@unique([employee_kpi_id, quarter], map: "unique_employee_kpi_quarter")
+  @@index([employee_kpi_id], map: "idx_kpireview_employeekpi")
+  @@index([reviewer_id], map: "idx_kpireview_reviewer")
+}
+
+model kpigoalprogress {
+  id                  Int       @id @default(autoincrement())
+  review_id           Int
+  kpi_goal_id         Int
+  progress_percentage Float
+  manager_comment     String?   @db.Text
+  employee_comment    String?   @db.Text
+  created_at          DateTime? @default(now()) @db.DateTime(0)
+  updated_at          DateTime? @default(now()) @db.DateTime(0)
+  kpireview           kpireview @relation(fields: [review_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  kpigoal             kpigoal   @relation(fields: [kpi_goal_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  
+  @@unique([review_id, kpi_goal_id], map: "unique_review_goal")
+  @@index([review_id], map: "idx_kpigoalprogress_review")
+  @@index([kpi_goal_id], map: "idx_kpigoalprogress_goal")
+}
+
+enum asset_status {
+  available
+  pending_manager
+  pending_hr
+  assigned
+  under_repair
+  retired
+}
+
+enum asset_condition {
+  good
+  fair
+  damaged
+}
+
+model assetcategory {
+  id          Int       @id @default(autoincrement())
+  company_id  Int
+  name        String    @db.VarChar(255)
+  description String?   @db.Text
+  created_at  DateTime? @default(now()) @db.DateTime(0)
+  updated_at  DateTime? @default(now()) @db.DateTime(0)
+  company     company   @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  asset       asset[]
+  assetrequest assetrequest[]
+
+  @@index([company_id], map: "idx_assetcategory_company")
+}
+
+model asset {
+  id              Int               @id @default(autoincrement())
+  company_id      Int
+  category_id     Int
+  name            String            @db.VarChar(255)
+  serial_number   String?           @db.VarChar(100)
+  condition       asset_condition   @default(good)
+  status          asset_status      @default(available)
+  assigned_to     Int?              // employee_id
+  assigned_date   DateTime?         @db.DateTime(0)
+  created_at      DateTime?         @default(now()) @db.DateTime(0)
+  updated_at      DateTime?         @default(now()) @db.DateTime(0)
+  
+  company         company           @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  category        assetcategory     @relation(fields: [category_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  employee        employee?         @relation(fields: [assigned_to], references: [id], onUpdate: NoAction)
+  
+  assethistory    assethistory[]
+  assetrequest    assetrequest[]
+
+  @@index([company_id], map: "idx_asset_company")
+  @@index([category_id], map: "idx_asset_category")
+  @@index([assigned_to], map: "idx_asset_employee")
+}
+
+model assethistory {
+  id                   Int              @id @default(autoincrement())
+  asset_id             Int
+  company_id           Int
+  previous_assignee_id Int              // employee_id
+  condition_out        asset_condition
+  condition_in         asset_condition?
+  assigned_date        DateTime         @db.DateTime(0)
+  returned_date        DateTime?        @db.DateTime(0)
+  created_at           DateTime?        @default(now()) @db.DateTime(0)
+
+  company              company          @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  asset                asset            @relation(fields: [asset_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  employee             employee         @relation(fields: [previous_assignee_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([asset_id], map: "idx_assethistory_asset")
+  @@index([previous_assignee_id], map: "idx_assethistory_employee")
+}
+
+enum request_type {
+  assignment
+  return
+}
+
+model assetrequest {
+  id              Int               @id @default(autoincrement())
+  company_id      Int
+  requested_by    Int               // employee_id
+  category_id     Int?              // Optional if requesting a specific asset type
+  asset_id        Int?              // Filled if HR assigns a specific asset, or if returning
+  type            request_type      @default(assignment)
+  reason          String?           @db.Text
+  status          asset_status      @default(pending_manager)
+  manager_id      Int?              // employee_id of the approving manager
+  manager_comment String?           @db.Text
+  hr_comment      String?           @db.Text
+  created_at      DateTime?         @default(now()) @db.DateTime(0)
+  updated_at      DateTime?         @default(now()) @db.DateTime(0)
+
+  company         company           @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  employee        employee          @relation("assetrequest_requested_by", fields: [requested_by], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  manager         employee?         @relation("assetrequest_manager_id", fields: [manager_id], references: [id], onUpdate: NoAction)
+  category        assetcategory?    @relation(fields: [category_id], references: [id], onUpdate: NoAction)
+  asset           asset?            @relation(fields: [asset_id], references: [id], onUpdate: NoAction)
+
+  @@index([company_id], map: "idx_assetrequest_company")
+  @@index([requested_by], map: "idx_assetrequest_employee")
 }

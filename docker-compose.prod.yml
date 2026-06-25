@@ -1,0 +1,81 @@
+version: "3.8"
+
+services:
+  # ── MySQL Database ───────────────────────────────────────────────────────────
+  db:
+    image: mysql:8.0
+    container_name: hrms_db_prod
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME:-hrms}
+    # In production, we do not expose 3306 to the public internet for security.
+    # It is only accessible internally within the docker network.
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./Backend/prisma/seed.sql:/docker-entrypoint-initdb.d/seed.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ── Backend (Express + Prisma) ───────────────────────────────────────────────
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    container_name: hrms_backend_prod
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: mysql://${DB_USER:-root}:${DB_PASSWORD}@db:3306/${DB_NAME:-hrms}
+      JWT_SECRET: ${JWT_SECRET}
+      EXPIRED_AT: ${EXPIRED_AT:-24h}
+      SERVER_BASE_URL: https://api.bayonhr.shop
+    # Internal only, reverse proxied via Caddy
+    volumes:
+      - uploads_data:/app/public/uploads
+
+  # ── Frontend (Next.js Standalone) ─────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: https://api.bayonhr.shop
+        BACKEND_INTERNAL_URL: http://backend:8080
+    container_name: hrms_frontend_prod
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      NEXT_PUBLIC_API_URL: https://api.bayonhr.shop
+      HOSTNAME: "0.0.0.0"
+      BACKEND_INTERNAL_URL: http://backend:8080
+    # Internal only, reverse proxied via Caddy
+
+  # ── Caddy Reverse Proxy (HTTPS / SSL) ─────────────────────────────────────────
+  caddy:
+    image: caddy:2-alpine
+    container_name: hrms_caddy_prod
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
+      - backend
+
+volumes:
+  mysql_data:
+  uploads_data:
+  caddy_data:
+  caddy_config:
