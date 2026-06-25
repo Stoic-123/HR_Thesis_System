@@ -50,7 +50,7 @@ services:
   # ── Frontend (Next.js) ───────────────────────────────────────────────────────
   frontend:
     build:
-      context: ./frontend
+      context: ./Frontend
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: ""
