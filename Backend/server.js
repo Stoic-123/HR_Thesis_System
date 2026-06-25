@@ -62,7 +62,8 @@ app.use(
         origin.startsWith("http://192.168") ||
         origin.startsWith("http://172.20") ||
         origin.startsWith("exp://") ||
-        origin.startsWith("https://bayon-market-thesis.proxy.mekongtunnel.dev")
+        origin.startsWith("https://bayon-market-thesis.proxy.mekongtunnel.dev") ||
+        origin.startsWith("https://bayonhr.shop") 
       ) {
         callback(null, true);
       } else {
