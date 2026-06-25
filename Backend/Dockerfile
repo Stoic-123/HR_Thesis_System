@@ -1,5 +1,5 @@
 # Use Debian slim — required for glibc-linked binaries (onnxruntime-node, canvas)
-FROM oven/bun:1-slim
+FROM node:20-slim
 
 # Install system deps for canvas + other native modules
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -17,14 +17,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Copy lockfile and manifest first for better layer caching
-COPY package.json bun.lock ./
+# Copy package.json first for layer caching
+COPY package.json ./
 
-RUN bun install
+# Install dependencies using standard npm
+RUN npm install
 
 # Copy prisma schema and generate client
 COPY prisma ./prisma/
-RUN bunx prisma generate
+RUN npx prisma generate
 
 # Copy the rest of the source
 COPY . .
@@ -37,4 +38,4 @@ RUN mkdir -p public/uploads/documents \
 
 EXPOSE 8080
 
-CMD ["sh", "-c", "bunx prisma db push --accept-data-loss && bun server.js"]
+CMD ["sh", "-c", "npx prisma db push --accept-data-loss && node server.js"]
