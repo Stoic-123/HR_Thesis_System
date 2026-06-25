@@ -36,6 +36,9 @@ services:
       EXPIRED_AT: ${EXPIRED_AT:-24h}
       SERVER_BASE_URL: https://api.bayonhr.shop
       COOKIE_DOMAIN: ${COOKIE_DOMAIN:-bayonhr.shop}
+      OLLAMA_HOST: ${OLLAMA_HOST:-http://host.docker.internal:11434}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     # Internal only, reverse proxied via Caddy
     volumes:
       - uploads_data:/app/public/uploads

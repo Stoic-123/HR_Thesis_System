@@ -1,12 +1,41 @@
 // Backend/lib/scanner/yolo.js
 
-import * as ort from "onnxruntime-node";
+import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { createCanvas } from "canvas";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 let session = null;
+let ort = null;
+let isCpuCompatible = null;
+
+function checkCpuCompatibility() {
+  if (isCpuCompatible !== null) return isCpuCompatible;
+
+  if (process.platform === "linux") {
+    try {
+      const cpuinfo = fs.readFileSync("/proc/cpuinfo", "utf8");
+      const flagsLine = cpuinfo.split("\n").find(line => line.startsWith("flags"));
+      if (flagsLine) {
+        const flags = flagsLine.toLowerCase().split(/\s+/);
+        const hasAvx = flags.includes("avx") || flags.includes("avx2");
+        const hasSse4 = flags.includes("sse4_1") || flags.includes("sse4_2") || flags.includes("sse4a") || flags.includes("sse4");
+        
+        if (!hasAvx && !hasSse4) {
+          console.warn("[YOLO] CPU lacks AVX/SSE4 support. Skipping onnxruntime-node to prevent SIGILL crash. CPU Flags:", flagsLine);
+          isCpuCompatible = false;
+          return false;
+        }
+      }
+    } catch (e) {
+      console.warn("[YOLO] Failed to read /proc/cpuinfo:", e.message);
+    }
+  }
+
+  isCpuCompatible = true;
+  return true;
+}
 
 const MODEL_PATH = path.join(__dirname, "../../public/models/scanner/document-scanner.onnx");
 const INPUT_SIZE = 640;
@@ -23,7 +52,17 @@ const COCO_MAP = {
 export async function initYolo() {
   if (session) return session;
 
+  if (!checkCpuCompatibility()) {
+    console.warn("[YOLO] ONNX Runtime is disabled due to CPU incompatibility.");
+    return null;
+  }
+
   try {
+    if (!ort) {
+      console.log("[YOLO] Dynamically importing onnxruntime-node...");
+      ort = await import("onnxruntime-node");
+      console.log("[YOLO] onnxruntime-node imported successfully.");
+    }
     session = await ort.InferenceSession.create(MODEL_PATH, {
       executionProviders: ["cpu"], // Node.js usually uses CPU unless GPU is configured
       graphOptimizationLevel: "all",
