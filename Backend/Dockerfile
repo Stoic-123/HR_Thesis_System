@@ -22,7 +22,7 @@ COPY package.json ./
 
 # Install dependencies using standard npm and clean cache to save space
 # Skip downloading the massive CUDA GPU binaries since the VPS is CPU-only
-RUN onnxruntime_node_install_cuda=skip npm install && npm cache clean --force
+RUN npm install --onnxruntime-node-install=skip && npm cache clean --force
 
 # Copy prisma schema and generate client
 COPY prisma ./prisma/
