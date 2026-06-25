@@ -1,21 +1,21 @@
 version: "3.8"
 
 services:
-  # ── MySQL Database ───────────────────────────────────────────────────────────
+  # ── MariaDB Database (MySQL Drop-in replacement) ──────────────────────────────
   db:
-    image: mysql:8.0
+    image: mariadb:10.11
     container_name: hrms_db_prod
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
-      MYSQL_DATABASE: ${DB_NAME:-hrms}
+      MARIADB_ROOT_PASSWORD: ${DB_PASSWORD}
+      MARIADB_DATABASE: ${DB_NAME:-hrms}
     # In production, we do not expose 3306 to the public internet for security.
     # It is only accessible internally within the docker network.
     volumes:
       - mysql_data:/var/lib/mysql
       - ./Backend/prisma/seed.sql:/docker-entrypoint-initdb.d/seed.sql:ro
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s
       timeout: 5s
       retries: 10
