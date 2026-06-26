@@ -9,10 +9,16 @@
       "supportsTablet": true
     },
     "android": {
-      "backgroundColor": "#1A1A1A"
+      "backgroundColor": "#1A1A1A",
+      "package": "com.muyheang.Votmean"
     },
     "web": {
       "bundler": "metro"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "4c34da1a-997f-4d3d-9d2e-2eb568505c05"
+      }
     }
   }
 }
