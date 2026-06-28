@@ -77,7 +77,7 @@ export const addEmployee = async (
     throw error;
   }
 };
-export const getAllEmployee = async (company_id, page = 1, limit = 10, status = null, department_id = null) => {
+export const getAllEmployee = async (company_id, page = 1, limit = 10, status = null, department_id = null, search = null) => {
   try {
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const take = parseInt(limit);
@@ -88,6 +88,17 @@ export const getAllEmployee = async (company_id, page = 1, limit = 10, status = 
     }
     if (department_id) {
       where.department_id = parseInt(department_id);
+    }
+    if (search && search.trim()) {
+      const cleanSearch = search.trim();
+      where.OR = [
+        { first_name: { contains: cleanSearch } },
+        { last_name: { contains: cleanSearch } },
+        { email: { contains: cleanSearch } },
+        { address: { contains: cleanSearch } },
+        { positions: { name: { contains: cleanSearch } } },
+        { department_employee_department_idTodepartment: { name: { contains: cleanSearch } } },
+      ];
     }
 
     const [employees, total, total_active] = await Promise.all([

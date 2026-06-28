@@ -12,10 +12,11 @@ export interface Employee {
   base_salary?: number;
 }
 
-export const getAllEmployee = async (page = 1, limit = 10, status?: string | null, departmentId?: string | null) => {
+export const getAllEmployee = async (page = 1, limit = 10, status?: string | null, departmentId?: string | null, search?: string | null) => {
   let url = `/api/employee/get-all-employee?page=${page}&limit=${limit}`;
   if (status) url += `&status=${status}`;
   if (departmentId) url += `&department_id=${departmentId}`;
+  if (search) url += `&search=${encodeURIComponent(search)}`;
   const res = await api.get(url);
   return res.data;
 };

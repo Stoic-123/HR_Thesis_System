@@ -271,13 +271,13 @@ export const deleteEmployeeController = async (req, res) => {
 export const getAllEmployeeController = async (req, res) => {
   try {
     const company_id = req.user.company_id;
-    const { page, limit, status, department_id } = req.query;
+    const { page, limit, status, department_id, search } = req.query;
     if (!company_id) {
       return res
         .status(400)
         .json({ result: false, message: "Company context is required..!" });
     }
-    const employeeGetData = await getAllEmployee(company_id, page, limit, status, department_id);
+    const employeeGetData = await getAllEmployee(company_id, page, limit, status, department_id, search);
     res.status(200).json(employeeGetData);
   } catch (error) {
     console.log(error.message);

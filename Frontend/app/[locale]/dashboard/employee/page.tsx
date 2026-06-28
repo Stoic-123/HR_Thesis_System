@@ -65,69 +65,41 @@ export default function EmployeePage() {
   const [filterStatus, setFilterStatus] = React.useState<string>("all");
   const [filterDept, setFilterDept] = React.useState<string>("all");
   const limit = 8;
+
+  // Search State
+  const [localSearch, setLocalSearch] = React.useState("");
+  const [searchQuery, setSearchQuery] = React.useState("");
+
   const { data: employee, isLoading, isError } = useAllEmployee(
     page, 
     limit, 
     filterStatus === "all" ? null : filterStatus, 
-    filterDept === "all" ? null : filterDept
+    filterDept === "all" ? null : filterDept,
+    searchQuery.trim() || null
   );
   const [preview, setPreview] = React.useState("");
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
 
-  // AI Smart Search State
-  const [searchQuery, setSearchQuery] = React.useState("");
-  const [isSmartSearch, setIsSmartSearch] = React.useState(false);
-  const [smartResults, setSmartResults] = React.useState<any[] | null>(null);
-  const [isSearching, setIsSearching] = React.useState(false);
-
-  // Handle URL parameters for AI Search
-  React.useEffect(() => {
-    const aiSearch = searchParams.get("aiSearch");
-    if (aiSearch) {
-      setIsSmartSearch(true);
-      setSearchQuery(aiSearch);
-      
-      // Auto-trigger search
-      const triggerSearch = async () => {
-        setIsSearching(true);
-        try {
-          const response = await smartSearchEmployees(aiSearch);
-          setSmartResults(response.data);
-        } catch (error: any) {
-          console.error("[Smart Search] Error:", error);
-          toast.error(t("smartSearchUnavailable"));
-        } finally {
-          setIsSearching(false);
-        }
-      };
-      triggerSearch();
-    }
-  }, [searchParams]);
-
-  const handleSmartSearch = async () => {
-    if (!searchQuery.trim()) {
-      setSmartResults(null);
-      return;
-    }
-
-    setIsSearching(true);
-    try {
-      const response = await smartSearchEmployees(searchQuery);
-      setSmartResults(response.data);
-    } catch (error: any) {
-      console.error("[Smart Search] Error:", error);
-      const message = error?.response?.data?.message || t("smartSearchUnavailable");
-      toast.error(message);
-    } finally {
-      setIsSearching(false);
-    }
+  const handleSearchTrigger = () => {
+    setSearchQuery(localSearch.trim());
+    setPage(1);
   };
 
+  const handleClearSearch = () => {
+    setLocalSearch("");
+    setSearchQuery("");
+    setPage(1);
+  };
+
+  // Handle URL parameters for search
   React.useEffect(() => {
-    if (!isSmartSearch) {
-      setSmartResults(null);
+    const querySearch = searchParams.get("search") || searchParams.get("aiSearch");
+    if (querySearch) {
+      setLocalSearch(querySearch);
+      setSearchQuery(querySearch);
+      setPage(1);
     }
-  }, [isSmartSearch]);
+  }, [searchParams]);
 
   // Form State
   const [formData, setFormData] = React.useState({
@@ -496,36 +468,33 @@ export default function EmployeePage() {
           <div className="relative flex-1">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <Input
-              placeholder={isSmartSearch ? t("searchAIDesc") : t("searchByName")}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && isSmartSearch && handleSmartSearch()}
-              className={cn(
-                "h-12 pl-11 pr-12 rounded-2xl border-white/40 bg-white/50 backdrop-blur-xl focus:bg-white/80 transition-all shadow-sm w-full",
-                isSmartSearch && "border-primary/40 ring-2 ring-primary/5"
-              )}
+              placeholder={t("searchByName")}
+              value={localSearch}
+              onChange={(e) => {
+                setLocalSearch(e.target.value);
+                if (e.target.value === "") {
+                  setSearchQuery("");
+                }
+              }}
+              onKeyDown={(e) => e.key === "Enter" && handleSearchTrigger()}
+              className="h-12 pl-11 pr-24 rounded-2xl border-white/40 bg-white/50 backdrop-blur-xl focus:bg-white/80 transition-all shadow-sm w-full"
             />
-            {isSmartSearch && (
+            {localSearch && (
               <Button 
-                onClick={handleSmartSearch}
-                disabled={isSearching || !searchQuery.trim()}
-                className="absolute right-1 top-1 h-10 w-10 rounded-xl p-0"
+                variant="ghost"
+                onClick={handleClearSearch}
+                className="absolute right-12 top-1 h-10 w-10 rounded-xl p-0 text-muted-foreground hover:text-foreground"
               >
-                {isSearching ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+                <X className="size-4" />
               </Button>
             )}
+            <Button 
+              onClick={handleSearchTrigger}
+              className="absolute right-1 top-1 h-10 w-10 rounded-xl p-0 bg-primary hover:bg-primary/90 text-white"
+            >
+              <Search className="size-4" />
+            </Button>
           </div>
-          <Button
-            variant="ghost"
-            onClick={() => setIsSmartSearch(!isSmartSearch)}
-            className={cn(
-              "rounded-2xl gap-2 h-12 px-4 transition-all",
-              isSmartSearch ? "bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/20" : "bg-white/40 border border-white/40 hover:bg-white/60"
-            )}
-          >
-            <Sparkles className={cn("size-4", isSmartSearch ? "animate-pulse" : "text-primary")} />
-            <span className="hidden sm:inline">{t("smartSearch")}</span>
-          </Button>
         </div>
         <div className="flex items-center gap-6 ml-auto overflow-x-auto pb-2 lg:pb-0 w-full lg:w-auto">
           <StatBadge label={tc("total")} count={employee?.pagination?.total ?? 0} />
@@ -540,22 +509,13 @@ export default function EmployeePage() {
       </div>
 
       {/* Employee Grid */}
-      {isLoading || isSearching ? (
+      {isLoading ? (
         <LoadingState variant="card" count={limit} />
       ) : isError ? (
         <div className="flex flex-col items-center justify-center h-64 text-red-500">
           <p>{t("errorLoadingList")}</p>
         </div>
-      ) : isSmartSearch && smartResults === null ? (
-        <div className="flex flex-col items-center justify-center h-64 bg-primary/5 backdrop-blur-md rounded-[2.5rem] border border-primary/20 shadow-xl border-dashed">
-          <div className="relative mb-4">
-            <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full animate-pulse" />
-            <Sparkles className="size-12 text-primary relative" />
-          </div>
-          <p className="text-xl font-bold text-primary/80 uppercase tracking-tight">{t("aiReady")}</p>
-          <p className="text-sm text-muted-foreground mt-1">{t("aiReadyDesc")}</p>
-        </div>
-      ) : (isSmartSearch && smartResults?.length === 0) || (!isSmartSearch && (!employee?.data || employee.data.length === 0)) ? (
+      ) : !employee?.data || employee.data.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-64 bg-white/40 backdrop-blur-md rounded-[2.5rem] border border-white/60 shadow-xl">
           <UsersRound className="size-12 text-muted-foreground/40 mb-4" />
           <p className="text-xl font-bold text-muted-foreground/80">{t("noEmployeesFound")}</p>
@@ -563,23 +523,14 @@ export default function EmployeePage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {(smartResults || employee?.data)?.map((e: any) => (
+          {employee.data.map((e: any) => (
             <Link
               key={e.id}
               href={`/dashboard/employee/${e.id}`}
               className="group"
             >
               <Card className="apple-surface overflow-hidden hover:shadow-2xl hover:-translate-y-1 transition-all duration-500 border-white/40 h-full flex flex-col relative">
-                {isSmartSearch && e.relevanceScore && (
-                  <div className="absolute top-3 right-3 z-10">
-                    <div className="bg-primary/10 backdrop-blur-md border border-primary/20 rounded-full px-2 py-1 flex items-center gap-1">
-                      <Sparkles className="size-3 text-primary" />
-                      <span className="text-[10px] font-bold text-primary">
-                        {t("matchPercent", { score: Math.round(e.relevanceScore * 100) })}
-                      </span>
-                    </div>
-                  </div>
-                )}
+
                 {e.status !== "active" && (
                   <div className="absolute top-3 left-3 z-10">
                     <Badge variant="destructive" className="bg-rose-500 text-white hover:bg-rose-600 shadow-sm">
@@ -661,7 +612,7 @@ export default function EmployeePage() {
       )}
 
       {/* Pagination Controls */}
-      {!isSmartSearch && employee?.pagination && employee.pagination.totalPages > 1 && (
+      {employee?.pagination && employee.pagination.totalPages > 1 && (
         <div className="flex items-center justify-center gap-4 mt-8 pb-10">
           <Button
             variant="outline"

@@ -98,13 +98,13 @@ export default function DashboardLayout({
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
-  const [globalSearchQuery, setGlobalSearchQuery] = useState("");
-  const [isClassifying, setIsSearching] = useState(false);
+
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const t = useTranslations("layout");
   const tc = useTranslations("common");
+  const apiBaseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
   const changePasswordMutation = useMutation({
     mutationFn: changePasswordApi,
@@ -119,31 +119,6 @@ export default function DashboardLayout({
     },
   });
 
-  const handleGlobalSearch = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (!globalSearchQuery.trim() || isClassifying) return;
-    
-    setIsSearching(true);
-    try {
-      const response = await classifyIntent(globalSearchQuery.trim());
-      const { route, category } = response;
-      
-      if (category === "EMPLOYEE" || !route) {
-        router.push(`/dashboard/employee?aiSearch=${encodeURIComponent(globalSearchQuery.trim())}`);
-      } else {
-        // Use next-intl router to push the route with current locale
-        router.push(route);
-        toast.info(t("navigating"));
-      }
-      setGlobalSearchQuery("");
-    } catch (error) {
-      console.error("[Global Search] Classification failed:", error);
-      // Fallback to employee page
-      router.push(`/dashboard/employee?aiSearch=${encodeURIComponent(globalSearchQuery.trim())}`);
-    } finally {
-      setIsSearching(false);
-    }
-  };
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
@@ -243,6 +218,13 @@ export default function DashboardLayout({
         }),
       } as React.CSSProperties}
     >
+      {user?.employee?.company?.logo_path && (
+        <link 
+          rel="icon" 
+          href={`${apiBaseURL}${user.employee.company.logo_path}`} 
+          sizes="any" 
+        />
+      )}
       {/* Decorative glass background elements */}
       <div className="pointer-events-none absolute -top-[10%] -left-[10%] z-0 h-[40%] w-[40%] rounded-full bg-primary/5 blur-[120px]" />
       <div className="pointer-events-none absolute top-[40%] -right-[10%] z-0 h-[40%] w-[40%] rounded-full bg-indigo-500/5 blur-[120px]" />
@@ -261,22 +243,7 @@ export default function DashboardLayout({
               >
                 <PanelLeft className="size-4.5" />
               </Button>
-              <form onSubmit={handleGlobalSearch} className="min-w-0 flex-1">
-                <Field orientation="horizontal" className="gap-2">
-                  <Input
-                    className="h-11 rounded-2xl border-white/60 bg-white/70"
-                    type="search"
-                    placeholder={t("searchPlaceholder")}
-                    value={globalSearchQuery}
-                    onChange={(e) => setGlobalSearchQuery(e.target.value)}
-                    disabled={isClassifying}
-                  />
-                  <Button type="submit" disabled={isClassifying || !globalSearchQuery.trim()} className="h-11 rounded-2xl bg-primary px-5 text-primary-foreground hover:bg-primary/90">
-                    {isClassifying ? <Loader2 className="size-4 animate-spin" /> : <Search className="size-4" />}
-                    {t("searchBtn")}
-                  </Button>
-                </Field>
-              </form>
+
             </div>
             <div className="flex items-center gap-3">
               <LanguageSwitcher />
