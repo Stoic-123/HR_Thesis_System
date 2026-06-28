@@ -10,6 +10,7 @@ async function main() {
       name: 'Your Company',
       email: 'company@example.com',
       phone: '1234567890',
+      default_password: 'Hr12345',
     },
   });
   console.log('Created company:', company.name);

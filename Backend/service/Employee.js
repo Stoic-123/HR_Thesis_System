@@ -48,7 +48,14 @@ export const addEmployee = async (
 
     const employeeId = employee.id;
     const username = `${first_name} ${last_name}`;
-    const defaultPassword = "Hr12345";
+
+    // Get company's default password setting, fallback to "Hr12345"
+    const companyInfo = await prisma.company.findUnique({
+      where: { id: parseInt(company_id) },
+      select: { default_password: true },
+    });
+    const defaultPassword = companyInfo?.default_password || "Hr12345";
+
     const salt = await bcrypt.genSalt();
     const hashPassword = await bcrypt.hash(defaultPassword, salt);
 

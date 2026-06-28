@@ -6,7 +6,11 @@
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.muyheang.Votmean",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "backgroundColor": "#1A1A1A",
@@ -16,6 +20,7 @@
       "bundler": "metro"
     },
     "extra": {
+      "apiUrl": "https://api.bayonhr.shop",
       "eas": {
         "projectId": "4c34da1a-997f-4d3d-9d2e-2eb568505c05"
       }

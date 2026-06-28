@@ -88,6 +88,7 @@ export default function CompanyPage() {
     telegram_overtime_group_id: "",
     telegram_announcement_group_id: "",
     telegram_bot_token: "",
+    default_password: "",
   });
 
   const company = companyRes?.data;
@@ -108,6 +109,7 @@ export default function CompanyPage() {
         telegram_overtime_group_id: company.telegram_overtime_group_id || "",
         telegram_announcement_group_id: company.telegram_announcement_group_id || "",
         telegram_bot_token: company.telegram_bot_token || "",
+        default_password: company.default_password || "Hr12345",
       });
       if (company.logo_path) {
         setLogoPreview(`${process.env.NEXT_PUBLIC_API_URL}${company.logo_path}`);
@@ -208,6 +210,7 @@ export default function CompanyPage() {
     data.append("telegram_overtime_group_id", formData.telegram_overtime_group_id);
     data.append("telegram_announcement_group_id", formData.telegram_announcement_group_id);
     data.append("telegram_bot_token", formData.telegram_bot_token);
+    data.append("default_password", formData.default_password);
     data.append("old_logo_path", company?.logo_path || "");
 
     if (selectedFile) {
@@ -433,9 +436,9 @@ export default function CompanyPage() {
                 </Card>
               </div>
 
-              {/* Right Column: Telegram Settings */}
+              {/* Right Column: Telegram Settings & Default Password */}
               <div className="md:col-span-2 space-y-6">
-                <Card className="border border-white/60 bg-white/70 shadow-sm backdrop-blur-xl rounded-3xl h-full flex flex-col">
+                <Card className="border border-white/60 bg-white/70 shadow-sm backdrop-blur-xl rounded-3xl">
                   <CardHeader>
                     <CardTitle className="text-lg font-bold flex items-center gap-2 text-gray-800">
                       <Send className="size-5 text-sky-500" />
@@ -445,7 +448,7 @@ export default function CompanyPage() {
                       {t("telegramDesc")}
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-6 flex-1">
+                  <CardContent className="space-y-6">
                     <div className="space-y-4">
                       <div className="p-5 rounded-2xl bg-sky-50/50 border border-sky-100/50 space-y-4">
                         <h3 className="text-sm font-bold text-sky-900 flex items-center gap-2">
@@ -515,6 +518,32 @@ export default function CompanyPage() {
                           )}
                         </div>
                       </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Default Password Card */}
+                <Card className="border border-white/60 bg-white/70 shadow-sm backdrop-blur-xl rounded-3xl">
+                  <CardHeader>
+                    <CardTitle className="text-lg font-bold flex items-center gap-2 text-gray-800">
+                      <Lock className="size-5 text-indigo-500" />
+                      {t("defaultPasswordTitle")}
+                    </CardTitle>
+                    <CardDescription>
+                      {t("defaultPasswordDesc")}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="p-5 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-between shadow-sm">
+                      <div className="space-y-1">
+                        <span className="text-[11px] font-bold text-gray-400 block uppercase tracking-wider">{t("defaultPasswordLabel")}</span>
+                        <span className="font-mono text-sm font-semibold text-gray-800">
+                          {company.default_password || "Hr12345"}
+                        </span>
+                      </div>
+                      <Badge variant="secondary" className="rounded-full bg-indigo-50 text-indigo-700 hover:bg-indigo-50 text-[10px] font-bold border border-indigo-100 px-3 py-1">
+                        {t("activeSetting")}
+                      </Badge>
                     </div>
                   </CardContent>
                 </Card>
@@ -736,6 +765,27 @@ export default function CompanyPage() {
                             />
                           </div>
                         </div>
+                      </div>
+                    </div>
+
+                    <div className="p-5 rounded-2xl bg-indigo-50/30 border border-indigo-100/50 space-y-4">
+                      <h3 className="text-sm font-bold text-indigo-900 flex items-center gap-2">
+                        <Lock size={16} className="text-indigo-500" />
+                        {t("defaultPasswordTitle")}
+                      </h3>
+                      <div className="space-y-2">
+                        <Label htmlFor="default_password" className="text-xs font-semibold text-indigo-800">{t("defaultPasswordLabel")}</Label>
+                        <Input
+                          id="default_password"
+                          value={formData.default_password}
+                          onChange={(e) => setFormData({ ...formData, default_password: e.target.value })}
+                          placeholder="e.g. Hr12345"
+                          className="h-11 rounded-2xl border-indigo-100/80 bg-white/60 focus:bg-white text-sm"
+                          required
+                        />
+                        <p className="text-[10px] text-indigo-700/70 leading-normal">
+                          {t("defaultPasswordHelp")}
+                        </p>
                       </div>
                     </div>
                   </div>

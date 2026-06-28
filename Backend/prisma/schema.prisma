@@ -185,6 +185,7 @@ model company {
   telegram_overtime_group_id   String?        @db.VarChar(255)
   telegram_announcement_group_id String?      @db.VarChar(255)
   telegram_bot_token String?        @db.VarChar(255)
+  default_password   String?        @db.VarChar(255) @default("Hr12345")
   created_at         DateTime?      @default(now()) @db.DateTime(0)
   updated_at         DateTime?      @default(now()) @db.DateTime(0)
   announcement       announcement[]

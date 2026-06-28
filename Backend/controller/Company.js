@@ -91,6 +91,7 @@ export const updateCompanyController = async (req, res) => {
       telegram_overtime_group_id,
       telegram_announcement_group_id,
       telegram_bot_token,
+      default_password,
       old_logo_path,
     } = req.body;
     const company_id = req.user.company_id;
@@ -137,6 +138,7 @@ export const updateCompanyController = async (req, res) => {
       telegram_overtime_group_id,
       telegram_announcement_group_id,
       telegram_bot_token,
+      default_password,
       company_id
     );
 

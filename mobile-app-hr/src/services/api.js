@@ -3,14 +3,18 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import * as MediaLibrary from "expo-media-library";
+import Constants from "expo-constants";
 
-// Base URL is read from the .env file (EXPO_PUBLIC_API_URL).
-// Copy .env.example → .env and set your machine's local IP before running.
-// For physical device the IP must be your computer's Wi-Fi IP (same network as phone).
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:8080";
+// Base URL: reads from app.json extra.apiUrl first, then env var, then localhost fallback.
+const BASE_URL =
+  Constants.expoConfig?.extra?.apiUrl ||
+  process.env.EXPO_PUBLIC_API_URL ||
+  "http://localhost:8080";
+console.log("[Mobile API] BASE_URL:", BASE_URL);
 // Storage keys
 const AUTH_TOKEN_KEY = "auth_token";
 const USER_DATA_KEY = "user_data";
+
 
 // ---------------------------------------------------------------------------
 // Force-logout bridge

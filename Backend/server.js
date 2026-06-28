@@ -9,6 +9,7 @@ import slowDown from "express-slow-down";
 import { swaggerUi, swaggerSpec } from "./swagger/swagger.js";
 import { requireAuth } from "./middleware/auth.js";
 import { processTelegramCallbacks } from "./service/TelegramApproval.js";
+import { checkAndSendAttendanceReminders } from "./service/Reminder.js";
 
 // Import routes
 import employeeRoutes from "./routes/Employee.js";
@@ -23,7 +24,7 @@ import timemodeRoutes from "./routes/TimeMode.js";
 import holidayRoutes from "./routes/Holiday.js";
 import leaveTypeRoutes from "./routes/LeaveType.js";
 import userRoutes from "./routes/User.js";
-import authRoutes from "./routes/auth.js";
+import authRoutes from "./routes/Auth.js";
 import leaveRoute from "./routes/Leave.js";
 import auditLogRoutes from "./routes/AuditLog.js";
 import scannerRoutes from "./routes/Scanner.js";
@@ -170,4 +171,12 @@ server.listen(8080, "0.0.0.0", () => {
     );
   }, 5000);
   console.log('[Cron] Telegram approval poller started (5s interval)');
+
+  // ── Telegram individual attendance reminders cron — poll every 60 seconds ──
+  setInterval(() => {
+    checkAndSendAttendanceReminders().catch((e) =>
+      console.error('[Cron] Attendance reminder error:', e.message)
+    );
+  }, 60000);
+  console.log('[Cron] Attendance reminder poller started (60s interval)');
 });

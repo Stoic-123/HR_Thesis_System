@@ -457,7 +457,7 @@ export const resetPasswordToDefault = async (userId) => {
       };
     }
 
-    const defaultPassword = "Hr12345";
+    const defaultPassword = user.employee?.company?.default_password || "Hr12345";
     const hashedPassword = await bcrypt.hash(defaultPassword, 10);
 
     await prisma.user.update({

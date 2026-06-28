@@ -12,7 +12,8 @@ export const addCompany = async (
   telegram_leave_group_id,
   telegram_overtime_group_id,
   telegram_announcement_group_id,
-  telegram_bot_token
+  telegram_bot_token,
+  default_password
 ) => {
   try {
     await prisma.company.create({
@@ -29,6 +30,7 @@ export const addCompany = async (
         telegram_overtime_group_id,
         telegram_announcement_group_id,
         telegram_bot_token,
+        default_password,
       },
     });
 
@@ -92,6 +94,7 @@ export const updateCompany = async (
   telegram_overtime_group_id,
   telegram_announcement_group_id,
   telegram_bot_token,
+  default_password,
   company_id
 ) => {
   try {
@@ -110,6 +113,7 @@ export const updateCompany = async (
         telegram_overtime_group_id,
         telegram_announcement_group_id,
         telegram_bot_token,
+        default_password,
       },
     });
 
