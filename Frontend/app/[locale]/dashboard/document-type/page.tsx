@@ -111,7 +111,7 @@ export default function DocumentTypePage() {
     type.name.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
 
-  if (isLoading) return <LoadingState />;
+  if (isLoading) return <LoadingState variant="table" count={5} />;
 
   return (
     <div className="space-y-8 max-w-6xl mx-auto">

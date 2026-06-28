@@ -198,94 +198,114 @@ export const chatController = async (req, res) => {
       { role: "user", content: message }
     ];
 
-    // Get non-streaming response first to check for tool calls
-    const aiResponse = await chatWithAI(messages, "llama3.2");
-    console.log(`[Chatbot] Raw AI Response:`, aiResponse);
-
-    // Check if AI wants to use a tool (more robust extraction)
-    let toolCall = null;
-    try {
-      // Try direct parse first
-      const cleaned = aiResponse.trim().replace(/^```json\n?/, "").replace(/\n?```$/, "");
-      toolCall = JSON.parse(cleaned);
-    } catch (e) {
-      // Try to find JSON block in the text
-      const jsonMatch = aiResponse.match(/\{[\s\S]*"tool"[\s\S]*\}/);
-      if (jsonMatch) {
-        try {
-          toolCall = JSON.parse(jsonMatch[0]);
-        } catch (innerE) {
-          console.warn("[Chatbot] Found JSON-like block but failed to parse:", innerE);
-        }
-      }
-    }
-
-    if (toolCall && toolCall.tool && tools[toolCall.tool]) {
-      console.log(`[Chatbot] Executing tool: ${toolCall.tool}`, toolCall.args);
-      let result;
-
-      // Perform security and RBAC validation on tool execution
-      const adminOnlyTools = ["add_department", "add_position", "add_holiday"];
-      if (!isHrOrAdmin && adminOnlyTools.includes(toolCall.tool)) {
-        result = { success: false, message: "You do not have administrative permission to create or edit system records (departments, positions, holidays)." };
-      } else if (!isHrOrAdmin && (toolCall.tool === "update_employee" || toolCall.tool === "update_employee_department")) {
-        // Ensure targeted employee is in the same department
-        const targetEmpId = parseInt(toolCall.args.employee_id);
-        const targetEmployee = await prisma.employee.findUnique({
-          where: { id: targetEmpId }
-        });
-        
-        if (!targetEmployee || targetEmployee.department_id !== currentEmployee?.department_id) {
-          result = { success: false, message: "Access denied. You can only modify employees within your own department." };
-        }
-      }
-
-      if (result === undefined) {
-        try {
-          result = await tools[toolCall.tool](toolCall.args, company_id);
-        } catch (err) {
-          console.error(`[Chatbot] Tool execution crashed:`, err);
-          result = { success: false, message: "The system encountered an unexpected error while performing this action." };
-        }
-      }
-      
-      // Log the AI action
-      try {
-        await prisma.auditlog.create({
-          data: {
-            company_id: parseInt(company_id),
-            module: "AI_AGENT",
-            action: toolCall.tool.toUpperCase(),
-            description: `AI Agent executed ${toolCall.tool}: ${result.message}`,
-          }
-        });
-      } catch (logErr) {
-        console.error("[Chatbot] Audit log failed:", logErr);
-      }
-
-      res.setHeader('Content-Type', 'text/event-stream');
-      
-      // If tool failed, send a "reasonable" conversational error message instead of raw crash data
-      const displayMessage = result.success 
-        ? `⚙️ [SYSTEM COMMAND]: ${result.message}` 
-        : `⚠️ [AI ASSISTANT]: I'm sorry, I couldn't complete that action. ${result.message}`;
-
-      res.write(`data: ${JSON.stringify({ token: displayMessage })}\n\n`);
-      res.write('data: [DONE]\n\n');
-      return res.end();
-    }
-
-    // Since we already have the full response and it's NOT a tool call,
-    // we can just stream the already-received message to the UI.
+    // Stream response from Ollama
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
 
-    // Send the response in small chunks to simulate streaming feel
-    const words = aiResponse.split(" ");
-    for (const word of words) {
-      res.write(`data: ${JSON.stringify({ token: word + " " })}\n\n`);
-      await new Promise(r => setTimeout(r, 20)); // Small delay for "typing" feel
+    let isToolCallDetected = null;
+    let accumulatedText = "";
+
+    try {
+      await chatWithAI(messages, "llama3.2", (token) => {
+        accumulatedText += token;
+        
+        if (isToolCallDetected === null) {
+          const trimmed = accumulatedText.trim();
+          if (trimmed.length > 0) {
+            if (trimmed.startsWith("{")) {
+              isToolCallDetected = true;
+            } else {
+              isToolCallDetected = false;
+              // Stream the accumulated text so far
+              res.write(`data: ${JSON.stringify({ token: trimmed })}\n\n`);
+            }
+          }
+        } else if (isToolCallDetected === false) {
+          // Stream directly to the client in real-time
+          res.write(`data: ${JSON.stringify({ token })}\n\n`);
+        }
+      });
+    } catch (streamError) {
+      console.error("[Chatbot Controller] Streaming Error:", streamError);
+      if (isToolCallDetected === null || isToolCallDetected === false) {
+        res.write(`data: ${JSON.stringify({ error: "Connection to AI model interrupted." })}\n\n`);
+        res.write('data: [DONE]\n\n');
+        return res.end();
+      }
+      throw streamError;
+    }
+
+    if (isToolCallDetected === true) {
+      console.log(`[Chatbot] Raw AI Tool Response:`, accumulatedText);
+      // Check if AI wants to use a tool (more robust extraction)
+      let toolCall = null;
+      try {
+        const cleaned = accumulatedText.trim().replace(/^```json\n?/, "").replace(/\n?```$/, "");
+        toolCall = JSON.parse(cleaned);
+      } catch (e) {
+        const jsonMatch = accumulatedText.match(/\{[\s\S]*"tool"[\s\S]*\}/);
+        if (jsonMatch) {
+          try {
+            toolCall = JSON.parse(jsonMatch[0]);
+          } catch (innerE) {
+            console.warn("[Chatbot] Found JSON-like block but failed to parse:", innerE);
+          }
+        }
+      }
+
+      if (toolCall && toolCall.tool && tools[toolCall.tool]) {
+        console.log(`[Chatbot] Executing tool: ${toolCall.tool}`, toolCall.args);
+        let result;
+
+        // Perform security and RBAC validation on tool execution
+        const adminOnlyTools = ["add_department", "add_position", "add_holiday"];
+        if (!isHrOrAdmin && adminOnlyTools.includes(toolCall.tool)) {
+          result = { success: false, message: "You do not have administrative permission to create or edit system records (departments, positions, holidays)." };
+        } else if (!isHrOrAdmin && (toolCall.tool === "update_employee" || toolCall.tool === "update_employee_department")) {
+          // Ensure targeted employee is in the same department
+          const targetEmpId = parseInt(toolCall.args.employee_id);
+          const targetEmployee = await prisma.employee.findUnique({
+            where: { id: targetEmpId }
+          });
+          
+          if (!targetEmployee || targetEmployee.department_id !== currentEmployee?.department_id) {
+            result = { success: false, message: "Access denied. You can only modify employees within your own department." };
+          }
+        }
+
+        if (result === undefined) {
+          try {
+            result = await tools[toolCall.tool](toolCall.args, company_id);
+          } catch (err) {
+            console.error(`[Chatbot] Tool execution crashed:`, err);
+            result = { success: false, message: "The system encountered an unexpected error while performing this action." };
+          }
+        }
+        
+        // Log the AI action
+        try {
+          await prisma.auditlog.create({
+            data: {
+              company_id: parseInt(company_id),
+              module: "AI_AGENT",
+              action: toolCall.tool.toUpperCase(),
+              description: `AI Agent executed ${toolCall.tool}: ${result.message}`,
+            }
+          });
+        } catch (logErr) {
+          console.error("[Chatbot] Audit log failed:", logErr);
+        }
+
+        const displayMessage = result.success 
+          ? `⚙️ [SYSTEM COMMAND]: ${result.message}` 
+          : `⚠️ [AI ASSISTANT]: I'm sorry, I couldn't complete that action. ${result.message}`;
+
+        res.write(`data: ${JSON.stringify({ token: displayMessage })}\n\n`);
+      } else {
+        // If it looked like a tool call but wasn't valid, treat the whole text as chat response
+        res.write(`data: ${JSON.stringify({ token: accumulatedText })}\n\n`);
+      }
     }
 
     res.write('data: [DONE]\n\n');

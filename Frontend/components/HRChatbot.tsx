@@ -116,11 +116,11 @@ export function HRChatbot() {
   return (
     <Card 
       className={cn(
-        "fixed right-6 bottom-6 w-96 shadow-2xl border-white/20 transition-all duration-300 z-50 overflow-hidden",
-        isMinimized ? "h-14" : "h-[500px]"
+        "fixed right-6 bottom-6 shadow-2xl border-white/20 transition-all duration-300 z-50 overflow-hidden p-0 py-0 gap-0 flex flex-col",
+        isMinimized ? "w-72 h-[68px] rounded-2xl" : "w-96 h-[500px] rounded-3xl"
       )}
     >
-      <CardHeader className="p-4 bg-primary text-white flex flex-row items-center justify-between">
+      <CardHeader className="p-4 bg-primary text-white flex flex-row items-center justify-between shrink-0 h-[68px]">
         <div className="flex flex-col">
           <CardTitle className="text-sm font-bold flex items-center gap-2">
             <Bot className="size-5" /> HR AI Assistant
@@ -160,7 +160,7 @@ export function HRChatbot() {
         <>
           <CardContent 
             ref={scrollRef}
-            className="p-4 h-[380px] overflow-y-auto space-y-4 bg-zinc-50/50"
+            className="p-4 overflow-y-auto space-y-4 bg-zinc-50/50 flex-1"
           >
             {messages.map((msg, i) => (
               <div 
@@ -186,7 +186,7 @@ export function HRChatbot() {
             )}
           </CardContent>
 
-          <CardFooter className="p-3 border-t bg-white">
+          <CardFooter className="p-3 border-t bg-white shrink-0">
             <form onSubmit={handleSend} className="flex w-full items-center gap-2">
               <Input
                 value={message}

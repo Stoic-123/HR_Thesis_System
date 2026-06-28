@@ -26,6 +26,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LoadingState } from "@/components/ui/loading-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 
@@ -240,7 +241,23 @@ export default function HolidayPage() {
 
           <CardContent className="pb-4">
             {isLoading ? (
-              <LoadingState variant="card" count={1} />
+              <div className="space-y-3 py-4 animate-pulse">
+                <div className="flex justify-between items-center px-2">
+                  <Skeleton className="h-6 w-24 rounded-md" />
+                  <div className="flex gap-2">
+                    <Skeleton className="h-7 w-7 rounded" />
+                    <Skeleton className="h-7 w-7 rounded" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-7 gap-2">
+                  {[...Array(7)].map((_, i) => (
+                    <Skeleton key={i} className="h-4 rounded" />
+                  ))}
+                  {[...Array(35)].map((_, i) => (
+                    <Skeleton key={i} className="h-8 rounded-lg" />
+                  ))}
+                </div>
+              </div>
             ) : (
               <Calendar
                 mode="single"
@@ -328,7 +345,17 @@ export default function HolidayPage() {
             </CardHeader>
             <CardContent className="space-y-2.5">
               {isLoading ? (
-                <LoadingState variant="table" count={3} />
+                <div className="space-y-2.5 animate-pulse">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="flex items-center justify-between rounded-2xl border border-border/40 bg-background/30 px-4 py-3">
+                      <div className="space-y-2 flex-1">
+                        <Skeleton className="h-4 w-1/3 rounded" />
+                        <Skeleton className="h-3 w-1/4 rounded" />
+                      </div>
+                      <Skeleton className="h-6 w-20 rounded-full shrink-0" />
+                    </div>
+                  ))}
+                </div>
               ) : holidays.length === 0 ? (
                 <div className="flex flex-col items-center py-10 text-center">
                   <div className="rounded-full bg-muted p-3">
