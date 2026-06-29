@@ -28,7 +28,11 @@ const getTodayKey = (dateObj) => {
 const sentReminders = new Set();
 let lastCleanedDate = formatICTDate(new Date());
 
+let isRunning = false;
+
 export const checkAndSendAttendanceReminders = async () => {
+  if (isRunning) return;
+  isRunning = true;
   try {
     const rawNow = new Date();
     const ictNow = toICTDate(rawNow);
@@ -107,7 +111,7 @@ export const checkAndSendAttendanceReminders = async () => {
 
         // Check if current time is exactly 5 minutes before scheduled time
         if (currentTotalMinutes === timeMinutes - 5) {
-          const reminderKey = `${employee.id}-${timeMinutes}-${timeStr}-${todayStr}`;
+          const reminderKey = `${employee.telegram_chat_id}-${timeMinutes}-${timeStr}-${todayStr}`;
           if (sentReminders.has(reminderKey)) return;
 
           sentReminders.add(reminderKey);
@@ -127,5 +131,7 @@ export const checkAndSendAttendanceReminders = async () => {
     }
   } catch (error) {
     console.error("[Reminder] checkAndSendAttendanceReminders error:", error.message);
+  } finally {
+    isRunning = false;
   }
 };
