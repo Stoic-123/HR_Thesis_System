@@ -2,6 +2,11 @@ import prisma from "../lib/prisma.js";
 import jwt from "jsonwebtoken";
 
 export const requireAuth = async (req, res, next) => {
+  const clearCookieOptions = { httpOnly: true, sameSite: "none", secure: true };
+  if (process.env.COOKIE_DOMAIN) {
+    clearCookieOptions.domain = process.env.COOKIE_DOMAIN;
+  }
+
   try {
     let token = null;
     if (req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
@@ -12,7 +17,7 @@ export const requireAuth = async (req, res, next) => {
     }
 
     if (!token) {
-      res.clearCookie("auth_token", { httpOnly: true, sameSite: "none", secure: true });
+      res.clearCookie("auth_token", clearCookieOptions);
       return res
         .status(401)
         .json({ result: false, message: "Unauthorized - No token" });
@@ -35,12 +40,12 @@ export const requireAuth = async (req, res, next) => {
     });
 
     if (!user) {
-      res.clearCookie("auth_token", { httpOnly: true, sameSite: "none", secure: true });
+      res.clearCookie("auth_token", clearCookieOptions);
       return res.status(401).json({ result: false, message: "User not found" });
     }
 
     if (user.token_version !== decoded.token_version) {
-      res.clearCookie("auth_token", { httpOnly: true, sameSite: "none", secure: true });
+      res.clearCookie("auth_token", clearCookieOptions);
       return res.status(401).json({
         message: "Token expired",
       });
@@ -54,7 +59,7 @@ export const requireAuth = async (req, res, next) => {
     next();
   } catch (error) {
     console.error("[AuthMiddleware] Verification failed:", error);
-    res.clearCookie("auth_token", { httpOnly: true, sameSite: "none", secure: true });
+    res.clearCookie("auth_token", clearCookieOptions);
     return res
       .status(401)
       .json({ result: false, message: "Invalid or expired token" });

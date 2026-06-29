@@ -127,11 +127,11 @@ export default function DashboardLayout({
     },
     onSuccess: () => {
       toast.success(t("logoutSuccess"));
-      router.push("/login");
-      router.refresh();
+      window.location.href = "/login?logout=true";
     },
     onError: () => {
       toast.error(t("logoutError"));
+      window.location.href = "/login?logout=true";
     },
   });
   const { data: user, isLoading, isError } = useMe();
@@ -177,7 +177,9 @@ export default function DashboardLayout({
 
   useEffect(() => {
     if (isError) {
-      router.push("/login");
+      api.post("/api/auth/logout").finally(() => {
+        window.location.href = "/login?logout=true";
+      });
     }
   }, [isError, router]);
 
@@ -194,9 +196,14 @@ export default function DashboardLayout({
       <div className="h-screen w-screen flex flex-col items-center justify-center bg-background p-4 text-center">
         <h1 className="text-2xl font-bold text-rose-500 mb-2">{t("unauthorized")}</h1>
         <p className="text-muted-foreground mb-6">{t("unauthorizedDesc")}</p>
-        <Link href="/login">
-          <Button className="rounded-2xl">{t("backToLogin")}</Button>
-        </Link>
+        <Button 
+          className="rounded-2xl" 
+          onClick={() => logoutMutation.mutate()}
+          disabled={logoutMutation.isPending}
+        >
+          {logoutMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+          {t("backToLogin")}
+        </Button>
       </div>
     );
   }
