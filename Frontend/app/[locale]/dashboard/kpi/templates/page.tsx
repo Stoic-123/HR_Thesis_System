@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LoadingState } from "@/components/ui/loading-state";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function KpiTemplatesPage() {
   const queryClient = useQueryClient();
@@ -91,7 +92,36 @@ export default function KpiTemplatesPage() {
     setExpandedTemplates(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  if (isLoading) return <LoadingState variant="card" count={3} />;
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-48 rounded-md animate-pulse" />
+            <Skeleton className="h-4 w-72 rounded animate-pulse" />
+          </div>
+          <Skeleton className="h-10 w-36 rounded-xl animate-pulse" />
+        </div>
+        <div className="space-y-4">
+          {[...Array(3)].map((_, i) => (
+            <Card key={i} className="overflow-hidden p-6 flex items-center justify-between">
+              <div className="flex items-center gap-3 flex-1">
+                <Skeleton className="h-10 w-10 rounded-xl shrink-0 animate-pulse" />
+                <div className="space-y-2 flex-1">
+                  <Skeleton className="h-5 w-1/4 rounded animate-pulse" />
+                  <Skeleton className="h-4 w-1/3 rounded animate-pulse" />
+                </div>
+              </div>
+              <div className="flex items-center gap-4 shrink-0">
+                <Skeleton className="h-8 w-24 rounded-lg animate-pulse" />
+                <Skeleton className="h-5 w-5 rounded animate-pulse" />
+              </div>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

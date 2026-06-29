@@ -16,8 +16,9 @@ import {
 } from 'react-native';
 import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import { COLORS } from '../constants/theme';
-import useLeaveStore from '../stores/useLeaveStore';
 import useAuthStore from '../stores/useAuthStore';
+import useLeaveStore from '../stores/useLeaveStore';
+import { BASE_URL } from '../services/api';
 import CircularGauge from '../components/CircularGauge';
 import LeaveRequestCard from '../components/LeaveRequestCard';
 import * as ImagePicker from 'expo-image-picker';
@@ -973,7 +974,7 @@ export default function LeaveHistoryScreen({ theme, navigateTo }) {
                     <Text style={[s.detailLabel, { color: textSub, marginBottom: 8 }]}>Attachment</Text>
                     <Image 
                       source={{ 
-                        uri: `${process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '') || 'http://localhost:8080'}${selectedLeaveForDetails.photo_path}` 
+                        uri: `${BASE_URL.replace(/\/$/, '')}${selectedLeaveForDetails.photo_path}` 
                       }}
                       style={{ width: '100%', height: 200, borderRadius: 12, resizeMode: 'cover' }}
                     />

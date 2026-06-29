@@ -1,9 +1,8 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import io from 'socket.io-client';
-import { notificationService } from '../services/api';
+import { notificationService, BASE_URL } from '../services/api';
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8080';
 const AUTH_TOKEN_KEY = 'auth_token';
 
 const useNotificationStore = create((set, get) => ({

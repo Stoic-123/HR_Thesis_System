@@ -2,6 +2,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, Platform, Animated, Image } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NativeWindStyleSheet } from "nativewind";
+import * as SplashScreen from 'expo-splash-screen';
+
+// Keep the native splash screen visible until our JS bundle is loaded
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 NativeWindStyleSheet.setOutput({
   default: "native",
@@ -111,6 +115,9 @@ export default function App() {
 
   // Simple timeout to show splash for 3 seconds
   useEffect(() => {
+    // Hide the native splash screen once the React Native app is mounted and rendering
+    SplashScreen.hideAsync().catch(() => {});
+
     const timer = setTimeout(() => {
       Animated.timing(fadeSplash, {
         toValue: 0,

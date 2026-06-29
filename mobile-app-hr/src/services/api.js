@@ -5,11 +5,11 @@ import * as Sharing from "expo-sharing";
 import * as MediaLibrary from "expo-media-library";
 import Constants from "expo-constants";
 
-// Base URL: reads from app.json extra.apiUrl first, then env var, then localhost fallback.
-const BASE_URL =
+// Base URL: reads from app.json extra.apiUrl first, then env var, then production fallback.
+export const BASE_URL =
   Constants.expoConfig?.extra?.apiUrl ||
   process.env.EXPO_PUBLIC_API_URL ||
-  "http://localhost:8080";
+  "https://api.bayonhr.shop";
 console.log("[Mobile API] BASE_URL:", BASE_URL);
 // Storage keys
 const AUTH_TOKEN_KEY = "auth_token";

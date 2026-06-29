@@ -4,6 +4,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { COLORS } from '../constants/theme';
 import { mockEmployee } from '../mockData/hrData';
 import useAuthStore from '../stores/useAuthStore';
+import { BASE_URL } from '../services/api';
 
 export default function ProfileScreen({ theme, navigateTo, onLogout }) {
   const { user } = useAuthStore();
@@ -54,7 +55,7 @@ export default function ProfileScreen({ theme, navigateTo, onLogout }) {
               uri: user?.employee?.profile_path 
                 ? (user.employee.profile_path.startsWith('http') 
                     ? user.employee.profile_path 
-                    : `${process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8080'}${user.employee.profile_path.startsWith('/') ? '' : '/'}${user.employee.profile_path}`)
+                    : `${BASE_URL}${user.employee.profile_path.startsWith('/') ? '' : '/'}${user.employee.profile_path}`)
                 : 'https://ui-avatars.com/api/?name=' + (user?.employee?.first_name || 'U') + '+' + (user?.employee?.last_name || '') + '&background=random' 
             }}
             className="w-24 h-24 rounded-full border-4 border-amber-500 shadow-md mb-3"

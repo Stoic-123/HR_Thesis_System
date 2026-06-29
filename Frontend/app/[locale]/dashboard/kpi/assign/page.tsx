@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { UsersRound, CheckCircle2 } from "lucide-react";
 import { LoadingState } from "@/components/ui/loading-state";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function KpiAssignPage() {
   const queryClient = useQueryClient();
@@ -54,7 +55,39 @@ export default function KpiAssignPage() {
     });
   };
 
-  if (loadingCycles || loadingTemplates || loadingDepts) return <LoadingState variant="card" count={2} />;
+  if (loadingCycles || loadingTemplates || loadingDepts) {
+    return (
+      <div className="space-y-6 max-w-4xl mx-auto">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-56 rounded-md animate-pulse" />
+          <Skeleton className="h-4 w-96 rounded animate-pulse" />
+        </div>
+        <Card className="p-6 space-y-6">
+          <div className="space-y-2">
+            <Skeleton className="h-6 w-48 rounded animate-pulse" />
+            <Skeleton className="h-4 w-72 rounded animate-pulse" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-32 rounded animate-pulse" />
+              <Skeleton className="h-10 w-full rounded-xl animate-pulse" />
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-32 rounded animate-pulse" />
+              <Skeleton className="h-10 w-full rounded-xl animate-pulse" />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Skeleton className="h-4 w-32 rounded animate-pulse" />
+              <Skeleton className="h-10 w-full rounded-xl animate-pulse" />
+            </div>
+          </div>
+          <div className="pt-4 flex justify-end">
+            <Skeleton className="h-11 w-40 rounded-xl animate-pulse" />
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   const activeCycles = cycles?.filter((c: any) => c.status === "active") || [];
 

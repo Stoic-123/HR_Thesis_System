@@ -1,6 +1,6 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
-import { apiRequest, authService } from './api';
+import { apiRequest, authService, BASE_URL } from './api';
 
 export const getMobilePayrollOverview = async () => {
   const res = await apiRequest('/api/payroll/mobile/overview');
@@ -14,7 +14,7 @@ export const getMobilePayrollHistory = async (year) => {
 };
 
 export const getPayslipDownloadUrl = (payrollId) => {
-  const base = process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '') || 'http://localhost:8080';
+  const base = BASE_URL.replace(/\/$/, '');
   return `${base}/api/payroll/${payrollId}/payslip?download=true`;
 };
 

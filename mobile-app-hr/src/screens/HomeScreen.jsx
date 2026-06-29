@@ -8,6 +8,7 @@ import CircularGauge from '../components/CircularGauge';
 import QuickAccessCard from '../components/QuickAccessCard';
 import useAuthStore from '../stores/useAuthStore';
 import useNotificationStore from '../stores/useNotificationStore';
+import { BASE_URL } from '../services/api';
 
 export default function HomeScreen({ theme, toggleTheme, navigateTo }) {
   const isDark = theme === 'dark';
@@ -70,7 +71,7 @@ export default function HomeScreen({ theme, toggleTheme, navigateTo }) {
                     uri: user?.employee?.profile_path 
                       ? (user.employee.profile_path.startsWith('http') 
                           ? user.employee.profile_path 
-                          : `${process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8080'}${user.employee.profile_path.startsWith('/') ? '' : '/'}${user.employee.profile_path}`)
+                          : `${BASE_URL}${user.employee.profile_path.startsWith('/') ? '' : '/'}${user.employee.profile_path}`)
                       : 'https://ui-avatars.com/api/?name=' + (user?.employee?.first_name || 'U') + '+' + (user?.employee?.last_name || '') + '&background=random' 
                   }}
                   style={{ width: 52, height: 52, borderRadius: 26, borderWidth: 2, borderColor: 'white' }}

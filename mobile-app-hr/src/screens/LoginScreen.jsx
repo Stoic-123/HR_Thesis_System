@@ -17,6 +17,7 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS } from '../constants/theme';
 import useAuthStore from '../stores/useAuthStore';
+import { BASE_URL } from '../services/api';
 
 export default function LoginScreen({ onLoginSuccess }) {
   const [username, setUsername] = useState('');
@@ -76,8 +77,7 @@ export default function LoginScreen({ onLoginSuccess }) {
     setIsForgotModalVisible(false);
     
     try {
-      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8080';
-      const response = await fetch(`${API_URL}/api/auth/forgot-password`, {
+      const response = await fetch(`${BASE_URL}/api/auth/forgot-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

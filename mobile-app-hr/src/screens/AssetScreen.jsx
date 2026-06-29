@@ -10,8 +10,7 @@ import { COLORS } from '../constants/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
 import useAuthStore from '../stores/useAuthStore';
-
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:8080";
+import { BASE_URL } from '../services/api';
 
 export default function AssetScreen({ theme, navigateTo }) {
   const { user } = useAuthStore();
