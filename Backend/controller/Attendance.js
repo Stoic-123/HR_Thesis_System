@@ -63,7 +63,7 @@ const findTimeModeForField = async (company_id, timeField) => {
   }
 };
 
-const inferTimeFieldFromSchedule = (timeSheet, nowMinutes) => {
+const inferTimeFieldFromSchedule = (timeSheet, nowMinutes, clockedFields = new Set()) => {
   if (!timeSheet) return null;
 
   const timeIn   = parseTimeToMinutes(timeSheet.time_in);
@@ -71,7 +71,7 @@ const inferTimeFieldFromSchedule = (timeSheet, nowMinutes) => {
   const lunchIn  = parseTimeToMinutes(timeSheet.lunch_in);
   const timeOut  = parseTimeToMinutes(timeSheet.time_out);
 
-  console.log("[Schedule Debug]", { timeIn, lunchOut, lunchIn, timeOut, nowMinutes });
+  console.log("[Schedule Debug]", { timeIn, lunchOut, lunchIn, timeOut, nowMinutes, clockedFields: Array.from(clockedFields) });
 
   const WINDOW = 120;
 
@@ -88,7 +88,9 @@ const inferTimeFieldFromSchedule = (timeSheet, nowMinutes) => {
     nowMinutes >= timeIn - ATTENDANCE_GRACE_MINUTES &&
     nowMinutes <= timeInEnd
   ) {
-    return "time_in";
+    if (!clockedFields.has("time_in")) {
+      return "time_in";
+    }
   }
 
   // ── lunch_out / lunch_in ─────────────────────────────────────────
@@ -100,6 +102,19 @@ const inferTimeFieldFromSchedule = (timeSheet, nowMinutes) => {
   if (lunchOut !== null && lunchIn !== null) {
     const midpoint = Math.floor((lunchOut + lunchIn) / 2);
 
+    // If within the overall lunch break window
+    if (nowMinutes >= lunchOut - WINDOW && nowMinutes <= lunchIn + WINDOW) {
+      const hasLunchOut = clockedFields.has("lunch_out");
+      const hasLunchIn = clockedFields.has("lunch_in");
+
+      if (!hasLunchOut) {
+        return "lunch_out";
+      } else if (!hasLunchIn) {
+        return "lunch_in";
+      }
+    }
+
+    // Fallback standard checks:
     // lunch_out: from WINDOW before lunch_out up to the midpoint
     if (nowMinutes >= lunchOut - WINDOW && nowMinutes <= midpoint) {
       return "lunch_out";
@@ -196,8 +211,34 @@ const computeAttendanceMeta = async ({ employee_id, company_id, timeMode, workAt
   const schedule = await getEmployeeScheduleForToday(employee_id, company_id, workAt);
   const ictDate = toICTDate(workAt);
   const nowMinutes = ictDate.getUTCHours() * 60 + ictDate.getUTCMinutes();
+
+  const targetDateStr = formatICTDate(workAt);
+  const startOfDay = new Date(`${targetDateStr}T00:00:00.000+07:00`);
+  const endOfDay = new Date(`${targetDateStr}T23:59:59.999+07:00`);
+
+  const todayRecords = await prisma.attendancerecord.findMany({
+    where: {
+      employee_id,
+      work_at: {
+        gte: startOfDay,
+        lte: endOfDay,
+      },
+    },
+    include: {
+      timemode: true,
+    },
+  });
+
+  const clockedFields = new Set();
+  for (const record of todayRecords) {
+    const field = inferTimeFieldFromTimeMode(record.timemode);
+    if (field) {
+      clockedFields.add(field);
+    }
+  }
+
   const timeField =
-    inferTimeFieldFromSchedule(schedule?.timeSheet, nowMinutes) ??
+    inferTimeFieldFromSchedule(schedule?.timeSheet, nowMinutes, clockedFields) ??
     inferTimeFieldFromTimeMode(timeMode);
   const expectedTime = timeField ? schedule?.timeSheet?.[timeField] : null;
   const expectedMin = parseTimeToMinutes(expectedTime);

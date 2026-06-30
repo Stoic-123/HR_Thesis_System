@@ -110,6 +110,143 @@ const tools = {
     } catch (error) {
       return { success: false, message: error.message };
     }
+  },
+  get_today_attendance: async (args, company_id, deptFilter) => {
+    try {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999);
+
+      const whereClause = {
+        employee: {
+          company_id: parseInt(company_id),
+          is_active: "active"
+        },
+        work_at: {
+          gte: todayStart,
+          lte: todayEnd,
+        },
+      };
+
+      if (deptFilter) {
+        whereClause.employee.department_id = parseInt(deptFilter);
+      }
+
+      const records = await prisma.attendancerecord.findMany({
+        where: whereClause,
+        include: {
+          employee: true,
+        },
+      });
+
+      if (records.length === 0) {
+        return { success: true, message: "No employee has scanned today." };
+      }
+
+      const summary = records.map(r => ({
+        employee: `${r.employee.first_name} ${r.employee.last_name}`,
+        time: r.work_at.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
+        status: r.status,
+        type: r.type,
+      }));
+
+      const summaryText = summary.map(s => `* **${s.employee}:** checked in at ${s.time} (${s.type === 'FINGER' ? 'Fingerprint' : 'Online'})`).join("\n");
+      return { success: true, message: `Today's scan list:\n${summaryText}` };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  },
+  get_employee_leave_balance: async (args, company_id, deptFilter) => {
+    try {
+      const { employee_name_or_id } = args;
+      if (!employee_name_or_id) {
+        return { success: false, message: "Please specify the employee name or ID." };
+      }
+
+      const whereClause = {
+        company_id: parseInt(company_id),
+      };
+
+      if (isNaN(parseInt(employee_name_or_id))) {
+        whereClause.OR = [
+          { first_name: { contains: employee_name_or_id } },
+          { last_name: { contains: employee_name_or_id } },
+        ];
+      } else {
+        whereClause.id = parseInt(employee_name_or_id);
+      }
+
+      if (deptFilter) {
+        whereClause.department_id = parseInt(deptFilter);
+      }
+
+      const employee = await prisma.employee.findFirst({
+        where: whereClause,
+      });
+
+      if (!employee) {
+        return { success: false, message: `Employee "${employee_name_or_id}" not found or access denied.` };
+      }
+
+      // Fetch all leave profiles for this employee
+      const profiles = await prisma.leaveprofile.findMany({
+        where: { employee_id: employee.id },
+        include: { leavetype: true },
+      });
+
+      if (profiles.length === 0) {
+        return { success: true, message: `No leave profiles found for ${employee.first_name} ${employee.last_name}.` };
+      }
+
+      const summaryText = profiles.map(p => 
+        `* **${p.leavetype.name} (${p.leavetype.code}):** Assigned: ${p.assignment || 0} days | Used: ${p.used || 0} days | Balance: ${p.balance || 0} days`
+      ).join("\n");
+
+      return {
+        success: true,
+        message: `Leave balance summary for **${employee.first_name} ${employee.last_name}**:\n${summaryText}`
+      };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  },
+  get_company_leave_summary: async (args, company_id, deptFilter) => {
+    try {
+      const whereClause = {
+        employee: {
+          company_id: parseInt(company_id),
+          is_active: "active"
+        }
+      };
+
+      if (deptFilter) {
+        whereClause.employee.department_id = parseInt(deptFilter);
+      }
+
+      const profiles = await prisma.leaveprofile.findMany({
+        where: whereClause,
+        include: {
+          employee: true,
+          leavetype: true,
+        },
+      });
+
+      if (profiles.length === 0) {
+        return { success: true, message: "No leave profiles found." };
+      }
+
+      const summaryText = profiles.map(p => 
+        `* **${p.employee.first_name} ${p.employee.last_name}:** ${p.leavetype.name} (Used: ${p.used || 0} days, Balance: ${p.balance || 0} days)`
+      ).join("\n");
+
+      return {
+        success: true,
+        message: `Company Leave Summary:\n${summaryText}`
+      };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
   }
 };
 
@@ -138,9 +275,8 @@ export const chatController = async (req, res) => {
       currentEmployee?.role?.name?.toLowerCase().includes("admin") ||
       currentEmployee?.role?.name?.toLowerCase().includes("hr");
 
-    // Fetch context (restricted to department if user is not HR/Admin)
     const deptFilter = isHrOrAdmin ? null : currentEmployee?.department_id;
-    const context = await getHRContext(company_id, deptFilter);
+    const context = await getHRContext(company_id, null);
     
     // Customize Prompt Capabilities and Roles dynamically
     let roleDescription = isHrOrAdmin 
@@ -153,11 +289,16 @@ export const chatController = async (req, res) => {
          - update_employee {"employee_id": number, "new_args": {"field": "value"}}
          - add_department {"name": "string"}
          - add_position {"name": "string", "department_id": number}
-         - add_holiday {"name": "string", "start_date": "YYYY-MM-DD", "end_date": "YYYY-MM-DD"}`
+         - add_holiday {"name": "string", "start_date": "YYYY-MM-DD", "end_date": "YYYY-MM-DD"}
+         - get_today_attendance {}
+         - get_employee_leave_balance {"employee_name_or_id": "string"} (ONLY for checking a single specific employee by name/ID)
+         - get_company_leave_summary {} (Use this for company-wide queries, list of all leaves, comparisons, sorting, or queries like 'who has taken the most leaves', 'unpaid the most', or 'top leave users')`
       : `Available tools:
          - update_employee_department {"employee_id": number, "department_id": number} (ONLY for employees in your department)
          - update_employee {"employee_id": number, "new_args": {"field": "value"}} (ONLY for employees in your department)
-         * Note: Administrative tools (add_department, add_position, add_holiday) are strictly disabled for your role.`;
+         - get_today_attendance {} (Get list of scanned employees today in your department)
+         - get_employee_leave_balance {"employee_name_or_id": "string"} (ONLY for checking a single specific employee in your department by name/ID)
+         - get_company_leave_summary {} (Use this for queries in your department like 'who has taken the most leaves', 'unpaid the most', 'top leave users', or list of all department leaves)`;
 
     const systemPrompt = `
       ${roleDescription}
@@ -166,6 +307,8 @@ export const chatController = async (req, res) => {
       - EMPLOYEES: ${JSON.stringify(context.employees)}
       - DEPARTMENTS: ${JSON.stringify(context.departments)}
       - POSITIONS: ${JSON.stringify(context.positions)}
+      - LEAVE TYPES: ${JSON.stringify(context.leaveTypes)}
+      - HOLIDAYS: ${JSON.stringify(context.holidays)}
       
       CAPABILITIES:
       1. You can search, move, and update employee information (age, name, etc.).
@@ -173,21 +316,26 @@ export const chatController = async (req, res) => {
       
       RESTRICTIONS:
       - You are NOT allowed to delete anything (employees, departments, positions, etc.).
-      - If a user is not Admin/HR, you MUST refuse to perform company-wide administrative tasks (like adding departments, holidays, positions).
+      - If a user is not Admin/HR and asks for administrative changes (such as adding departments, holidays, or positions), politely refuse and explain that they must request an HR or Admin user to perform or approve this action.
       - Refuse to update or fetch information about employees who are NOT in the EMPLOYEES context list.
       - If a user asks for something you cannot do (e.g., "order pizza", "hack the system", "delete everyone"), respond politely that it is outside your current HR management capabilities.
       
       OUTPUT RULES:
-      1. NEVER output raw JSON code blocks or database IDs to the user.
-      2. ALWAYS respond with natural, conversational English.
-      3. If you find data, summarize it in a nice list or paragraph.
-      4. DO NOT say "Here is the JSON" or similar technical phrases.
-      5. Answer ONLY in English.
+      1. NEVER output raw JSON, code blocks, tool calls, tool examples, or database IDs to the user. If you are writing a conversational response, NEVER include JSON formats or tool structures like \`{"tool": ...}\`.
+      2. NEVER output markdown tables (e.g., using | or ---). Tables are strictly forbidden as they do not fit in the chat UI.
+      3. Format details using a clean bulleted list, like:
+         * **Field Name:** Value
+      4. Clean up raw data before rendering:
+         - If a value is "null", "N/A", empty, or undefined, do NOT show that line/field at all (e.g., if age is null, skip the Age line).
+         - Render dates in a simple, friendly format (e.g. YYYY-MM-DD).
+      5. Always respond in polite, conversational, professional English. Do not use technical phrases like "Here is the JSON".
       
-      ACTION RULES:
-      1. For ACTIONS on specific people/items, if multiple matches exist, ALWAYS ask for clarification.
-      2. To perform an action (and ONLY to perform an action), return ONLY a JSON object: {"tool": "tool_name", "args": {...}}.
-      3. ${toolInstructions}
+      ACTION AND QUERY RULES:
+      1. To perform any action or query database records (such as fetching today's scan/attendance list, updating employees, or adding items), you MUST call the appropriate tool by returning ONLY a JSON object: {"tool": "tool_name", "args": {...}}.
+      2. Do NOT write any conversational text, introductory remarks, or explanations if you are calling a tool. Return ONLY the JSON object.
+      3. NEVER ask the user for their login credentials, passwords, or verification. The user is already securely authenticated by the system.
+      4. For actions on specific employees, if multiple matches exist, ask for clarification.
+      5. ${toolInstructions}
       
       IMPORTANT: Be polite and professional. If you are unsure, ask for more details.
     `;
@@ -205,11 +353,17 @@ export const chatController = async (req, res) => {
 
     let isToolCallDetected = null;
     let accumulatedText = "";
+    let isStreamingBlocked = false;
 
     try {
-      await chatWithAI(messages, "llama3.2", (token) => {
+      await chatWithAI(messages, process.env.AI_MODEL || "qwen2.5:1.5b", (token) => {
         accumulatedText += token;
         
+        // If we detect a code block or JSON block starting, block further streaming to client
+        if (accumulatedText.includes("```json") || accumulatedText.includes('{"tool":')) {
+          isStreamingBlocked = true;
+        }
+
         if (isToolCallDetected === null) {
           const trimmed = accumulatedText.trim();
           if (trimmed.length > 0) {
@@ -217,13 +371,17 @@ export const chatController = async (req, res) => {
               isToolCallDetected = true;
             } else {
               isToolCallDetected = false;
-              // Stream the accumulated text so far
-              res.write(`data: ${JSON.stringify({ token: trimmed })}\n\n`);
+              if (!isStreamingBlocked) {
+                // Stream the accumulated text so far
+                res.write(`data: ${JSON.stringify({ token: trimmed })}\n\n`);
+              }
             }
           }
         } else if (isToolCallDetected === false) {
-          // Stream directly to the client in real-time
-          res.write(`data: ${JSON.stringify({ token })}\n\n`);
+          if (!isStreamingBlocked) {
+            // Stream directly to the client in real-time
+            res.write(`data: ${JSON.stringify({ token })}\n\n`);
+          }
         }
       });
     } catch (streamError) {
@@ -234,6 +392,12 @@ export const chatController = async (req, res) => {
         return res.end();
       }
       throw streamError;
+    }
+
+    // After stream completes, check if there is a JSON tool call embedded anywhere in the response
+    const embeddedJsonMatch = accumulatedText.match(/\{[\s\S]*"tool"[\s\S]*\}/);
+    if (embeddedJsonMatch) {
+      isToolCallDetected = true;
     }
 
     if (isToolCallDetected === true) {
@@ -252,6 +416,28 @@ export const chatController = async (req, res) => {
             console.warn("[Chatbot] Found JSON-like block but failed to parse:", innerE);
           }
         }
+      }
+
+      if (toolCall && toolCall.tool) {
+        let normalizedTool = toolCall.tool;
+        if (
+          normalizedTool === "get_scan_attendance_list" ||
+          normalizedTool === "get_attendance" ||
+          normalizedTool === "get_attendance_list" ||
+          normalizedTool === "list_attendance"
+        ) {
+          normalizedTool = "get_today_attendance";
+        }
+        if (
+          normalizedTool === "get_employee_leave_balance" ||
+          normalizedTool === "get_leave_balance" ||
+          normalizedTool === "get_leave" ||
+          normalizedTool === "check_leave_balance" ||
+          normalizedTool === "get_leave_profile"
+        ) {
+          normalizedTool = "get_employee_leave_balance";
+        }
+        toolCall.tool = normalizedTool;
       }
 
       if (toolCall && toolCall.tool && tools[toolCall.tool]) {
@@ -276,7 +462,7 @@ export const chatController = async (req, res) => {
 
         if (result === undefined) {
           try {
-            result = await tools[toolCall.tool](toolCall.args, company_id);
+            result = await tools[toolCall.tool](toolCall.args, company_id, null);
           } catch (err) {
             console.error(`[Chatbot] Tool execution crashed:`, err);
             result = { success: false, message: "The system encountered an unexpected error while performing this action." };
@@ -298,8 +484,8 @@ export const chatController = async (req, res) => {
         }
 
         const displayMessage = result.success 
-          ? `⚙️ [SYSTEM COMMAND]: ${result.message}` 
-          : `⚠️ [AI ASSISTANT]: I'm sorry, I couldn't complete that action. ${result.message}`;
+          ? result.message 
+          : `⚠️ I'm sorry, I couldn't complete that action. ${result.message}`;
 
         res.write(`data: ${JSON.stringify({ token: displayMessage })}\n\n`);
       } else {

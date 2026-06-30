@@ -37,6 +37,7 @@ services:
       SERVER_BASE_URL: https://api.bayonhr.shop
       COOKIE_DOMAIN: ${COOKIE_DOMAIN:-bayonhr.shop}
       OLLAMA_HOST: ${OLLAMA_HOST:-http://host.docker.internal:11434}
+      AI_MODEL: ${AI_MODEL:-qwen2.5:1.5b}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     # Internal only, reverse proxied via Caddy

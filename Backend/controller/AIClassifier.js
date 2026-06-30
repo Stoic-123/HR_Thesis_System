@@ -27,7 +27,7 @@ export const classifyIntentController = async (req, res) => {
       { role: "user", content: query }
     ];
 
-    const category = await chatWithAI(classificationPrompt, "llama3.2");
+    const category = await chatWithAI(classificationPrompt, process.env.AI_MODEL || "qwen2.5:1.5b");
     const cleanCategory = category.trim().toUpperCase();
 
     // Map categories to routes

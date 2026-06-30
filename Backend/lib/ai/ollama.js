@@ -2,7 +2,7 @@ import { Ollama } from "ollama";
 
 const ollama = new Ollama({ host: process.env.OLLAMA_HOST || "http://127.0.0.1:11434" });
 
-export const chatWithAI = async (messages, model = "llama3.2", onStream = null) => {
+export const chatWithAI = async (messages, model = process.env.AI_MODEL || "qwen2.5:1.5b", onStream = null) => {
   try {
     if (onStream) {
       const response = await ollama.chat({

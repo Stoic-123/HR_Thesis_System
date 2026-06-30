@@ -133,7 +133,7 @@ export const smartSearchController = async (req, res) => {
     ];
 
     console.log(`[Smart Search] DB Fast Path missed. Calling Ollama fallback for query: "${query}"...`);
-    const aiResult = await chatWithAI(searchPrompt, "llama3.2");
+    const aiResult = await chatWithAI(searchPrompt, process.env.AI_MODEL || "qwen2.5:1.5b");
     console.log(`[Smart Search] Raw AI Response:`, aiResult);
 
     // Parse IDs from AI response robustly

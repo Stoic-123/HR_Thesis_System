@@ -3,9 +3,8 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import morgan from "morgan";
 import helmet from "helmet";
-import rateLimit from "express-rate-limit";
+import { globalRateLimiter } from "./middleware/rateLimiter.js";
 import fileUpload from "express-fileupload";
-import slowDown from "express-slow-down";
 import { swaggerUi, swaggerSpec } from "./swagger/swagger.js";
 import { requireAuth } from "./middleware/auth.js";
 import { processTelegramCallbacks } from "./service/TelegramApproval.js";
@@ -89,25 +88,7 @@ app.use(
   }),
 );
 
-const speedLimiter = slowDown({
-  windowMs: 15 * 60 * 1000, // 15 min
-  delayAfter: 20, // after 20 requests
-  delayMs: () => 500, // add 500ms delay each request
-});
-
-app.use(speedLimiter);
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 1000,
-
-  keyGenerator: (req) => {
-    return req.headers["x-forwarded-for"] || req.socket.remoteAddress;
-  },
-
-  message: "Too many requests",
-});
-
-app.use(limiter);
+app.use(globalRateLimiter);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
