@@ -287,7 +287,8 @@ To enable attendance notifications and approval flow:
 - This is a native module that needs system libs. The Dockerfile installs them automatically via `apk add`. If it still fails, ensure Docker has enough memory (4GB+ recommended in Docker Desktop settings).
 
 **Prisma `P1012` schema error on startup**
-- Run `bunx prisma db push --accept-data-loss` manually inside the Backend folder
+- Run `bunx prisma db push` manually inside the Backend folder (WARNING: Never run this in production, especially with `--accept-data-loss`, as it will silently drop database tables and columns).
+
 
 **`expo-image-manipulator` not found**
 - Run `bunx expo start --clear` to clear Metro bundler cache

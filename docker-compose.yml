@@ -40,6 +40,10 @@ services:
       SERVER_BASE_URL: ${SERVER_BASE_URL:-http://localhost:8080}
       OLLAMA_HOST: ${OLLAMA_HOST:-http://host.docker.internal:11434}
       AI_MODEL: ${AI_MODEL:-qwen2.5:1.5b}
+      DISABLE_RATE_LIMITER: ${DISABLE_RATE_LIMITER:-false}
+      RATE_LIMIT_GLOBAL_MAX: ${RATE_LIMIT_GLOBAL_MAX:-5000}
+      RATE_LIMIT_AUTH_MAX: ${RATE_LIMIT_AUTH_MAX:-100}
+
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:

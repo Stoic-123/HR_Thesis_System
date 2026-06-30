@@ -39,4 +39,5 @@ RUN mkdir -p public/uploads/documents \
 
 EXPOSE 8080
 
-CMD ["sh", "-c", "npx prisma db push --accept-data-loss && node server.js"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node server.js"]
+

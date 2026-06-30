@@ -47,3 +47,6 @@ android/build/
 ios/build/
 bin/
 obj/
+
+# Ignore entire mobile app directory
+mobile-app-hr/
