@@ -27,6 +27,7 @@ export const addCompanyController = async (req, res) => {
       telegram_leave_group_id,
       telegram_overtime_group_id,
       telegram_announcement_group_id,
+      telegram_backup_group_id,
       telegram_bot_token,
     } = req.body;
     if (!name) {
@@ -46,6 +47,7 @@ export const addCompanyController = async (req, res) => {
       telegram_leave_group_id,
       telegram_overtime_group_id,
       telegram_announcement_group_id,
+      telegram_backup_group_id,
       telegram_bot_token,
     );
 
@@ -90,6 +92,7 @@ export const updateCompanyController = async (req, res) => {
       telegram_leave_group_id,
       telegram_overtime_group_id,
       telegram_announcement_group_id,
+      telegram_backup_group_id,
       telegram_bot_token,
       default_password,
       old_logo_path,
@@ -137,6 +140,7 @@ export const updateCompanyController = async (req, res) => {
       telegram_leave_group_id,
       telegram_overtime_group_id,
       telegram_announcement_group_id,
+      telegram_backup_group_id,
       telegram_bot_token,
       default_password,
       company_id

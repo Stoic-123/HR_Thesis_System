@@ -9,6 +9,8 @@ import { swaggerUi, swaggerSpec } from "./swagger/swagger.js";
 import { requireAuth } from "./middleware/auth.js";
 import { processTelegramCallbacks } from "./service/TelegramApproval.js";
 import { checkAndSendAttendanceReminders } from "./service/Reminder.js";
+import { checkAndRunDatabaseBackup } from "./service/Backup.js";
+
 
 // Import routes
 import employeeRoutes from "./routes/Employee.js";
@@ -160,4 +162,14 @@ server.listen(8080, "0.0.0.0", () => {
     );
   }, 60000);
   console.log('[Cron] Attendance reminder poller started (60s interval)');
+
+  // ── Database Backup cron — poll every 60 seconds ───────────────────────────
+  setInterval(() => {
+    checkAndRunDatabaseBackup().catch((e) =>
+      console.error('[Cron] DatabaseBackup error:', e.message)
+    );
+  }, 60000);
+  console.log('[Cron] Database backup scheduler started (60s interval)');
 });
+
+

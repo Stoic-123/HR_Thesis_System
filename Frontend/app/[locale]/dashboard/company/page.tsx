@@ -87,6 +87,7 @@ export default function CompanyPage() {
     telegram_leave_group_id: "",
     telegram_overtime_group_id: "",
     telegram_announcement_group_id: "",
+    telegram_backup_group_id: "",
     telegram_bot_token: "",
     default_password: "",
   });
@@ -108,6 +109,7 @@ export default function CompanyPage() {
         telegram_leave_group_id: company.telegram_leave_group_id || "",
         telegram_overtime_group_id: company.telegram_overtime_group_id || "",
         telegram_announcement_group_id: company.telegram_announcement_group_id || "",
+        telegram_backup_group_id: company.telegram_backup_group_id || "",
         telegram_bot_token: company.telegram_bot_token || "",
         default_password: company.default_password || "Hr12345",
       });
@@ -209,6 +211,7 @@ export default function CompanyPage() {
     data.append("telegram_leave_group_id", formData.telegram_leave_group_id);
     data.append("telegram_overtime_group_id", formData.telegram_overtime_group_id);
     data.append("telegram_announcement_group_id", formData.telegram_announcement_group_id);
+    data.append("telegram_backup_group_id", formData.telegram_backup_group_id);
     data.append("telegram_bot_token", formData.telegram_bot_token);
     data.append("default_password", formData.default_password);
     data.append("old_logo_path", company?.logo_path || "");
@@ -488,10 +491,17 @@ export default function CompanyPage() {
                             </div>
                           </div>
 
-                          <div className="space-y-1 sm:col-span-2">
+                          <div className="space-y-1">
                             <span className="text-[11px] font-bold text-gray-400 block uppercase tracking-wider">{t("announcementGroupIdLabel")}</span>
                             <div className="bg-white/90 border border-sky-100 rounded-xl px-3.5 py-2.5 font-mono text-xs text-gray-800 select-all shadow-sm">
                               {company.telegram_announcement_group_id || <span className="text-gray-400 italic font-sans">{tc("notSet")}</span>}
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <span className="text-[11px] font-bold text-gray-400 block uppercase tracking-wider">{t("backupGroupIdLabel") || "Backup Group ID"}</span>
+                            <div className="bg-white/90 border border-sky-100 rounded-xl px-3.5 py-2.5 font-mono text-xs text-gray-800 select-all shadow-sm">
+                              {company.telegram_backup_group_id || <span className="text-gray-400 italic font-sans">{tc("notSet")}</span>}
                             </div>
                           </div>
                         </div>
@@ -884,12 +894,22 @@ export default function CompanyPage() {
                               className="h-10 rounded-xl border-sky-100/80 bg-white/70 focus:bg-white text-sm font-mono"
                             />
                           </div>
-                          <div className="space-y-1.5 sm:col-span-2">
+                          <div className="space-y-1.5">
                             <Label htmlFor="telegram_announcement_group_id" className="text-xs font-semibold text-sky-800">{t("announcementGroupIdLabel")}</Label>
                             <Input
                               id="telegram_announcement_group_id"
                               value={formData.telegram_announcement_group_id}
                               onChange={(e) => setFormData({ ...formData, telegram_announcement_group_id: e.target.value })}
+                              placeholder="e.g. -100123456789"
+                              className="h-10 rounded-xl border-sky-100/80 bg-white/70 focus:bg-white text-sm font-mono"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label htmlFor="telegram_backup_group_id" className="text-xs font-semibold text-sky-800">{t("backupGroupIdLabel") || "Backup Group ID"}</Label>
+                            <Input
+                              id="telegram_backup_group_id"
+                              value={formData.telegram_backup_group_id}
+                              onChange={(e) => setFormData({ ...formData, telegram_backup_group_id: e.target.value })}
                               placeholder="e.g. -100123456789"
                               className="h-10 rounded-xl border-sky-100/80 bg-white/70 focus:bg-white text-sm font-mono"
                             />

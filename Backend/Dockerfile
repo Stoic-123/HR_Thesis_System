@@ -13,7 +13,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgif-dev \
     librsvg2-dev \
     libpixman-1-dev \
+    mariadb-client \
     && rm -rf /var/lib/apt/lists/*
+
 
 WORKDIR /app
 
@@ -39,5 +41,5 @@ RUN mkdir -p public/uploads/documents \
 
 EXPOSE 8080
 
-CMD ["sh", "-c", "npx prisma migrate deploy && node server.js"]
+CMD ["sh", "-c", "npx prisma db push && node server.js"]
 

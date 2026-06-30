@@ -307,3 +307,86 @@ export const deleteTelegramMessage = async (botToken, chatId, messageId) => {
     return false;
   }
 };
+
+/**
+ * Send a document/file (like a database backup SQL file).
+ * `filePath` is an absolute path on disk.
+ * Returns the API result on success, or false on error.
+ */
+export const sendTelegramDocument = async (botToken, chatId, filePath, caption = '', options = {}) => {
+  if (!botToken || !chatId || !filePath) return false;
+  try {
+    if (!fs.existsSync(filePath)) {
+      console.warn('[Telegram] Document not found:', filePath);
+      return false;
+    }
+
+    const fileStream  = fs.createReadStream(filePath);
+    const filename    = path.basename(filePath);
+    const boundary    = `----TelegramBoundary${Date.now()}`;
+    const CRLF        = '\r\n';
+
+    const metaFields = [
+      { name: 'chat_id',    value: String(chatId) },
+      { name: 'caption',    value: caption || '' },
+      { name: 'parse_mode', value: 'HTML' },
+    ];
+
+    for (const [key, value] of Object.entries(options)) {
+      metaFields.push({ name: key, value: String(value) });
+    }
+
+    const fileBuffer = await new Promise((resolve, reject) => {
+      const chunks = [];
+      fileStream.on('data', c => chunks.push(c));
+      fileStream.on('end',  () => resolve(Buffer.concat(chunks)));
+      fileStream.on('error', reject);
+    });
+
+    const parts = [];
+    for (const { name, value } of metaFields) {
+      parts.push(
+        Buffer.from(
+          `--${boundary}${CRLF}` +
+          `Content-Disposition: form-data; name="${name}"${CRLF}${CRLF}` +
+          `${value}${CRLF}`,
+          'utf8'
+        )
+      );
+    }
+
+    parts.push(
+      Buffer.from(
+        `--${boundary}${CRLF}` +
+        `Content-Disposition: form-data; name="document"; filename="${filename}"${CRLF}` +
+        `Content-Type: application/octet-stream${CRLF}${CRLF}`,
+        'utf8'
+      )
+    );
+    parts.push(fileBuffer);
+    parts.push(Buffer.from(`${CRLF}--${boundary}--${CRLF}`, 'utf8'));
+
+    const body = Buffer.concat(parts);
+
+    const res = await fetch(`${TELEGRAM_API}/bot${botToken}/sendDocument`, {
+      method:  'POST',
+      headers: {
+        'Content-Type':   `multipart/form-data; boundary=${boundary}`,
+        'Content-Length': String(body.length),
+      },
+      body,
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      console.error('[Telegram] sendDocument failed:', err.description || res.status);
+      return false;
+    }
+    const result = await res.json();
+    return result;
+  } catch (e) {
+    console.error('[Telegram] sendDocument error:', e.message);
+    return false;
+  }
+};
+

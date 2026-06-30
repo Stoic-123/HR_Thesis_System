@@ -82,23 +82,41 @@ export const getAllEmployee = async (company_id, page = 1, limit = 10, status = 
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const take = parseInt(limit);
 
-    let where = { company_id: parseInt(company_id) };
+    let where = {
+      company_id: parseInt(company_id),
+      AND: [
+        {
+          OR: [
+            { role_id: null },
+            {
+              role: {
+                name: {
+                  not: "Admin"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    };
     if (status) {
-      where.is_active = status;
+      where.AND.push({ is_active: status });
     }
     if (department_id) {
-      where.department_id = parseInt(department_id);
+      where.AND.push({ department_id: parseInt(department_id) });
     }
     if (search && search.trim()) {
       const cleanSearch = search.trim();
-      where.OR = [
-        { first_name: { contains: cleanSearch } },
-        { last_name: { contains: cleanSearch } },
-        { email: { contains: cleanSearch } },
-        { address: { contains: cleanSearch } },
-        { positions: { name: { contains: cleanSearch } } },
-        { department_employee_department_idTodepartment: { name: { contains: cleanSearch } } },
-      ];
+      where.AND.push({
+        OR: [
+          { first_name: { contains: cleanSearch } },
+          { last_name: { contains: cleanSearch } },
+          { email: { contains: cleanSearch } },
+          { address: { contains: cleanSearch } },
+          { positions: { name: { contains: cleanSearch } } },
+          { department_employee_department_idTodepartment: { name: { contains: cleanSearch } } },
+        ]
+      });
     }
 
     const [employees, total, total_active] = await Promise.all([
@@ -124,9 +142,24 @@ export const getAllEmployee = async (company_id, page = 1, limit = 10, status = 
         where: {
           company_id: parseInt(company_id),
           is_active: "active",
+          AND: [
+            {
+              OR: [
+                { role_id: null },
+                {
+                  role: {
+                    name: {
+                      not: "Admin"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
         },
       }),
     ]);
+
 
     if (employees.length === 0) {
       return {

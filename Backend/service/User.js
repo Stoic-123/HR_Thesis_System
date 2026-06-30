@@ -46,8 +46,10 @@ export const getUser = async (company_id, page = 1, limit = 10) => {
       telegram_username: u.employee?.telegram_username || null,
       email: u.employee?.email || null,
       name: u.employee?.role?.name || null,
+      role_id: u.employee?.role_id || null,
       is_active: u.employee?.is_active || 'inactive',
     }));
+
 
     return {
       result: true,
