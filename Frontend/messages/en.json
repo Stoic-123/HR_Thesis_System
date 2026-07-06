@@ -621,7 +621,11 @@
     "noRecords": "No attendance records for today.",
     "selectDifferentDate": "Please select a different date or wait for new data.",
     "loadFailed": "Failed to load attendance report",
-    "exportPDF": "Export PDF"
+    "exportPDF": "Export PDF",
+    "dateRange": "Date Range",
+    "employee": "Employee",
+    "department": "Department",
+    "all": "All"
   },
   "timesheet": {
     "title": "Time Schedule",

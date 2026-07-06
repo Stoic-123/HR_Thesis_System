@@ -36,7 +36,7 @@ import {
 import { getDepartments } from "@/services/department.services";
 import { getAllEmployees } from "@/services/employee.services";
 import { toast } from "sonner";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { useMe } from "@/hooks/useMe";
 import { exportReportToPDF } from "@/lib/pdf-export";
 import { type DateRange } from "react-day-picker";
@@ -58,6 +58,20 @@ const formatKhmerDate = (isoDate: string): string => {
   const d = new Date(isoDate);
   if (isNaN(d.getTime())) return isoDate;
   return d.toLocaleDateString("km-KH", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+};
+
+const formatReportDate = (isoDate: string, locale: string): string => {
+  if (isoDate.includes(" to ")) {
+    const [start, end] = isoDate.split(" to ");
+    return `${formatReportDate(start, locale)} - ${formatReportDate(end, locale)}`;
+  }
+  const d = new Date(isoDate);
+  if (isNaN(d.getTime())) return isoDate;
+  return d.toLocaleDateString(locale === "km" ? "km-KH" : "en-US", {
     year: "numeric",
     month: "long",
     day: "numeric",
@@ -115,6 +129,7 @@ const TimeAttendanceReportPage = () => {
 
   const t = useTranslations("timeAttendanceReport");
   const tc = useTranslations("common");
+  const locale = useLocale();
   const { data: user } = useMe();
 
   const fetchReport = async () => {
@@ -208,10 +223,25 @@ const TimeAttendanceReportPage = () => {
         { kh: "ឈ្មោះបុគ្គលិក", en: "Employee Name" },
         { kh: "កាលបរិច្ឆេទ", en: "Date" },
         ...(timeModes.length > 0
-          ? timeModes.map(tm => ({
-              kh: formatTimeModeName(tm.name),
-              en: tm.name.replace(/([A-Z])/g, ' $1').trim()
-            }))
+          ? timeModes.map(tm => {
+              const key = tm.name.toLowerCase().replace(/_/g, "").replace(/\s/g, "");
+              let kh = tm.name;
+              let en = tm.name.replace(/([A-Z])/g, ' $1').trim();
+              if (key.includes("in") && !key.includes("lunch")) {
+                kh = "ម៉ោងចូល";
+                en = "Time In";
+              } else if (key.includes("out") && !key.includes("lunch")) {
+                kh = "ម៉ោងចេញ";
+                en = "Time Out";
+              } else if (key.includes("lunchout")) {
+                kh = "សម្រាកអាហារថ្ងៃត្រង់";
+                en = "Lunch Out";
+              } else if (key.includes("lunchin")) {
+                kh = "ចូលធ្វើការវិញ";
+                en = "Lunch In";
+              }
+              return { kh, en };
+            })
           : [
               { kh: "ម៉ោងចូល", en: "Check In" },
               { kh: "ម៉ោងចេញ", en: "Check Out" }
@@ -343,17 +373,17 @@ const TimeAttendanceReportPage = () => {
                 <CalendarIcon className="size-4 text-muted-foreground" />
                 <div className="flex flex-col text-left">
                   <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider leading-none mb-1">
-                    កាលបរិច្ឆេទ / Date Range
+                    {t("dateRange")}
                   </span>
                   <span className="text-xs font-semibold leading-tight">
                     {dateRange?.from ? (
                       dateRange.to ? (
                         <>
-                          {dateRange.from.toLocaleDateString("km-KH", { month: "short", day: "numeric", year: "numeric" })} -{" "}
-                          {dateRange.to.toLocaleDateString("km-KH", { month: "short", day: "numeric", year: "numeric" })}
+                          {dateRange.from.toLocaleDateString(locale === "km" ? "km-KH" : "en-US", { month: "short", day: "numeric", year: "numeric" })} -{" "}
+                          {dateRange.to.toLocaleDateString(locale === "km" ? "km-KH" : "en-US", { month: "short", day: "numeric", year: "numeric" })}
                         </>
                       ) : (
-                        dateRange.from.toLocaleDateString("km-KH", { month: "short", day: "numeric", year: "numeric" })
+                        dateRange.from.toLocaleDateString(locale === "km" ? "km-KH" : "en-US", { month: "short", day: "numeric", year: "numeric" })
                       )
                     ) : (
                       "Pick a date range"
@@ -374,10 +404,10 @@ const TimeAttendanceReportPage = () => {
           {/* Department Select */}
           <Select value={selectedDeptId} onValueChange={setSelectedDeptId}>
             <SelectTrigger className="w-[180px] rounded-xl shadow-sm">
-              <SelectValue placeholder={`${tc("department") || "នាយកដ្ឋាន"} / Department`} />
+              <SelectValue placeholder={t("department")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">{`${tc("all") || "ទាំងអស់"} / All`}</SelectItem>
+              <SelectItem value="all">{t("all")}</SelectItem>
               {departments.map((dept) => (
                 <SelectItem key={dept.id} value={String(dept.id)}>
                   {dept.name}
@@ -389,10 +419,10 @@ const TimeAttendanceReportPage = () => {
           {/* Employee Select */}
           <Select value={selectedEmpId} onValueChange={setSelectedEmpId}>
             <SelectTrigger className="w-[180px] rounded-xl shadow-sm">
-              <SelectValue placeholder="បុគ្គលិក / Employee" />
+              <SelectValue placeholder={t("employee")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">{`${tc("all") || "ទាំងអស់"} / All`}</SelectItem>
+              <SelectItem value="all">{t("all")}</SelectItem>
               {employees.map((emp) => (
                 <SelectItem key={emp.id} value={String(emp.id)}>
                   {`${emp.first_name} ${emp.last_name}`}
@@ -451,11 +481,13 @@ const TimeAttendanceReportPage = () => {
           </Badge>
         </CardHeader>
 
-        <CardContent>
+        <CardContent className="px-0 pb-0">
           {loading ? (
-            <LoadingState variant="table" count={5} />
+            <div className="px-6">
+              <LoadingState variant="table" count={5} />
+            </div>
           ) : rows.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="flex flex-col items-center justify-center py-16 text-center px-6">
               <div className="rounded-full bg-muted p-4">
                 <Fingerprint className="size-8 text-muted-foreground" />
               </div>
@@ -468,15 +500,15 @@ const TimeAttendanceReportPage = () => {
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
+              <div className="overflow-x-auto max-h-[500px] overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
               <table className="w-full min-w-[700px] text-sm">
                 <thead>
                   <tr className="text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    <th className="sticky top-0 bg-white/75 dark:bg-zinc-950/75 backdrop-blur-md z-10 py-3 pr-4 border-b border-border/50">{t("employeeCol")}</th>
-                    <th className="sticky top-0 bg-white/75 dark:bg-zinc-950/75 backdrop-blur-md z-10 py-3 pr-4 border-b border-border/50">{t("dateCol")}</th>
+                    <th className="sticky top-0 bg-white/75 dark:bg-zinc-950/75 backdrop-blur-md z-10 py-3 pl-6 pr-4 border-b border-border/50">{t("employeeCol")}</th>
+                    <th className="sticky top-0 bg-white/75 dark:bg-zinc-950/75 backdrop-blur-md z-10 py-3 px-4 border-b border-border/50">{t("dateCol")}</th>
                     {timeModes.length > 0 ? (
                       timeModes.map((tm) => (
-                        <th key={tm.id} className="sticky top-0 bg-white/75 dark:bg-zinc-950/75 backdrop-blur-md z-10 py-3 pr-4 border-b border-border/50">
+                        <th key={tm.id} className="sticky top-0 bg-white/75 dark:bg-zinc-950/75 backdrop-blur-md z-10 py-3 px-4 border-b border-border/50">
                           <span className="inline-flex items-center gap-1.5">
                             <Clock3 className="size-3.5" />
                             {formatTimeModeName(tm.name)}
@@ -485,19 +517,19 @@ const TimeAttendanceReportPage = () => {
                       ))
                     ) : (
                       <>
-                        <th className="sticky top-0 bg-white/75 dark:bg-zinc-950/75 backdrop-blur-md z-10 py-3 pr-4 border-b border-border/50">
+                        <th className="sticky top-0 bg-white/75 dark:bg-zinc-950/75 backdrop-blur-md z-10 py-3 px-4 border-b border-border/50">
                           <span className="inline-flex items-center gap-1.5">
                             <LogIn className="size-3.5" /> {t("checkInCol")}
                           </span>
                         </th>
-                        <th className="sticky top-0 bg-white/75 dark:bg-zinc-950/75 backdrop-blur-md z-10 py-3 pr-4 border-b border-border/50">
+                        <th className="sticky top-0 bg-white/75 dark:bg-zinc-950/75 backdrop-blur-md z-10 py-3 px-4 border-b border-border/50">
                           <span className="inline-flex items-center gap-1.5">
                             <LogOut className="size-3.5" /> {t("checkOutCol")}
                           </span>
                         </th>
                       </>
                     )}
-                    <th className="sticky top-0 bg-white/75 dark:bg-zinc-950/75 backdrop-blur-md z-10 py-3 text-right border-b border-border/50">{t("statusCol")}</th>
+                    <th className="sticky top-0 bg-white/75 dark:bg-zinc-950/75 backdrop-blur-md z-10 py-3 pl-4 pr-6 text-right border-b border-border/50">{t("statusCol")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/30">
@@ -509,7 +541,7 @@ const TimeAttendanceReportPage = () => {
                         key={row.employee_id}
                         className="group transition-colors hover:bg-muted/40"
                       >
-                        <td className="py-3.5 pr-4">
+                        <td className="py-3.5 pl-6 pr-4">
                           <div className="flex items-center gap-3">
                             <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
                               {initials(row.employee)}
@@ -520,8 +552,8 @@ const TimeAttendanceReportPage = () => {
                           </div>
                         </td>
 
-                        <td className="py-3.5 pr-4 text-muted-foreground">
-                          {formatKhmerDate(row.date)}
+                        <td className="py-3.5 px-4 text-muted-foreground">
+                          {formatReportDate(row.date, locale)}
                         </td>
 
                         {timeModes.length > 0 ? (
@@ -550,7 +582,7 @@ const TimeAttendanceReportPage = () => {
                             }
 
                             return (
-                              <td key={tm.id} className="py-3.5 pr-4">
+                              <td key={tm.id} className="py-3.5 px-4">
                                 <span className={cn("inline-flex items-center gap-1.5 font-mono text-sm tabular-nums", textClass)}>
                                   <Clock3 className="size-3.5 shrink-0" />
                                   {scanText}
@@ -560,14 +592,14 @@ const TimeAttendanceReportPage = () => {
                           })
                         ) : (
                           <>
-                            <td className="py-3.5 pr-4">
+                            <td className="py-3.5 px-4">
                               <span className="inline-flex items-center gap-1.5 font-mono text-sm tabular-nums text-emerald-500">
                                 <Clock3 className="size-3.5 text-emerald-500" />
                                 {row.checkIn}
                               </span>
                             </td>
 
-                            <td className="py-3.5 pr-4">
+                            <td className="py-3.5 px-4">
                               <span className="inline-flex items-center gap-1.5 font-mono text-sm tabular-nums text-rose-400">
                                 <Clock3 className="size-3.5 text-rose-400" />
                                 {row.checkOut}
@@ -576,7 +608,7 @@ const TimeAttendanceReportPage = () => {
                           </>
                         )}
 
-                        <td className="py-3.5 text-right">
+                        <td className="py-3.5 pl-4 pr-6 text-right">
                           <Badge
                             className={`rounded-full px-3 ring-1 ${badge.className}`}
                           >
@@ -595,9 +627,11 @@ const TimeAttendanceReportPage = () => {
 
             {/* Pagination Controls */}
             {rows.length > 0 && report?.pagination && (
-              <div className="flex items-center justify-between border-t border-border/30 px-2 py-4 mt-4">
+              <div className="flex items-center justify-between border-t border-border/30 px-6 py-4 mt-4">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground font-medium">បង្ហាញ / Show:</span>
+                  <span className="text-xs text-muted-foreground font-medium">
+                    {locale === "km" ? "បង្ហាញ:" : "Show:"}
+                  </span>
                   <Select
                     value={String(limit)}
                     onValueChange={(val) => {
@@ -616,7 +650,7 @@ const TimeAttendanceReportPage = () => {
                     </SelectContent>
                   </Select>
                   <span className="text-xs text-muted-foreground">
-                    ជួរក្នុងមួយទំព័រ / Rows per page
+                    {locale === "km" ? "ជួរក្នុងមួយទំព័រ" : "Rows per page"}
                   </span>
                 </div>
                 

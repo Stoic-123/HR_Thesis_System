@@ -148,6 +148,7 @@ export const exportReportToPDF = (options: ExportPdfOptions) => {
             font-size: 11pt;
             letter-spacing: 0.5px;
             margin: 0;
+            text-align: center;
           }
           .national-motto-en {
             font-family: 'Kantumruy Pro', sans-serif;
@@ -155,6 +156,7 @@ export const exportReportToPDF = (options: ExportPdfOptions) => {
             font-size: 9pt;
             text-transform: uppercase;
             margin: 2px 0 5px 0;
+            text-align: center;
           }
           .motto-divider {
             width: 100px;

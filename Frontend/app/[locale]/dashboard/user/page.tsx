@@ -24,6 +24,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function UserPage() {
   const [users, setUsers] = useState<any[]>([]);
@@ -37,6 +47,7 @@ export default function UserPage() {
   const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
   const t = useTranslations("user");
   const tc = useTranslations("common");
@@ -98,14 +109,13 @@ export default function UserPage() {
     }
   };
 
-  const handleResetPassword = async () => {
-    if (!editingUser) return;
-    
-    const confirmMessage = t("resetConfirm", { username: editingUser.username }) || `Are you sure you want to reset password for ${editingUser.username}?`;
-    if (!confirm(confirmMessage)) {
-      return;
-    }
+  const handleResetPassword = () => {
+    setIsConfirmOpen(true);
+  };
 
+  const handleConfirmReset = async () => {
+    if (!editingUser) return;
+    setIsConfirmOpen(false);
     try {
       setIsResettingPassword(true);
       const response = await resetPassword(editingUser.id);
@@ -280,6 +290,26 @@ export default function UserPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
+        <AlertDialogContent className="border-white/60 bg-white/95 shadow-2xl backdrop-blur-xl rounded-3xl dark:bg-zinc-900/95 dark:border-zinc-800">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-lg font-semibold">{t("resetPassword") || "Reset Password"}</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-muted-foreground">
+              {t("resetConfirm", { username: editingUser?.username }) || `Are you sure you want to reset password for ${editingUser?.username}?`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl">{tc("cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmReset}
+              className="bg-red-600 hover:bg-red-700 text-white rounded-xl cursor-pointer"
+            >
+              {t("resetPassword") || "Reset Password"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
