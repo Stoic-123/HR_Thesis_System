@@ -205,8 +205,22 @@ const menuItems: MenuItem[] = [
     title: "Overtime",
     labelKey: "overtime",
     icon: Timer,
-    href: "/dashboard/overtime",
-    permission: "overtime:approve",
+    submenu: [
+      {
+        title: "Requests",
+        labelKey: "overtimeRequests",
+        icon: Timer,
+        href: "/dashboard/overtime",
+        permission: "overtime:approve",
+      },
+      {
+        title: "Report",
+        labelKey: "report",
+        icon: FileText,
+        href: "/dashboard/overtime/report",
+        permission: "overtime:approve",
+      },
+    ],
   },
   {
     title: "Payroll",
@@ -492,10 +506,15 @@ export function Sidebar({ collapsed = false }: { collapsed?: boolean }) {
                         transition={{ duration: 0.2, ease: "easeInOut" }}
                         className="ml-3 mt-1 space-y-1 border-l border-gray-200 pl-3 overflow-hidden"
                       >
-                        {item.submenu.map((subItem) => {
+                        {item.submenu?.map((subItem) => {
+                          const hasMoreSpecificMatch = item.submenu?.some(otherSub =>
+                            otherSub.href !== subItem.href &&
+                            otherSub.href.length > subItem.href.length &&
+                            pathname.startsWith(otherSub.href)
+                          ) ?? false;
                           const isSubActive =
                             pathname === subItem.href ||
-                            pathname.startsWith(subItem.href + "/");
+                            (pathname.startsWith(subItem.href + "/") && !hasMoreSpecificMatch);
                           return (
                             <Link
                               key={subItem.title}

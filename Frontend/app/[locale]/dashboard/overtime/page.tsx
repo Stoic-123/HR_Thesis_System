@@ -48,12 +48,26 @@ export default function OvertimePage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("all");
 
+  // Pagination states
+  const [page, setPage] = useState<number>(1);
+  const [limit, setLimit] = useState<number>(10);
+  const [total, setTotal] = useState<number>(0);
+  const [totalPages, setTotalPages] = useState<number>(1);
+
   const fetchData = async () => {
     try {
       setLoading(true);
-      const data = await getAllOvertimes();
+      const data = await getAllOvertimes({
+        page,
+        limit,
+        status: filter,
+      });
       if (data?.result) {
         setOvertimes(data.data);
+        if (data.pagination) {
+          setTotal(data.pagination.total);
+          setTotalPages(data.pagination.totalPages);
+        }
       }
     } catch (error) {
       console.error("Failed to fetch overtimes", error);
@@ -63,9 +77,14 @@ export default function OvertimePage() {
     }
   };
 
+  // Reset page when filter changes
+  useEffect(() => {
+    setPage(1);
+  }, [filter]);
+
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [filter, page, limit]);
 
   const handleApprove = async (id: number) => {
     try {
@@ -152,10 +171,7 @@ export default function OvertimePage() {
     });
   };
 
-  const filteredOvertimes =
-    filter === "all"
-      ? overtimes
-      : overtimes.filter((ot) => ot.status === filter);
+  const filteredOvertimes = overtimes;
 
   return (
     <div className="p-6 space-y-6">
@@ -186,69 +202,126 @@ export default function OvertimePage() {
           {loading ? (
             <LoadingState variant="table" count={6} />
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{to("employeeLabel")}</TableHead>
-                  <TableHead>{to("from")}</TableHead>
-                  <TableHead>{to("to")}</TableHead>
-                  <TableHead>{to("reason")}</TableHead>
-                  <TableHead>{tc("status")}</TableHead>
-                  <TableHead>{tc("actions")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredOvertimes.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center text-gray-500">
-                      {to("noRequests")}
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredOvertimes.map((ot) => (
-                    <TableRow key={ot.id}>
-                      <TableCell className="font-medium">
-                        {ot.employee_overtime_employee_idToemployee
-                          ? `${ot.employee_overtime_employee_idToemployee.first_name} ${ot.employee_overtime_employee_idToemployee.last_name}`
-                          : ot.employee_id
-                          ? `Employee #${ot.employee_id}`
-                          : "Unknown Employee"}
-                      </TableCell>
-                      <TableCell>{formatDate(ot.start_date)}</TableCell>
-                      <TableCell>{formatDate(ot.end_date)}</TableCell>
-                      <TableCell>{ot.reason || to("noReason")}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {getStatusIcon(ot.status)}
-                          {getStatusBadge(ot.status)}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {ot.status === "pending" && (
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant="default"
-                              className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                              onClick={() => handleApprove(ot.id)}
-                            >
-                              {to("approve")}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => handleReject(ot.id)}
-                            >
-                              {to("reject")}
-                            </Button>
-                          </div>
-                        )}
+            <>
+              <div className="max-h-[500px] overflow-y-auto relative">
+                <Table>
+                  <TableHeader className="sticky top-0 bg-white dark:bg-zinc-950 z-10">
+                    <TableRow>
+                      <TableHead className="bg-white dark:bg-zinc-950">{to("employeeLabel")}</TableHead>
+                      <TableHead className="bg-white dark:bg-zinc-950">{to("from")}</TableHead>
+                      <TableHead className="bg-white dark:bg-zinc-950">{to("to")}</TableHead>
+                      <TableHead className="bg-white dark:bg-zinc-950">{to("reason")}</TableHead>
+                      <TableHead className="bg-white dark:bg-zinc-950">{tc("status")}</TableHead>
+                      <TableHead className="bg-white dark:bg-zinc-950">{tc("actions")}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                  {filteredOvertimes.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-gray-500">
+                        {to("noRequests")}
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    filteredOvertimes.map((ot) => (
+                      <TableRow key={ot.id}>
+                        <TableCell className="font-medium">
+                          {ot.employee_overtime_employee_idToemployee
+                            ? `${ot.employee_overtime_employee_idToemployee.first_name} ${ot.employee_overtime_employee_idToemployee.last_name}`
+                            : ot.employee_id
+                            ? `Employee #${ot.employee_id}`
+                            : "Unknown Employee"}
+                        </TableCell>
+                        <TableCell>{formatDate(ot.start_date)}</TableCell>
+                        <TableCell>{formatDate(ot.end_date)}</TableCell>
+                        <TableCell>{ot.reason || to("noReason")}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {getStatusIcon(ot.status)}
+                            {getStatusBadge(ot.status)}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {ot.status === "pending" && (
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="default"
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                                onClick={() => handleApprove(ot.id)}
+                              >
+                                {to("approve")}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handleReject(ot.id)}
+                              >
+                                {to("reject")}
+                              </Button>
+                            </div>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+
+              {/* Pagination Controls */}
+              {overtimes.length > 0 && (
+                <div className="flex items-center justify-between border-t border-border/30 px-2 py-4 mt-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground font-medium">បង្ហាញ / Show:</span>
+                    <Select
+                      value={String(limit)}
+                      onValueChange={(val) => {
+                        setLimit(Number(val));
+                        setPage(1);
+                      }}
+                    >
+                      <SelectTrigger className="w-[85px] h-8 rounded-xl shadow-sm">
+                        <SelectValue placeholder="10" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="10">10</SelectItem>
+                        <SelectItem value="20">20</SelectItem>
+                        <SelectItem value="50">50</SelectItem>
+                        <SelectItem value="100">100</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <span className="text-xs text-muted-foreground">
+                      ជួរក្នុងមួយទំព័រ / Rows per page
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 rounded-xl shadow-sm text-xs font-medium cursor-pointer"
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={page === 1}
+                    >
+                      {tc("previous")}
+                    </Button>
+                    <span className="text-xs text-muted-foreground font-semibold px-2">
+                      {tc("page")} {page} {tc("of")} {totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 rounded-xl shadow-sm text-xs font-medium cursor-pointer"
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={page >= totalPages}
+                    >
+                      {tc("next")}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>

@@ -71,56 +71,6 @@ services:
     ports:
       - "3000:3000"
 
-  # ── Mekong Frontend Tunnel ──────────────────────────────────────────────────
-  mekong-frontend:
-    image: alpine:latest
-    container_name: hrms_mekong_frontend
-    restart: unless-stopped
-    depends_on:
-      - frontend
-    network_mode: service:frontend
-    volumes:
-      - ~/.mekong:/root/.mekong:ro
-    environment:
-      MEKONG_FRONTEND_SUBDOMAIN: ${MEKONG_FRONTEND_SUBDOMAIN:-}
-    entrypoint: >
-      sh -c "
-      apk add --no-cache curl libc6-compat &&
-      curl -fsSL https://mekongtunnel.dev/install.sh | sh &&
-      echo 'Waiting for frontend to start...' &&
-      until curl -s http://localhost:3000 > /dev/null; do sleep 1; done &&
-      if [ -n \"$$MEKONG_FRONTEND_SUBDOMAIN\" ]; then
-        mekong 3000 --subdomain \"$$MEKONG_FRONTEND_SUBDOMAIN\"
-      else
-        mekong 3000
-      fi
-      "
-
-  # ── Mekong Backend Tunnel ───────────────────────────────────────────────────
-  mekong-backend:
-    image: alpine:latest
-    container_name: hrms_mekong_backend
-    restart: unless-stopped
-    depends_on:
-      - backend
-    network_mode: service:backend
-    volumes:
-      - ~/.mekong:/root/.mekong:ro
-    environment:
-      MEKONG_BACKEND_SUBDOMAIN: ${MEKONG_BACKEND_SUBDOMAIN:-}
-    entrypoint: >
-      sh -c "
-      apk add --no-cache curl libc6-compat &&
-      curl -fsSL https://mekongtunnel.dev/install.sh | sh &&
-      echo 'Waiting for backend to start...' &&
-      until curl -s http://localhost:8080 > /dev/null; do sleep 1; done &&
-      if [ -n \"$$MEKONG_BACKEND_SUBDOMAIN\" ]; then
-        mekong 8080 --subdomain \"$$MEKONG_BACKEND_SUBDOMAIN\"
-      else
-        mekong 8080
-      fi
-      "
-
 volumes:
   mysql_data:
   uploads_data:

@@ -127,6 +127,10 @@ export const getAllOvertimesController = async (req, res) => {
   try {
     const company_id = req.user.company_id;
     const employee_id = req.user.employee_id;
+    const { page, limit, startDate, endDate, departmentId, employeeId, status } = req.query;
+
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 10;
 
     // Fetch user role and department to check access permissions
     const currentEmployee = await prisma.employee.findUnique({
@@ -143,7 +147,67 @@ export const getAllOvertimesController = async (req, res) => {
       deptId = currentEmployee.department_id;
     }
 
-    const overtimes = await getAllOvertimes(company_id, deptId);
+    const where = {
+      employee_overtime_employee_idToemployee: {
+        company_id: parseInt(company_id),
+      },
+    };
+
+    // Restrict manager's view or apply selected department filter
+    if (deptId) {
+      where.employee_overtime_employee_idToemployee.department_id = parseInt(deptId);
+    } else if (departmentId && departmentId !== "all") {
+      where.employee_overtime_employee_idToemployee.department_id = parseInt(departmentId);
+    }
+
+    if (employeeId && employeeId !== "all") {
+      where.employee_id = parseInt(employeeId);
+    }
+
+    if (status && status !== "all") {
+      where.status = status;
+    }
+
+    if (startDate && endDate) {
+      where.start_date = {
+        gte: new Date(`${startDate}T00:00:00.000+07:00`),
+      };
+      where.end_date = {
+        lte: new Date(`${endDate}T23:59:59.999+07:00`),
+      };
+    }
+
+    // Get total matching records count
+    const total = await prisma.overtime.count({ where });
+
+    // Fetch paginated list
+    const overtimes = await prisma.overtime.findMany({
+      where,
+      include: {
+        employee_overtime_employee_idToemployee: true,
+      },
+      orderBy: {
+        created_at: "desc",
+      },
+      skip: (pageNum - 1) * limitNum,
+      take: limitNum,
+    });
+
+    // Fetch stats for all matching overtimes (ignoring status filter so card totals remain accurate)
+    const statsWhere = { ...where };
+    delete statsWhere.status;
+    const allMatchingOvertimes = await prisma.overtime.findMany({
+      where: statsWhere,
+      select: { status: true },
+    });
+
+    const stats = {
+      total: allMatchingOvertimes.length,
+      approved: allMatchingOvertimes.filter(o => o.status === "approved").length,
+      pending: allMatchingOvertimes.filter(o => o.status === "pending").length,
+      rejected: allMatchingOvertimes.filter(o => o.status === "rejected").length,
+    };
+
     const formattedOvertimes = overtimes.map((ot) => {
       return {
         id: ot.id,
@@ -153,6 +217,7 @@ export const getAllOvertimesController = async (req, res) => {
               id: ot.employee_overtime_employee_idToemployee.id,
               first_name: ot.employee_overtime_employee_idToemployee.first_name,
               last_name: ot.employee_overtime_employee_idToemployee.last_name,
+              department_id: ot.employee_overtime_employee_idToemployee.department_id,
             }
           : null,
         start_date: ot.start_date,
@@ -162,7 +227,17 @@ export const getAllOvertimesController = async (req, res) => {
       };
     });
 
-    res.status(200).json({ result: true, data: formattedOvertimes });
+    res.status(200).json({
+      result: true,
+      data: formattedOvertimes,
+      stats,
+      pagination: {
+        total,
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(total / limitNum),
+      }
+    });
   } catch (error) {
     console.error(error.message);
     res.status(500).json({ result: false, message: error.message });

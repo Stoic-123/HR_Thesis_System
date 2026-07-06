@@ -3,10 +3,12 @@
 import React, { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getUsers, updateUser } from "@/services/user.services";
+import { Button } from "@/components/ui/button";
+import { getUsers, updateUser, resetPassword } from "@/services/user.services";
 import { getRoles } from "@/services/role.services";
-import { Loader2 } from "lucide-react";
+import { Loader2, Pencil } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { toast } from "sonner";
 import {
   Select,
   SelectContent,
@@ -14,6 +16,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export default function UserPage() {
   const [users, setUsers] = useState<any[]>([]);
@@ -21,6 +31,13 @@ export default function UserPage() {
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
   const t = useTranslations("user");
   const tc = useTranslations("common");
 
@@ -52,23 +69,55 @@ export default function UserPage() {
     loadData();
   }, []);
 
-  const handleRoleChange = async (userId: number, roleId: number) => {
+  const handleEditClick = (user: any) => {
+    setEditingUser(user);
+    setSelectedRoleId(user.role_id);
+    setIsDialogOpen(true);
+  };
+
+  const handleSaveUser = async () => {
+    if (!editingUser || selectedRoleId === null) return;
     try {
-      setUpdatingId(userId);
-      const response = await updateUser(userId, { role_id: roleId });
+      setIsSaving(true);
+      const response = await updateUser(editingUser.id, { role_id: selectedRoleId });
       if (response.result) {
+        toast.success("User role updated successfully");
+        setIsDialogOpen(false);
         // Refresh users list
         const updatedUsers = await getUsers();
         if (updatedUsers.result) {
           setUsers(updatedUsers.data || []);
         }
       } else {
-        alert(response.message || "Failed to update role.");
+        toast.error(response.message || "Failed to update role.");
       }
     } catch (err: any) {
-      alert(err.message || "An error occurred while updating the role.");
+      toast.error(err.message || "An error occurred while updating the role.");
     } finally {
-      setUpdatingId(null);
+      setIsSaving(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!editingUser) return;
+    
+    const confirmMessage = t("resetConfirm", { username: editingUser.username }) || `Are you sure you want to reset password for ${editingUser.username}?`;
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    try {
+      setIsResettingPassword(true);
+      const response = await resetPassword(editingUser.id);
+      if (response.result) {
+        toast.success(response.message || "Password reset to default successfully.");
+      } else {
+        toast.error(response.message || "Failed to reset password.");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "An error occurred while resetting password.");
+    } finally {
+      setIsResettingPassword(false);
     }
   };
 
@@ -84,7 +133,7 @@ export default function UserPage() {
       <Card>
         <CardHeader className="flex-row items-center justify-between">
           <CardTitle>{t("userList")}</CardTitle>
-          {(loading || updatingId !== null) && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+          {(loading || updatingId !== null || isSaving) && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
         </CardHeader>
         <CardContent>
           {error ? (
@@ -106,6 +155,7 @@ export default function UserPage() {
                     <th className="px-4 py-3 text-xs font-semibold">{tc("email")}</th>
                     <th className="px-4 py-3 text-xs font-semibold">{tc("role")}</th>
                     <th className="px-4 py-3 text-xs font-semibold">{tc("status")}</th>
+                    <th className="px-4 py-3 text-xs font-semibold text-center w-[100px]">{tc("actions")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -113,23 +163,10 @@ export default function UserPage() {
                     <tr key={u.id} className="border-b border-white/30 last:border-0 hover:bg-white/5">
                       <td className="px-4 py-3 font-semibold">{u.username}</td>
                       <td className="px-4 py-3 text-muted-foreground">{u.email || "N/A"}</td>
-                      <td className="px-4 py-3">
-                        <Select
-                          value={String(u.role_id || "")}
-                          onValueChange={(val) => handleRoleChange(u.id, Number(val))}
-                          disabled={updatingId === u.id}
-                        >
-                          <SelectTrigger className="h-8 w-[180px] rounded-lg">
-                            <SelectValue placeholder={t("selectRole") || "Select Role"} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {roles.map((r) => (
-                              <SelectItem key={r.id} value={String(r.id)}>
-                                {r.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                      <td className="px-4 py-3 font-medium">
+                        <Badge variant="outline" className="rounded-full bg-white/5 border-white/10 px-2.5 py-0.5 text-xs text-foreground font-normal">
+                          {roles.find((r) => r.id === u.role_id)?.name || u.name || "N/A"}
+                        </Badge>
                       </td>
                       <td className="px-4 py-3">
                         {u.is_active === 'active' ? (
@@ -142,6 +179,16 @@ export default function UserPage() {
                           </Badge>
                         )}
                       </td>
+                      <td className="px-4 py-3 text-center">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEditClick(u)}
+                          className="rounded-lg h-8 w-8 hover:bg-white/10"
+                        >
+                          <Pencil className="size-4 text-muted-foreground hover:text-foreground" />
+                        </Button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -150,6 +197,90 @@ export default function UserPage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-md border-white/60 bg-white/95 shadow-2xl backdrop-blur-xl rounded-3xl dark:bg-zinc-900/95 dark:border-zinc-800">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold">
+              {t("editUser")}
+            </DialogTitle>
+            <DialogDescription>
+              Update access role or reset password for <strong>{editingUser?.username}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            {/* Role Selection */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-muted-foreground block">
+                {tc("role")}
+              </label>
+              <Select
+                value={String(selectedRoleId || "")}
+                onValueChange={(val) => setSelectedRoleId(Number(val))}
+              >
+                <SelectTrigger className="w-full h-10 rounded-xl">
+                  <SelectValue placeholder={t("selectRole") || "Select Role"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {roles.map((r) => (
+                    <SelectItem key={r.id} value={String(r.id)}>
+                      {r.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <hr className="border-t border-muted/50" />
+
+            {/* Reset Password */}
+            <div className="space-y-3 bg-red-50/50 dark:bg-red-950/20 p-4 rounded-2xl border border-red-100 dark:border-red-950/50">
+              <h4 className="text-sm font-semibold text-red-800 dark:text-red-400">
+                {t("resetPasswordToDefault")}
+              </h4>
+              <p className="text-xs text-red-600/80 dark:text-red-400/80">
+                {t("resetPasswordWarning")}
+              </p>
+              <Button
+                type="button"
+                variant="destructive"
+                className="w-full rounded-xl gap-2 bg-red-600 hover:bg-red-700 text-white font-medium shadow-sm transition-all duration-200"
+                onClick={handleResetPassword}
+                disabled={isResettingPassword}
+              >
+                {isResettingPassword ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Resetting...
+                  </>
+                ) : (
+                  t("resetPassword")
+                )}
+              </Button>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setIsDialogOpen(false)}
+              className="rounded-xl"
+            >
+              {tc("cancel")}
+            </Button>
+            <Button
+              onClick={handleSaveUser}
+              disabled={isSaving}
+              className="rounded-xl gap-2 bg-primary hover:bg-primary/90 text-primary-foreground"
+            >
+              {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+              {tc("save")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+

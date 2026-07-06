@@ -72,6 +72,7 @@
     "documentType": "Document Type",
     "holiday": "Holiday",
     "overtime": "Overtime",
+    "overtimeRequests": "Requests",
     "payroll": "Payroll",
     "payrollDashboard": "Dashboard",
     "payrollReview": "Review",
@@ -410,7 +411,12 @@
     "title": "Users",
     "subtitle": "Manage users and access permissions.",
     "userList": "User List",
-    "noUsers": "No user data available."
+    "noUsers": "No user data available.",
+    "editUser": "Edit User Access",
+    "resetPassword": "Reset Password",
+    "resetPasswordToDefault": "Reset Password to Default",
+    "resetPasswordWarning": "This will reset the user's password to the company's default password. The user must change their password on next login.",
+    "resetConfirm": "Are you sure you want to reset password for {username}?"
   },
   "role": {
     "title": "Roles",
@@ -450,7 +456,8 @@
     "allRequests": "All Requests",
     "noRequests": "No overtime requests found",
     "approvedSuccess": "Overtime request approved",
-    "rejectedSuccess": "Overtime request rejected"
+    "rejectedSuccess": "Overtime request rejected",
+    "exportPDF": "Export PDF"
   },
   "timemode": {
     "title": "Time Modes",
@@ -613,7 +620,8 @@
     "early": "Early Leave",
     "noRecords": "No attendance records for today.",
     "selectDifferentDate": "Please select a different date or wait for new data.",
-    "loadFailed": "Failed to load attendance report"
+    "loadFailed": "Failed to load attendance report",
+    "exportPDF": "Export PDF"
   },
   "timesheet": {
     "title": "Time Schedule",
@@ -765,6 +773,15 @@
   "leaveReport": {
     "title": "Leave Report",
     "description": "Overview of all submitted leave requests.",
+    "thisMonthRequests": "This Month Requests",
+    "approvedCount": "Approved",
+    "pendingCount": "Pending",
+    "allRequests": "All Requests",
+    "weekBadge": "This Month"
+  },
+  "overtimeReport": {
+    "title": "Overtime Report",
+    "description": "Overview and statistics of all submitted overtime requests.",
     "thisMonthRequests": "This Month Requests",
     "approvedCount": "Approved",
     "pendingCount": "Pending",

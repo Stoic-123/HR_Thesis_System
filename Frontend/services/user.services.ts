@@ -13,3 +13,7 @@ export const updateUser = async (
   return res.data;
 };
 
+export const resetPassword = async (userId: number) => {
+  const res = await api.post("/api/auth/reset-password", { user_id: userId });
+  return res.data;
+};

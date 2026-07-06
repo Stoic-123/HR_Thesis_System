@@ -9,6 +9,7 @@ import {
   LogOut,
   UserCheck,
   Users,
+  Printer,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,18 +20,41 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { LoadingState } from "@/components/ui/loading-state";
 import { cn } from "@/lib/utils";
 import {
   getAttendanceReport,
   type AttendanceReport,
 } from "@/services/attendance.services";
+import { getDepartments } from "@/services/department.services";
+import { getAllEmployees } from "@/services/employee.services";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import { useMe } from "@/hooks/useMe";
+import { exportReportToPDF } from "@/lib/pdf-export";
+import { type DateRange } from "react-day-picker";
+
 
 /* ────────────────────────── helpers ──────────────────────────── */
 
-const formatKhmerDate = (isoDate: string) => {
+const formatLateMinutes = (mins: number) => {
+  const hrs = Math.floor(mins / 60);
+  const m = mins % 60;
+  return `+${String(hrs).padStart(2, "0")}:${String(m).padStart(2, "0")}min`;
+};
+
+const formatKhmerDate = (isoDate: string): string => {
+  if (isoDate.includes(" to ")) {
+    const [start, end] = isoDate.split(" to ");
+    return `${formatKhmerDate(start)} - ${formatKhmerDate(end)}`;
+  }
   const d = new Date(isoDate);
   if (isNaN(d.getTime())) return isoDate;
   return d.toLocaleDateString("km-KH", {
@@ -60,16 +84,50 @@ const initials = (name: string) =>
 const TimeAttendanceReportPage = () => {
   const [report, setReport] = useState<AttendanceReport | null>(null);
   const [loading, setLoading] = useState(true);
-  const [calendarDate, setCalendarDate] = useState<Date>(new Date());
+  const [startDate, setStartDate] = useState<Date>(new Date());
+  const [endDate, setEndDate] = useState<Date>(new Date());
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: new Date(),
+    to: new Date(),
+  });
+  const [departments, setDepartments] = useState<{ id: number; name: string }[]>([]);
+  const [employees, setEmployees] = useState<{ id: number; first_name: string; last_name: string }[]>([]);
+  const [selectedDeptId, setSelectedDeptId] = useState<string>("all");
+  const [selectedEmpId, setSelectedEmpId] = useState<string>("all");
+  
+  // Pagination states
+  const [page, setPage] = useState<number>(1);
+  const [limit, setLimit] = useState<number>(10);
+
+  const handleDateRangeSelect = (range: DateRange | undefined) => {
+    setDateRange(range);
+    if (range) {
+      if (range.from) {
+        setStartDate(range.from);
+      }
+      if (range.to) {
+        setEndDate(range.to);
+      } else if (range.from) {
+        setEndDate(range.from);
+      }
+    }
+  };
+
   const t = useTranslations("timeAttendanceReport");
   const tc = useTranslations("common");
+  const { data: user } = useMe();
 
-  const selectedDate = toISODate(calendarDate);
-
-  const fetchReport = async (date: string) => {
+  const fetchReport = async () => {
     setLoading(true);
     try {
-      const res = await getAttendanceReport(date);
+      const res = await getAttendanceReport({
+        startDate: toISODate(startDate),
+        endDate: toISODate(endDate),
+        departmentId: selectedDeptId,
+        employeeId: selectedEmpId,
+        page,
+        limit,
+      });
       if (res.result) {
         setReport(res.data);
       } else {
@@ -77,7 +135,7 @@ const TimeAttendanceReportPage = () => {
       }
     } catch (err) {
       console.error("Failed to fetch attendance report:", err);
-      toast.error(t("loadFailed"));
+      toast.error(t("loadFailed") || "Failed to load report");
       setReport(null);
     } finally {
       setLoading(false);
@@ -85,8 +143,127 @@ const TimeAttendanceReportPage = () => {
   };
 
   useEffect(() => {
-    fetchReport(selectedDate);
-  }, [selectedDate]);
+    const loadFilters = async () => {
+      try {
+        const deptsRes = await getDepartments(1, 1, 100);
+        if (deptsRes?.result) {
+          setDepartments(deptsRes.data);
+        }
+        const empsRes = await getAllEmployees(1, 1000);
+        if (empsRes?.result) {
+          setEmployees(empsRes.data);
+        }
+      } catch (err) {
+        console.error("Failed to load filter data:", err);
+      }
+    };
+    loadFilters();
+  }, []);
+
+  // Reset page to 1 when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [startDate, endDate, selectedDeptId, selectedEmpId]);
+
+  useEffect(() => {
+    fetchReport();
+  }, [startDate, endDate, selectedDeptId, selectedEmpId, page, limit]);
+
+  const handleExportPDF = () => {
+    if (!report) return;
+
+    const formattedDate = startDate.toDateString() === endDate.toDateString()
+      ? startDate.toLocaleDateString("km-KH", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        })
+      : `${formatKhmerDate(toISODate(startDate))} - ${formatKhmerDate(toISODate(endDate))}`;
+
+    const deptLabel = selectedDeptId === "all"
+      ? "គ្រប់ផ្នែក / All Departments"
+      : departments.find(d => String(d.id) === selectedDeptId)?.name || "នាយកដ្ឋាន / Department";
+
+    const userFullName = user?.employee ? `${user.employee.first_name} ${user.employee.last_name}` : "";
+
+    const apiBaseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+    const companyLogo = user?.employee?.company?.logo_path
+      ? (user.employee.company.logo_path.startsWith("http")
+          ? user.employee.company.logo_path
+          : `${apiBaseURL}${user.employee.company.logo_path}`)
+      : "";
+
+    exportReportToPDF({
+      titleKh: "របាយការណ៍វត្តមានការងារ",
+      titleEn: "Time Attendance Report",
+      companyName: user?.employee?.company?.name || "ក្រុមហ៊ុន សារណៈ",
+      companyLogo,
+      orientation: "landscape",
+      metadata: [
+        { labelKh: "កាលបរិច្ឆេទ", labelEn: "Date", value: formattedDate },
+        { labelKh: "ផ្នែក/នាយកដ្ឋាន", labelEn: "Department", value: deptLabel },
+        { labelKh: "រៀបចំដោយ", labelEn: "Prepared By", value: userFullName || "រដ្ឋបាល / Admin" }
+      ],
+      tableHeaders: [
+        { kh: "ឈ្មោះបុគ្គលិក", en: "Employee Name" },
+        { kh: "កាលបរិច្ឆេទ", en: "Date" },
+        ...(timeModes.length > 0
+          ? timeModes.map(tm => ({
+              kh: formatTimeModeName(tm.name),
+              en: tm.name.replace(/([A-Z])/g, ' $1').trim()
+            }))
+          : [
+              { kh: "ម៉ោងចូល", en: "Check In" },
+              { kh: "ម៉ោងចេញ", en: "Check Out" }
+            ]
+        ),
+        { kh: "ស្ថានភាព", en: "Status", align: "right" }
+      ],
+      tableRows: rows.map(row => {
+        const scansCells = timeModes.length > 0
+          ? timeModes.map(tm => {
+              const scan = row.scans?.[tm.id];
+              let scanText = "--:--";
+              let colorClass = "text-gray";
+              if (scan) {
+                if (scan.late_minutes && scan.late_minutes > 0) {
+                  scanText = `${scan.time} <span style="font-size: 7.5pt; font-weight: normal; color: #ef4444;">(${formatLateMinutes(scan.late_minutes)})</span>`;
+                  colorClass = "text-rose";
+                } else if (scan.early_minutes && scan.early_minutes > 0) {
+                  scanText = `${scan.time} <span style="font-size: 7.5pt; font-weight: normal; color: #ef4444;">(-${formatLateMinutes(scan.early_minutes)})</span>`;
+                  colorClass = "text-rose";
+                } else {
+                  scanText = scan.time;
+                  if (scan.is_late) colorClass = "text-amber";
+                  else if (scan.is_early) colorClass = "text-rose";
+                  else colorClass = "text-emerald";
+                }
+              }
+              return {
+                text: `<span class="${colorClass} font-mono">${scanText}</span>`,
+                align: "left" as const
+              };
+            })
+          : [
+              { text: `<span class="text-emerald font-mono">${row.checkIn || "--:--"}</span>`, align: "left" as const },
+              { text: `<span class="text-rose font-mono">${row.checkOut || "--:--"}</span>`, align: "left" as const }
+            ];
+
+        const statusLabel = row.status === "present" ? "មកទាន់ពេល" : row.status === "late" ? "យឺតយ៉ាវ" : "ចេញមុន";
+        const statusColor = row.status === "present" ? "text-emerald" : row.status === "late" ? "text-amber" : "text-rose";
+
+        return {
+          cells: [
+            { text: `<strong>${row.employee}</strong>`, align: "left" as const },
+            { text: formatKhmerDate(row.date), align: "left" as const },
+            ...scansCells,
+            { text: `<span class="${statusColor}">${statusLabel}</span>`, align: "right" as const }
+          ]
+        };
+      }),
+      preparedBy: userFullName
+    });
+  };
 
   const summary = report?.summary;
   const rows = report?.rows ?? [];
@@ -155,33 +332,84 @@ const TimeAttendanceReportPage = () => {
           </p>
         </div>
 
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className={cn(
-                "min-w-[230px] justify-start gap-2 rounded-xl shadow-sm",
-                !calendarDate && "text-muted-foreground"
-              )}
-            >
-              <CalendarIcon className="size-4 text-muted-foreground" />
-              {calendarDate
-                ? calendarDate.toLocaleDateString("km-KH", {
-                    year: "numeric",
-                    month: "short",
-                    day: "numeric",
-                  })
-                : tc("selectDate")}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="end">
-            <Calendar
-              mode="single"
-              selected={calendarDate}
-              onSelect={(date) => date && setCalendarDate(date)}
-            />
-          </PopoverContent>
-        </Popover>
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Date Range Picker */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className="min-w-[240px] justify-start gap-2 rounded-xl shadow-sm text-left font-normal cursor-pointer"
+              >
+                <CalendarIcon className="size-4 text-muted-foreground" />
+                <div className="flex flex-col text-left">
+                  <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider leading-none mb-1">
+                    កាលបរិច្ឆេទ / Date Range
+                  </span>
+                  <span className="text-xs font-semibold leading-tight">
+                    {dateRange?.from ? (
+                      dateRange.to ? (
+                        <>
+                          {dateRange.from.toLocaleDateString("km-KH", { month: "short", day: "numeric", year: "numeric" })} -{" "}
+                          {dateRange.to.toLocaleDateString("km-KH", { month: "short", day: "numeric", year: "numeric" })}
+                        </>
+                      ) : (
+                        dateRange.from.toLocaleDateString("km-KH", { month: "short", day: "numeric", year: "numeric" })
+                      )
+                    ) : (
+                      "Pick a date range"
+                    )}
+                  </span>
+                </div>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <Calendar
+                mode="range"
+                selected={dateRange}
+                onSelect={handleDateRangeSelect}
+              />
+            </PopoverContent>
+          </Popover>
+
+          {/* Department Select */}
+          <Select value={selectedDeptId} onValueChange={setSelectedDeptId}>
+            <SelectTrigger className="w-[180px] rounded-xl shadow-sm">
+              <SelectValue placeholder={`${tc("department") || "នាយកដ្ឋាន"} / Department`} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{`${tc("all") || "ទាំងអស់"} / All`}</SelectItem>
+              {departments.map((dept) => (
+                <SelectItem key={dept.id} value={String(dept.id)}>
+                  {dept.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Employee Select */}
+          <Select value={selectedEmpId} onValueChange={setSelectedEmpId}>
+            <SelectTrigger className="w-[180px] rounded-xl shadow-sm">
+              <SelectValue placeholder="បុគ្គលិក / Employee" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{`${tc("all") || "ទាំងអស់"} / All`}</SelectItem>
+              {employees.map((emp) => (
+                <SelectItem key={emp.id} value={String(emp.id)}>
+                  {`${emp.first_name} ${emp.last_name}`}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Button
+            onClick={handleExportPDF}
+            className="flex items-center gap-2 rounded-xl shadow-sm bg-primary hover:bg-primary/90 text-white font-medium cursor-pointer"
+            disabled={!report || rows.length === 0}
+          >
+            <Printer className="size-4" />
+            {t("exportPDF") || "Export PDF"}
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-5 sm:grid-cols-3">
@@ -239,16 +467,17 @@ const TimeAttendanceReportPage = () => {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <>
+              <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
               <table className="w-full min-w-[700px] text-sm">
                 <thead>
-                  <tr className="border-b border-border/60 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    <th className="pb-3 pr-4">{t("employeeCol")}</th>
-                    <th className="pb-3 pr-4">{t("dateCol")}</th>
+                  <tr className="text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    <th className="sticky top-0 bg-white/75 dark:bg-zinc-950/75 backdrop-blur-md z-10 py-3 pr-4 border-b border-border/50">{t("employeeCol")}</th>
+                    <th className="sticky top-0 bg-white/75 dark:bg-zinc-950/75 backdrop-blur-md z-10 py-3 pr-4 border-b border-border/50">{t("dateCol")}</th>
                     {timeModes.length > 0 ? (
                       timeModes.map((tm) => (
-                        <th key={tm.id} className="pb-3 pr-4">
-                          <span className="inline-flex items-center gap-1">
+                        <th key={tm.id} className="sticky top-0 bg-white/75 dark:bg-zinc-950/75 backdrop-blur-md z-10 py-3 pr-4 border-b border-border/50">
+                          <span className="inline-flex items-center gap-1.5">
                             <Clock3 className="size-3.5" />
                             {formatTimeModeName(tm.name)}
                           </span>
@@ -256,19 +485,19 @@ const TimeAttendanceReportPage = () => {
                       ))
                     ) : (
                       <>
-                        <th className="pb-3 pr-4">
-                          <span className="inline-flex items-center gap-1">
+                        <th className="sticky top-0 bg-white/75 dark:bg-zinc-950/75 backdrop-blur-md z-10 py-3 pr-4 border-b border-border/50">
+                          <span className="inline-flex items-center gap-1.5">
                             <LogIn className="size-3.5" /> {t("checkInCol")}
                           </span>
                         </th>
-                        <th className="pb-3 pr-4">
-                          <span className="inline-flex items-center gap-1">
+                        <th className="sticky top-0 bg-white/75 dark:bg-zinc-950/75 backdrop-blur-md z-10 py-3 pr-4 border-b border-border/50">
+                          <span className="inline-flex items-center gap-1.5">
                             <LogOut className="size-3.5" /> {t("checkOutCol")}
                           </span>
                         </th>
                       </>
                     )}
-                    <th className="pb-3 text-right">{t("statusCol")}</th>
+                    <th className="sticky top-0 bg-white/75 dark:bg-zinc-950/75 backdrop-blur-md z-10 py-3 text-right border-b border-border/50">{t("statusCol")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/30">
@@ -302,13 +531,21 @@ const TimeAttendanceReportPage = () => {
                             let textClass = "text-muted-foreground";
                             
                             if (scan) {
-                              scanText = scan.time;
-                              if (scan.is_late) {
-                                textClass = "text-amber-500 font-semibold";
-                              } else if (scan.is_early) {
+                              if (scan.late_minutes && scan.late_minutes > 0) {
+                                scanText = `${scan.time} (${formatLateMinutes(scan.late_minutes)})`;
+                                textClass = "text-red-500 font-bold";
+                              } else if (scan.early_minutes && scan.early_minutes > 0) {
+                                scanText = `${scan.time} (-${formatLateMinutes(scan.early_minutes)})`;
                                 textClass = "text-rose-500 font-semibold";
                               } else {
-                                textClass = "text-emerald-500 font-medium";
+                                scanText = scan.time;
+                                if (scan.is_late) {
+                                  textClass = "text-amber-500 font-semibold";
+                                } else if (scan.is_early) {
+                                  textClass = "text-rose-500 font-semibold";
+                                } else {
+                                  textClass = "text-emerald-500 font-medium";
+                                }
                               }
                             }
 
@@ -355,8 +592,62 @@ const TimeAttendanceReportPage = () => {
                 </tbody>
               </table>
             </div>
-          )}
-        </CardContent>
+
+            {/* Pagination Controls */}
+            {rows.length > 0 && report?.pagination && (
+              <div className="flex items-center justify-between border-t border-border/30 px-2 py-4 mt-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground font-medium">បង្ហាញ / Show:</span>
+                  <Select
+                    value={String(limit)}
+                    onValueChange={(val) => {
+                      setLimit(Number(val));
+                      setPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="w-[85px] h-8 rounded-xl shadow-sm">
+                      <SelectValue placeholder="10" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="20">20</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                      <SelectItem value="100">100</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <span className="text-xs text-muted-foreground">
+                    ជួរក្នុងមួយទំព័រ / Rows per page
+                  </span>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 rounded-xl shadow-sm text-xs font-medium cursor-pointer"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                  >
+                    {tc("previous")}
+                  </Button>
+                  <span className="text-xs text-muted-foreground font-semibold px-2">
+                    {tc("page")} {page} {tc("of")} {report?.pagination?.totalPages || 1}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 rounded-xl shadow-sm text-xs font-medium cursor-pointer"
+                    onClick={() => setPage((p) => Math.min(report?.pagination?.totalPages || 1, p + 1))}
+                    disabled={page >= (report?.pagination?.totalPages || 1)}
+                  >
+                    {tc("next")}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </CardContent>
       </Card>
     </div>
   );

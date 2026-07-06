@@ -369,16 +369,38 @@ export default function LeaveHistoryScreen({ theme, navigateTo }) {
       {/* Main Container */}
       <View className="flex-1">
         {/* 1. Main Navigation Segmented Control */}
-        <View className="flex-row p-1 m-3 rounded-xl bg-slate-200/50 dark:bg-zinc-800/40">
+        <View 
+          style={{
+            flexDirection: 'row',
+            padding: 4,
+            marginHorizontal: 12,
+            marginVertical: 12,
+            borderRadius: 12,
+            backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+          }}
+        >
           {tabs.map((tab) => (
             <Pressable
               key={tab}
               onPress={() => setActiveTab(tab)}
-              className="flex-1 py-2.5 rounded-lg items-center justify-center"
-              style={{ backgroundColor: activeTab === tab ? primaryColor : 'transparent' }}
+              style={{
+                flex: 1,
+                paddingVertical: 10,
+                borderRadius: 10,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: activeTab === tab ? primaryColor : 'transparent',
+              }}
             >
               <Text 
-                className={`text-[11px] font-bold ${activeTab === tab ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                style={{
+                  fontSize: 12,
+                  fontWeight: 'bold',
+                  color: activeTab === tab ? '#FFFFFF' : (isDark ? '#9CA3AF' : '#4B5563'),
+                  paddingHorizontal: 4,
+                }}
               >
                 {tab}
               </Text>

@@ -467,11 +467,16 @@ export default function OvertimeScreen({ theme, navigateTo }) {
               }
             ]}
           >
-            <Text style={{
-              color: activeTab === tab ? '#FFF' : isDark ? '#9CA3AF' : '#6B7280',
-              fontSize: 11,
-              fontWeight: 'bold',
-            }}>
+            <Text 
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              style={{
+                color: activeTab === tab ? '#FFF' : isDark ? '#9CA3AF' : '#6B7280',
+                fontSize: 11,
+                fontWeight: 'bold',
+                paddingHorizontal: 4,
+              }}
+            >
               {tab}
             </Text>
           </Pressable>

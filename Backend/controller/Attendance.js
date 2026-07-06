@@ -95,18 +95,19 @@ const inferTimeFieldFromSchedule = (timeSheet, nowMinutes, clockedFields = new S
 
   // ── lunch_out / lunch_in ─────────────────────────────────────────
   // The schedule defines a break block: lunch_out (start) → lunch_in (end).
-  // We split that block at the midpoint:
-  //   • Before midpoint → employee is leaving for lunch (lunch_out)
-  //   • After midpoint  → employee is returning from lunch (lunch_in)
-  // This naturally handles early/late scanning on either side.
   if (lunchOut !== null && lunchIn !== null) {
-    const midpoint = Math.floor((lunchOut + lunchIn) / 2);
+    const hasLunchOut = clockedFields.has("lunch_out");
+    const hasLunchIn = clockedFields.has("lunch_in");
 
-    // If within the overall lunch break window
-    if (nowMinutes >= lunchOut - WINDOW && nowMinutes <= lunchIn + WINDOW) {
-      const hasLunchOut = clockedFields.has("lunch_out");
-      const hasLunchIn = clockedFields.has("lunch_in");
+    // 1. If scan is after lunch_in (e.g. >= 13:00) up to WINDOW after lunch_in
+    if (nowMinutes >= lunchIn && nowMinutes <= lunchIn + WINDOW) {
+      if (!hasLunchIn) {
+        return "lunch_in";
+      }
+    }
 
+    // 2. If scan is between lunch_out and lunch_in (e.g. 12:00 to 13:00)
+    if (nowMinutes >= lunchOut && nowMinutes < lunchIn) {
       if (!hasLunchOut) {
         return "lunch_out";
       } else if (!hasLunchIn) {
@@ -114,15 +115,11 @@ const inferTimeFieldFromSchedule = (timeSheet, nowMinutes, clockedFields = new S
       }
     }
 
-    // Fallback standard checks:
-    // lunch_out: from WINDOW before lunch_out up to the midpoint
-    if (nowMinutes >= lunchOut - WINDOW && nowMinutes <= midpoint) {
-      return "lunch_out";
-    }
-
-    // lunch_in: from midpoint+1 up to WINDOW after lunch_in
-    if (nowMinutes > midpoint && nowMinutes <= lunchIn + WINDOW) {
-      return "lunch_in";
+    // 3. If scan is before lunch_out (e.g. WINDOW before lunch_out up to lunch_out)
+    if (nowMinutes >= lunchOut - WINDOW && nowMinutes < lunchOut) {
+      if (!hasLunchOut) {
+        return "lunch_out";
+      }
     }
   } else if (lunchOut !== null) {
     // Only lunch_out defined — simple window around it
@@ -299,17 +296,25 @@ export const getAttendanceReportController = async (req, res) => {
   try {
     const company_id = req.user.company_id;
     const employee_id = req.user.employee_id;
-    const { date } = req.query;
+    const { date, startDate, endDate, departmentId, employeeId, page, limit } = req.query;
 
-    // Use the target date string (defaulting to the current ICT date)
-    const targetDateStr = date || formatICTDate(new Date());
-    if (date && isNaN(new Date(date).getTime())) {
-      return res.status(400).json({ result: false, message: "Invalid date format" });
+    let start, end, reportDateRange;
+    if (startDate && endDate) {
+      if (isNaN(new Date(startDate).getTime()) || isNaN(new Date(endDate).getTime())) {
+        return res.status(400).json({ result: false, message: "Invalid date range format" });
+      }
+      start = new Date(`${startDate}T00:00:00.000+07:00`);
+      end = new Date(`${endDate}T23:59:59.999+07:00`);
+      reportDateRange = `${startDate} to ${endDate}`;
+    } else {
+      const targetDateStr = date || formatICTDate(new Date());
+      if (date && isNaN(new Date(date).getTime())) {
+        return res.status(400).json({ result: false, message: "Invalid date format" });
+      }
+      start = new Date(`${targetDateStr}T00:00:00.000+07:00`);
+      end = new Date(`${targetDateStr}T23:59:59.999+07:00`);
+      reportDateRange = targetDateStr;
     }
-
-    // Parse the date range in local ICT time zone and map to UTC boundaries
-    const startOfDay = new Date(`${targetDateStr}T00:00:00.000+07:00`);
-    const endOfDay = new Date(`${targetDateStr}T23:59:59.999+07:00`);
 
     // Fetch user role and department to check access permissions
     const currentEmployee = await prisma.employee.findUnique({
@@ -322,7 +327,7 @@ export const getAttendanceReportController = async (req, res) => {
       currentEmployee?.role?.name?.toLowerCase().includes("hr");
 
     const whereClause = {
-      work_at: { gte: startOfDay, lte: endOfDay },
+      work_at: { gte: start, lte: end },
       employee: { company_id: parseInt(company_id) },
     };
 
@@ -331,13 +336,23 @@ export const getAttendanceReportController = async (req, res) => {
       whereClause.employee.department_id = currentEmployee.department_id;
     }
 
+    // Department filter from query
+    if (departmentId && departmentId !== "all") {
+      whereClause.employee.department_id = parseInt(departmentId);
+    }
+
+    // Employee filter from query
+    if (employeeId && employeeId !== "all") {
+      whereClause.employee_id = parseInt(employeeId);
+    }
+
     // Fetch all active time modes of the company for dynamic columns
     const timeModes = await prisma.timemode.findMany({
       where: { company_id: parseInt(company_id) },
       orderBy: { id: "asc" },
     });
 
-    // Fetch all attendance records matching the filter criteria on this date
+    // Fetch all attendance records matching the filter criteria on this date range
     const records = await prisma.attendancerecord.findMany({
       where: whereClause,
       include: {
@@ -361,13 +376,19 @@ export const getAttendanceReportController = async (req, res) => {
       return null;
     };
 
-    // Group records by employee_id
+    // Group records by employee_id and date
     const employeeMap = {};
-    records.forEach((r) => {
+    const scheduleCache = {};
+
+    for (const r of records) {
       const empId = r.employee_id;
-      if (!employeeMap[empId]) {
-        employeeMap[empId] = {
+      const dateStr = formatICTDate(r.work_at);
+      const key = `${empId}_${dateStr}`;
+
+      if (!employeeMap[key]) {
+        employeeMap[key] = {
           employee: r.employee,
+          date: dateStr,
           records: [],
           scans: {},
           timeIn: null,
@@ -377,42 +398,78 @@ export const getAttendanceReportController = async (req, res) => {
           status: "present",
         };
       }
-      const entry = employeeMap[empId];
+      const entry = employeeMap[key];
       entry.records.push(r);
 
+      const cacheKey = `${empId}_${dateStr}`;
+      if (!scheduleCache[cacheKey]) {
+        scheduleCache[cacheKey] = await getEmployeeScheduleForToday(empId, company_id, r.work_at);
+      }
+      const schedule = scheduleCache[cacheKey];
+
       const field = classifyTimeMode(r.timemode);
+      const expectedTime = field ? schedule.timeSheet?.[field] : null;
+      const expectedMin = parseTimeToMinutes(expectedTime);
       
       // Calculate scan time using local ICT timezone
       const ictWorkAt = toICTDate(r.work_at);
       const timeStr = `${String(ictWorkAt.getUTCHours()).padStart(2, '0')}:${String(ictWorkAt.getUTCMinutes()).padStart(2, '0')}`;
+      const actualMin = ictWorkAt.getUTCHours() * 60 + ictWorkAt.getUTCMinutes();
+
+      let late_minutes = 0;
+      let early_minutes = 0;
+
+      if (expectedMin !== null) {
+        if (field === "time_in" || field === "lunch_in") {
+          if (actualMin > expectedMin) {
+            late_minutes = actualMin - expectedMin;
+          }
+        } else if (field === "time_out" || field === "lunch_out") {
+          if (actualMin < expectedMin) {
+            early_minutes = expectedMin - actualMin;
+          }
+        }
+      }
 
       // Populate dynamic scan map
       entry.scans[r.time_mode_id] = {
         time: timeStr,
-        is_late: r.is_late || false,
-        is_early: r.is_early || false,
+        is_late: (r.is_late || late_minutes > 0),
+        is_early: (r.is_early || early_minutes > 0),
         status: r.status,
+        late_minutes,
+        early_minutes,
+        expected_time: expectedTime,
       };
+
+      if (late_minutes > 0) {
+        entry.isLate = true;
+        entry.status = "late";
+      }
+
+      if (early_minutes > 0) {
+        entry.isEarly = true;
+      }
 
       if (field === "time_in" && !entry.timeIn) {
         entry.timeIn = timeStr;
-        if (r.is_late) entry.isLate = true;
-        if (r.status === "late") entry.status = "late";
+        if (r.is_late || late_minutes > 0) entry.isLate = true;
+        if (r.status === "late" || late_minutes > 0) entry.status = "late";
       }
       if (field === "time_out") {
         entry.timeOut = timeStr;
-        if (r.is_early) entry.isEarly = true;
+        if (r.is_early || early_minutes > 0) entry.isEarly = true;
       }
       // Fallback: if we haven't captured time_in/time_out yet, use first/last record
       if (!entry.timeIn && field !== "time_out") {
         entry.timeIn = timeStr;
-        if (r.is_late) entry.isLate = true;
-        if (r.status === "late") entry.status = "late";
+        if (r.is_late || late_minutes > 0) entry.isLate = true;
+        if (r.status === "late" || late_minutes > 0) entry.status = "late";
       }
       if (field === "time_out" || (!entry.timeOut && entry.timeIn && entry.records.length > 1)) {
         entry.timeOut = timeStr;
       }
-    });
+    }
 
     // Build the rows array
     const rows = Object.values(employeeMap).map((entry) => {
@@ -427,7 +484,7 @@ export const getAttendanceReportController = async (req, res) => {
       return {
         employee_id: entry.employee.id,
         employee: `${entry.employee.first_name} ${entry.employee.last_name}`,
-        date: targetDateStr,
+        date: entry.date,
         checkIn: entry.timeIn || "--:--",
         checkOut: entry.timeOut || "--:--",
         scans: entry.scans,
@@ -435,16 +492,23 @@ export const getAttendanceReportController = async (req, res) => {
       };
     });
 
-    // Compute summary stats
+    // Compute summary stats over all filtered records
     const totalCheckIns = rows.length;
     const lateCount = rows.filter((r) => r.status === "late").length;
     const presentCount = rows.filter((r) => r.status === "present").length;
     const onTimeRate = totalCheckIns > 0 ? Math.round((presentCount / totalCheckIns) * 100) : 0;
 
+    // Apply pagination
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 10;
+    const startIndex = (pageNum - 1) * limitNum;
+    const endIndex = pageNum * limitNum;
+    const paginatedRows = rows.slice(startIndex, endIndex);
+
     return res.status(200).json({
       result: true,
       data: {
-        date: targetDateStr,
+        date: reportDateRange,
         timeModes: timeModes.map(tm => ({
           id: tm.id,
           name: tm.name,
@@ -455,7 +519,13 @@ export const getAttendanceReportController = async (req, res) => {
           onTimeRate,
           lateCount,
         },
-        rows,
+        rows: paginatedRows,
+        pagination: {
+          total: totalCheckIns,
+          page: pageNum,
+          limit: limitNum,
+          totalPages: Math.ceil(totalCheckIns / limitNum),
+        }
       },
     });
   } catch (error) {
