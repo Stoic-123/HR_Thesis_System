@@ -50,3 +50,11 @@ obj/
 
 # Ignore entire mobile app directory
 mobile-app-hr/
+
+# Appendix files
+APPENDIX_A_DATA_DICTIONARY.html
+APPENDIX_A_DATA_DICTIONARY.md
+APPENDIX_A_DATA_DICTIONARY.pdf
+APPENDIX_C_PROGRAM_INSTALLATION.html
+APPENDIX_C_PROGRAM_INSTALLATION.md
+
