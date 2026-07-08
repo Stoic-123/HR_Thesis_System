@@ -15,7 +15,7 @@ out/
 .env.production.local
 .env.backup
 .env*.local
-
+.env.prod.bak
 # Executables and large binary files
 *.exe
 *.dll
