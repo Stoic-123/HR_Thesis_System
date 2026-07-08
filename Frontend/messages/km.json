@@ -199,6 +199,7 @@
     "leaveGroupIdLabel": "អត្តសញ្ញាណក្រុមច្បាប់ឈប់សម្រាក (Leave Group ID)",
     "overtimeGroupIdLabel": "អត្តសញ្ញាណក្រុមថែមម៉ោង (Overtime Group ID)",
     "announcementGroupIdLabel": "អត្តសញ្ញាណក្រុមសេចក្តីជូនដំណឹង (Announcement Group ID)",
+    "backupGroupIdLabel": "អត្តសញ្ញាណក្រុមចម្លងទុក (Backup Group ID)",
     "botTokenLabel": "ថូខឹនប៊ុត (Bot Token)",
     "defaultPasswordTitle": "លេខសម្ងាត់លំនាំដើម",
     "defaultPasswordDesc": "លេខសម្ងាត់លំនាំដើមដែលត្រូវកំណត់ដោយស្វ័យប្រវត្តសម្រាប់គណនីបុគ្គលិកដែលបង្កើតថ្មី និងការកំណត់លេខសម្ងាត់ឡើងវិញ។",
@@ -222,7 +223,17 @@
     "enterLocationName": "សូមបញ្ចូលឈ្មោះទីតាំង",
     "radiusPositive": "កាំនៃទីតាំងត្រូវតែជាលេខធំជាងសូន្យ",
     "errorLoading": "មិនអាចទាញយកទិន្នន័យក្រុមហ៊ុនបានទេ",
-    "errorLoadingDesc": "សូមព្យាយាមឡើងវិញ ឬទាក់ទងអ្នកគ្រប់គ្រងប្រព័ន្ធ។"
+    "errorLoadingDesc": "សូមព្យាយាមឡើងវិញ ឬទាក់ទងអ្នកគ្រប់គ្រងប្រព័ន្ធ។",
+    "aiSettingsTitle": "ការកំណត់ AI Chatbot",
+    "aiSettingsDesc": "កំណត់រចនាសម្ព័ន្ធ AI និងម៉ូដែលដែលប្រើសម្រាប់ chatbot និងស្វ័យប្រវត្តិកម្មប្រព័ន្ធ។",
+    "aiProviderLabel": "អ្នកផ្តល់សេវាកម្ម AI (AI Provider)",
+    "aiModelLabel": "ម៉ូដែល AI (AI Model)",
+    "aiApiKeyLabel": "កូដសម្ងាត់ API Key / Token",
+    "aiApiKeyPlaceholder": "បញ្ចូល API Key / Token របស់អ្នក",
+    "aiModelPlaceholder": "ឧ. Qwen/Qwen2.5-7B-Instruct, google/gemini-2.5-flash:free ឬ qwen2.5:1.5b",
+    "aiLocalOption": "ម៉ូដែលមូលដ្ឋាន (Local Ollama)",
+    "aiHuggingFaceOption": "Hugging Face API",
+    "aiOpenrouterOption": "OpenRouter API"
   },
   "department": {
     "title": "នាយកដ្ឋាន",
@@ -790,7 +801,8 @@
     "approvedCount": "អនុម័ត",
     "pendingCount": "កំពុងរង់ចាំ",
     "allRequests": "សរុបសំណើ",
-    "weekBadge": "ខែនេះ"
+    "weekBadge": "ខែនេះ",
+    "exportPDF": "នាំចេញជា PDF"
   },
   "leaveProfile": {
     "title": "ទម្រង់ឈប់សម្រាកបុគ្គលិក",

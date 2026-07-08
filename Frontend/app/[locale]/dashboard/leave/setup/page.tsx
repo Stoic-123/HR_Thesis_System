@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { CalendarCog, CircleCheck, ShieldCheck, Plus } from "lucide-react";
+import { CalendarCog, CircleCheck, ShieldCheck, Plus, Edit } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,11 +15,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import {
   getAllLeaveTypes,
   createLeaveType,
+  updateLeaveType,
 } from "@/services/leavetype.services";
+import { toast } from "sonner";
 
 interface LeaveType {
   id: number;
@@ -35,14 +37,27 @@ const LeaveSetupPage = () => {
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  
   const [formData, setFormData] = useState({
     name: "",
     code: "",
     default_balance: 0,
   });
+
+  const [editFormData, setEditFormData] = useState({
+    id: 0,
+    name: "",
+    code: "",
+    default_balance: 0,
+  });
+
   const [submitting, setSubmitting] = useState(false);
+  const [updating, setUpdating] = useState(false);
+  
   const t = useTranslations("leaveSetup");
   const tc = useTranslations("common");
+  const locale = useLocale();
 
   const fetchLeaveTypes = async () => {
     try {
@@ -72,11 +87,51 @@ const LeaveSetupPage = () => {
         setDialogOpen(false);
         setFormData({ name: "", code: "", default_balance: 0 });
         fetchLeaveTypes();
+        toast.success(locale === "km" ? "បានបង្កើតប្រភេទច្បាប់ឈប់សម្រាកដោយជោគជ័យ" : "Leave type created successfully");
+      } else {
+        toast.error(res.message || "Failed to create");
       }
     } catch (error) {
       console.error("Failed to create leave type:", error);
+      toast.error("An error occurred");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleOpenEdit = (item: LeaveType) => {
+    setEditFormData({
+      id: item.id,
+      name: item.name,
+      code: item.code,
+      default_balance: item.default_balance,
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleUpdate = async () => {
+    if (!editFormData.name || !editFormData.code || editFormData.default_balance < 0) {
+      return;
+    }
+    try {
+      setUpdating(true);
+      const res = await updateLeaveType(editFormData.id, {
+        name: editFormData.name,
+        code: editFormData.code,
+        default_balance: editFormData.default_balance,
+      });
+      if (res.result) {
+        setEditDialogOpen(false);
+        fetchLeaveTypes();
+        toast.success(locale === "km" ? "បានធ្វើបច្ចុប្បន្នភាពប្រភេទច្បាប់ឈប់សម្រាកដោយជោគជ័យ" : "Leave type updated successfully");
+      } else {
+        toast.error(res.message || "Failed to update");
+      }
+    } catch (error) {
+      console.error("Failed to update leave type:", error);
+      toast.error("An error occurred");
+    } finally {
+      setUpdating(false);
     }
   };
 
@@ -207,16 +262,93 @@ const LeaveSetupPage = () => {
               >
                 <div>
                   <p className="font-semibold">{item.name}</p>
-                  <p className="text-sm text-muted-foreground">{t("daysCount", { count: item.default_balance })}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {locale === "km" ? `${item.default_balance} ថ្ងៃ` : `${item.default_balance} days`}
+                  </p>
                 </div>
-                <Badge className="rounded-full bg-primary/10 text-primary">
-                  {t("codePrefix")}: {item.code}
-                </Badge>
+                <div className="flex items-center gap-3">
+                  <Badge className="rounded-full bg-primary/10 text-primary">
+                    {t("codePrefix") || "Code"}: {item.code}
+                  </Badge>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="size-8 rounded-lg cursor-pointer"
+                    onClick={() => handleOpenEdit(item)}
+                  >
+                    <Edit className="size-4 text-muted-foreground hover:text-primary" />
+                  </Button>
+                </div>
               </div>
             ))
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Leave Type Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {locale === "km" ? "កែសម្រួលប្រភេទច្បាប់ឈប់សម្រាក" : "Edit Leave Type"}
+            </DialogTitle>
+            <DialogDescription>
+              {locale === "km" ? "កែប្រែព័ត៌មានលម្អិតនៃប្រភេទច្បាប់ឈប់សម្រាកនេះ។" : "Modify the details of this leave type."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">{t("nameLabel")}</Label>
+              <Input
+                id="edit-name"
+                value={editFormData.name}
+                onChange={(e) =>
+                  setEditFormData({ ...editFormData, name: e.target.value })
+                }
+                placeholder={t("namePlaceholder")}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-code">{t("codeLabel")}</Label>
+              <Input
+                id="edit-code"
+                value={editFormData.code}
+                onChange={(e) =>
+                  setEditFormData({ ...editFormData, code: e.target.value })
+                }
+                placeholder={t("codePlaceholder")}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-balance">{t("daysLabel")}</Label>
+              <Input
+                id="edit-balance"
+                type="number"
+                min="0"
+                value={editFormData.default_balance}
+                onChange={(e) =>
+                  setEditFormData({
+                    ...editFormData,
+                    default_balance: parseInt(e.target.value) || 0,
+                  })
+                }
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="secondary"
+              onClick={() => setEditDialogOpen(false)}
+              disabled={updating}
+            >
+              {tc("cancel")}
+            </Button>
+            <Button onClick={handleUpdate} disabled={updating}>
+              {updating ? (locale === "km" ? "កំពុងរក្សាទុក..." : "Saving...") : tc("save")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

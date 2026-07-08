@@ -14,7 +14,10 @@ export const addCompany = async (
   telegram_announcement_group_id,
   telegram_backup_group_id,
   telegram_bot_token,
-  default_password
+  default_password,
+  ai_provider = "ollama",
+  ai_api_key = null,
+  ai_model = "qwen2.5:1.5b"
 ) => {
   try {
     await prisma.company.create({
@@ -33,6 +36,9 @@ export const addCompany = async (
         telegram_backup_group_id,
         telegram_bot_token,
         default_password,
+        ai_provider,
+        ai_api_key,
+        ai_model,
       },
     });
 
@@ -98,6 +104,9 @@ export const updateCompany = async (
   telegram_backup_group_id,
   telegram_bot_token,
   default_password,
+  ai_provider,
+  ai_api_key,
+  ai_model,
   company_id
 ) => {
   try {
@@ -118,6 +127,9 @@ export const updateCompany = async (
         telegram_backup_group_id,
         telegram_bot_token,
         default_password,
+        ai_provider,
+        ai_api_key,
+        ai_model,
       },
     });
 

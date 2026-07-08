@@ -14,6 +14,21 @@ export interface ExportPdfOptions {
 export const exportReportToPDF = (options: ExportPdfOptions) => {
   const { titleKh, titleEn, companyName, companyLogo, orientation, metadata, summary, tableHeaders, tableRows, preparedBy } = options;
 
+  const originalTitle = document.title;
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  const hours = String(now.getHours()).padStart(2, "0");
+  const minutes = String(now.getMinutes()).padStart(2, "0");
+  const seconds = String(now.getSeconds()).padStart(2, "0");
+  const timestamp = `${year}${month}${day}_${hours}${minutes}${seconds}`;
+  const cleanTitleEn = titleEn.replace(/[^a-zA-Z0-9\s-_]/g, "").replace(/\s+/g, "_");
+  const formattedTitle = `${cleanTitleEn}_${timestamp}`;
+
+  // Temporarily set the main document title so browser print uses it as the default filename
+  document.title = formattedTitle;
+
   const iframe = document.createElement("iframe");
   iframe.style.position = "absolute";
   iframe.style.width = "0px";
@@ -24,6 +39,7 @@ export const exportReportToPDF = (options: ExportPdfOptions) => {
   const doc = iframe.contentWindow?.document;
   if (!doc) {
     console.error("Could not write to print iframe");
+    document.title = originalTitle;
     return;
   }
 
@@ -100,7 +116,7 @@ export const exportReportToPDF = (options: ExportPdfOptions) => {
     <!DOCTYPE html>
     <html>
       <head>
-        <title>${titleEn}</title>
+        <title>${formattedTitle}</title>
         <style>
           @import url('https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@400;500;600;700&family=Moul&display=swap');
           
@@ -387,6 +403,7 @@ export const exportReportToPDF = (options: ExportPdfOptions) => {
             setTimeout(() => {
               window.print();
               setTimeout(() => {
+                window.parent.document.title = ${JSON.stringify(originalTitle)};
                 window.parent.document.body.removeChild(window.frameElement);
               }, 500);
             }, 500);

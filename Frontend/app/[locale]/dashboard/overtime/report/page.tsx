@@ -1,16 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Card,
   CardContent,
@@ -25,8 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
@@ -51,6 +43,7 @@ import { getAllEmployees } from "@/services/employee.services";
 import { toast } from "sonner";
 import { useMe } from "@/hooks/useMe";
 import { exportReportToPDF } from "@/lib/pdf-export";
+import { type DateRange } from "react-day-picker";
 
 const toISODate = (d: Date) => {
   const y = d.getFullYear();
@@ -63,16 +56,26 @@ export default function OvertimeReportPage() {
   const tReport = useTranslations("overtimeReport");
   const tOt = useTranslations("overtime");
   const tc = useTranslations("common");
+  const locale = useLocale();
+  const { data: user } = useMe();
+
+  const getFirstDayOfMonth = () => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  };
+
   const [overtimes, setOvertimes] = useState<Overtime[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("all");
   
-  // New filters states
-  const [startDate, setStartDate] = useState<Date>(() => {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), 1); // default to 1st of current month
-  });
+  // Date range states
+  const [startDate, setStartDate] = useState<Date>(getFirstDayOfMonth());
   const [endDate, setEndDate] = useState<Date>(new Date());
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: getFirstDayOfMonth(),
+    to: new Date(),
+  });
+
   const [departments, setDepartments] = useState<{ id: number; name: string }[]>([]);
   const [employees, setEmployees] = useState<{ id: number; first_name: string; last_name: string }[]>([]);
   const [selectedDeptId, setSelectedDeptId] = useState<string>("all");
@@ -85,7 +88,19 @@ export default function OvertimeReportPage() {
   const [totalPages, setTotalPages] = useState<number>(1);
   const [stats, setStats] = useState({ total: 0, approved: 0, pending: 0, rejected: 0 });
 
-  const { data: user } = useMe();
+  const handleDateRangeSelect = (range: DateRange | undefined) => {
+    setDateRange(range);
+    if (range) {
+      if (range.from) {
+        setStartDate(range.from);
+      }
+      if (range.to) {
+        setEndDate(range.to);
+      } else if (range.from) {
+        setEndDate(range.from);
+      }
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -150,25 +165,25 @@ export default function OvertimeReportPage() {
     switch (status) {
       case "pending":
         return (
-          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 border border-yellow-200">
             {tOt("pending")}
           </Badge>
         );
       case "approved":
         return (
-          <Badge variant="secondary" className="bg-green-100 text-green-800">
+          <Badge variant="secondary" className="bg-green-100 text-green-800 border border-green-200">
             {tOt("approved")}
           </Badge>
         );
       case "rejected":
         return (
-          <Badge variant="secondary" className="bg-red-100 text-red-800">
+          <Badge variant="secondary" className="bg-red-100 text-red-800 border border-red-200">
             {tOt("rejected")}
           </Badge>
         );
       default:
         return (
-          <Badge variant="secondary" className="bg-gray-100 text-gray-800">
+          <Badge variant="secondary" className="bg-gray-100 text-gray-800 border border-gray-200">
             {tOt("unknown")}
           </Badge>
         );
@@ -176,10 +191,10 @@ export default function OvertimeReportPage() {
   };
 
   const formatDate = (dateString: string) => {
-    if (!dateString) return "N/A";
+    if (!dateString) return "—";
     const date = new Date(dateString);
-    if (isNaN(date.getTime())) return "N/A";
-    return date.toLocaleString("en-US", {
+    if (isNaN(date.getTime())) return "—";
+    return date.toLocaleString(locale === "km" ? "km-KH" : "en-US", {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -202,16 +217,21 @@ export default function OvertimeReportPage() {
   const handleExportPDF = () => {
     const userFullName = user?.employee ? `${user.employee.first_name} ${user.employee.last_name}` : "";
 
-    const totalCount = filteredOvertimes.length;
-    const approvedCount = filteredOvertimes.filter(ot => ot.status === "approved").length;
-    const pendingCount = filteredOvertimes.filter(ot => ot.status === "pending").length;
-    const rejectedCount = filteredOvertimes.filter(ot => ot.status === "rejected").length;
+    const formattedDateRange = startDate.toDateString() === endDate.toDateString()
+      ? formatDate(startDate.toISOString()).split(",")[0]
+      : `${formatDate(startDate.toISOString()).split(",")[0]} - ${formatDate(endDate.toISOString()).split(",")[0]}`;
 
-    const filterLabel = filter === "all" ? "ទាំងអស់ / All" : filter === "approved" ? "បានអនុម័ត / Approved" : filter === "pending" ? "រង់ចាំ / Pending" : "បានបដិសេធ / Rejected";
+    const filterLabel = filter === "all"
+      ? (locale === "km" ? "ទាំងអស់" : "All")
+      : filter === "approved"
+      ? (locale === "km" ? "បានអនុម័ត" : "Approved")
+      : filter === "pending"
+      ? (locale === "km" ? "កំពុងរង់ចាំ" : "Pending")
+      : (locale === "km" ? "បានបដិសេធ" : "Rejected");
+
     const deptLabel = selectedDeptId === "all"
-      ? "គ្រប់ផ្នែក / All Departments"
-      : departments.find(d => String(d.id) === selectedDeptId)?.name || "នាយកដ្ឋាន / Department";
-    const formattedDateRange = `${startDate.toLocaleDateString("km-KH")} - ${endDate.toLocaleDateString("km-KH")}`;
+      ? (locale === "km" ? "គ្រប់ផ្នែក" : "All Departments")
+      : departments.find(d => String(d.id) === selectedDeptId)?.name || (locale === "km" ? "នាយកដ្ឋាន" : "Department");
 
     const apiBaseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
     const companyLogo = user?.employee?.company?.logo_path
@@ -232,18 +252,12 @@ export default function OvertimeReportPage() {
         { labelKh: "ផ្នែក/នាយកដ្ឋាន", labelEn: "Department", value: deptLabel },
         { labelKh: "រៀបចំដោយ", labelEn: "Prepared By", value: userFullName || "រដ្ឋបាល / Admin" }
       ],
-      summary: [
-        { labelKh: "សំណើសរុប", labelEn: "Total Requests", value: String(totalCount) },
-        { labelKh: "បានអនុម័ត", labelEn: "Approved", value: String(approvedCount) },
-        { labelKh: "កំពុងរង់ចាំ", labelEn: "Pending", value: String(pendingCount) },
-        { labelKh: "បានបដិសេធ", labelEn: "Rejected", value: String(rejectedCount) }
-      ],
       tableHeaders: [
         { kh: "ឈ្មោះបុគ្គលិក", en: "Employee Name" },
-        { kh: "ចាប់ផ្តើម", en: "From Date" },
-        { kh: "បញ្ចប់", en: "To Date" },
+        { kh: "ចាប់ផ្តើម", en: "From Date", align: "center" },
+        { kh: "បញ្ចប់", en: "To Date", align: "center" },
         { kh: "មូលហេតុ", en: "Reason" },
-        { kh: "ស្ថានភាព", en: "Status", align: "right" }
+        { kh: "ស្ថានភាព", en: "Status", align: "center" }
       ],
       tableRows: filteredOvertimes.map(ot => {
         const empName = ot.employee_overtime_employee_idToemployee
@@ -256,10 +270,10 @@ export default function OvertimeReportPage() {
         return {
           cells: [
             { text: `<strong>${empName}</strong>`, align: "left" as const },
-            { text: formatDate(ot.start_date), align: "left" as const },
-            { text: formatDate(ot.end_date), align: "left" as const },
+            { text: formatDate(ot.start_date), align: "center" as const },
+            { text: formatDate(ot.end_date), align: "center" as const },
             { text: ot.reason || "—", align: "left" as const },
-            { text: `<span class="${statusColor}">${statusLabel}</span>`, align: "right" as const }
+            { text: `<span class="${statusColor}">${statusLabel}</span>`, align: "center" as const }
           ]
         };
       }),
@@ -275,52 +289,40 @@ export default function OvertimeReportPage() {
           <p className="text-gray-500">{tReport("description")}</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          {/* Start Date */}
+          {/* Date Range Picker (Single Input) */}
           <Popover>
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
-                className="min-w-[190px] justify-start gap-2 rounded-xl shadow-sm"
+                className="min-w-[240px] justify-start gap-2 rounded-xl shadow-sm text-left font-normal cursor-pointer"
               >
                 <CalendarIcon className="size-4 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground font-medium">ចាប់ផ្តើម / Start:</span>
-                {startDate.toLocaleDateString("km-KH", {
-                  year: "numeric",
-                  month: "short",
-                  day: "numeric",
-                })}
+                <div className="flex flex-col text-left">
+                  <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider leading-none mb-1">
+                    {locale === "km" ? "ចន្លោះកាលបរិច្ឆេទ" : "Date Range"}
+                  </span>
+                  <span className="text-xs font-semibold leading-tight">
+                    {dateRange?.from ? (
+                      dateRange.to ? (
+                        <>
+                          {dateRange.from.toLocaleDateString(locale === "km" ? "km-KH" : "en-US", { month: "short", day: "numeric", year: "numeric" })} -{" "}
+                          {dateRange.to.toLocaleDateString(locale === "km" ? "km-KH" : "en-US", { month: "short", day: "numeric", year: "numeric" })}
+                        </>
+                      ) : (
+                        dateRange.from.toLocaleDateString(locale === "km" ? "km-KH" : "en-US", { month: "short", day: "numeric", year: "numeric" })
+                      )
+                    ) : (
+                      locale === "km" ? "ជ្រើសរើសចន្លោះកាលបរិច្ឆេទ" : "Pick a date range"
+                    )}
+                  </span>
+                </div>
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="end">
               <Calendar
-                mode="single"
-                selected={startDate}
-                onSelect={(date) => date && setStartDate(date)}
-              />
-            </PopoverContent>
-          </Popover>
-
-          {/* End Date */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className="min-w-[190px] justify-start gap-2 rounded-xl shadow-sm"
-              >
-                <CalendarIcon className="size-4 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground font-medium">បញ្ចប់ / End:</span>
-                {endDate.toLocaleDateString("km-KH", {
-                  year: "numeric",
-                  month: "short",
-                  day: "numeric",
-                })}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="end">
-              <Calendar
-                mode="single"
-                selected={endDate}
-                onSelect={(date) => date && setEndDate(date)}
+                mode="range"
+                selected={dateRange}
+                onSelect={handleDateRangeSelect}
               />
             </PopoverContent>
           </Popover>
@@ -328,10 +330,10 @@ export default function OvertimeReportPage() {
           {/* Department Select */}
           <Select value={selectedDeptId} onValueChange={setSelectedDeptId}>
             <SelectTrigger className="w-[180px] rounded-xl shadow-sm">
-              <SelectValue placeholder={`${tc("department") || "នាយកដ្ឋាន"} / Department`} />
+              <SelectValue placeholder={locale === "km" ? "នាយកដ្ឋាន" : "Department"} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">{`${tc("all") || "ទាំងអស់"} / All`}</SelectItem>
+              <SelectItem value="all">{locale === "km" ? "ទាំងអស់" : "All"}</SelectItem>
               {departments.map((dept) => (
                 <SelectItem key={dept.id} value={String(dept.id)}>
                   {dept.name}
@@ -343,10 +345,10 @@ export default function OvertimeReportPage() {
           {/* Employee Select */}
           <Select value={selectedEmpId} onValueChange={setSelectedEmpId}>
             <SelectTrigger className="w-[180px] rounded-xl shadow-sm">
-              <SelectValue placeholder="បុគ្គលិក / Employee" />
+              <SelectValue placeholder={locale === "km" ? "បុគ្គលិក" : "Employee"} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">{`${tc("all") || "ទាំងអស់"} / All`}</SelectItem>
+              <SelectItem value="all">{locale === "km" ? "ទាំងអស់" : "All"}</SelectItem>
               {employees.map((emp) => (
                 <SelectItem key={emp.id} value={String(emp.id)}>
                   {`${emp.first_name} ${emp.last_name}`}
@@ -358,10 +360,10 @@ export default function OvertimeReportPage() {
           {/* Status Filter */}
           <Select value={filter} onValueChange={setFilter}>
             <SelectTrigger className="w-[180px] rounded-xl shadow-sm">
-              <SelectValue placeholder={tOt("filterByStatus")} />
+              <SelectValue placeholder={locale === "km" ? "ស្ថានភាព" : "Status"} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">{tOt("allRequests")}</SelectItem>
+              <SelectItem value="all">{locale === "km" ? "ទាំងអស់" : "All"}</SelectItem>
               <SelectItem value="pending">{tOt("pending")}</SelectItem>
               <SelectItem value="approved">{tOt("approved")}</SelectItem>
               <SelectItem value="rejected">{tOt("rejected")}</SelectItem>
@@ -374,20 +376,22 @@ export default function OvertimeReportPage() {
             disabled={filteredOvertimes.length === 0}
           >
             <Printer className="size-4" />
-            {tOt("exportPDF") || "Export PDF"}
+            {tReport("exportPDF") || "Export PDF"}
           </Button>
         </div>
       </div>
 
       {/* Summary Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-4 sm:grid-cols-2 grid-cols-1">
         <Card className="rounded-3xl border border-border/60 bg-primary-foreground shadow-sm">
           <CardContent className="flex items-center gap-3 py-5">
             <div className="rounded-xl bg-primary/10 p-2.5 text-primary">
               <CalendarRange className="size-4.5" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">{tReport("thisMonthRequests")}</p>
+              <p className="text-xs text-muted-foreground">
+                {locale === "km" ? "សរុបសំណើ" : "Total Requests"}
+              </p>
               <p className="text-xl font-semibold">{stats.total}</p>
             </div>
           </CardContent>
@@ -420,122 +424,125 @@ export default function OvertimeReportPage() {
               <XCircle className="size-4.5" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">{tOt("rejected")}</p>
+              <p className="text-xs text-muted-foreground">
+                {locale === "km" ? "បដិសេធ" : "Rejected"}
+              </p>
               <p className="text-xl font-semibold">{stats.rejected}</p>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
+      <Card className="rounded-3xl border border-border/60 bg-primary-foreground shadow-sm">
+        <CardHeader className="pb-3 px-6">
           <CardTitle>{tOt("overtimeList")}</CardTitle>
           <CardDescription>{tOt("overtimeListDesc")}</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {loading ? (
-            <LoadingState variant="table" count={6} />
+            <div className="py-8 px-6">
+              <LoadingState variant="table" count={6} />
+            </div>
           ) : (
             <>
-              <div className="max-h-[500px] overflow-y-auto relative">
-                <Table>
-                  <TableHeader className="sticky top-0 bg-white dark:bg-zinc-950 z-10">
-                    <TableRow>
-                      <TableHead className="bg-white dark:bg-zinc-950">{tOt("employeeLabel")}</TableHead>
-                      <TableHead className="bg-white dark:bg-zinc-950">{tOt("from")}</TableHead>
-                      <TableHead className="bg-white dark:bg-zinc-950">{tOt("to")}</TableHead>
-                      <TableHead className="bg-white dark:bg-zinc-950">{tOt("reason")}</TableHead>
-                      <TableHead className="bg-white dark:bg-zinc-950">{tc("status")}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                {filteredOvertimes.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center text-gray-500">
-                      {tOt("noRequests")}
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredOvertimes.map((ot) => (
-                    <TableRow key={ot.id}>
-                      <TableCell className="font-medium">
-                        {ot.employee_overtime_employee_idToemployee
-                          ? `${ot.employee_overtime_employee_idToemployee.first_name} ${ot.employee_overtime_employee_idToemployee.last_name}`
-                          : ot.employee_id
-                          ? `Employee #${ot.employee_id}`
-                          : "Unknown Employee"}
-                      </TableCell>
-                      <TableCell>{formatDate(ot.start_date)}</TableCell>
-                      <TableCell>{formatDate(ot.end_date)}</TableCell>
-                      <TableCell>{ot.reason || tOt("noReason")}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {getStatusIcon(ot.status)}
-                          {getStatusBadge(ot.status)}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-
-            {/* Pagination Controls */}
-            {overtimes.length > 0 && (
-              <div className="flex items-center justify-between border-t border-border/30 px-2 py-4 mt-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground font-medium">បង្ហាញ / Show:</span>
-                  <Select
-                    value={String(limit)}
-                    onValueChange={(val) => {
-                      setLimit(Number(val));
-                      setPage(1);
-                    }}
-                  >
-                    <SelectTrigger className="w-[85px] h-8 rounded-xl shadow-sm">
-                      <SelectValue placeholder="10" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="10">10</SelectItem>
-                      <SelectItem value="20">20</SelectItem>
-                      <SelectItem value="50">50</SelectItem>
-                      <SelectItem value="100">100</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <span className="text-xs text-muted-foreground">
-                    ជួរក្នុងមួយទំព័រ / Rows per page
-                  </span>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 rounded-xl shadow-sm text-xs font-medium cursor-pointer"
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={page === 1}
-                  >
-                    {tc("previous")}
-                  </Button>
-                  <span className="text-xs text-muted-foreground font-semibold px-2">
-                    {tc("page")} {page} {tc("of")} {totalPages}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 rounded-xl shadow-sm text-xs font-medium cursor-pointer"
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={page >= totalPages}
-                  >
-                    {tc("next")}
-                  </Button>
-                </div>
+              <div className="max-h-[500px] overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
+                <table className="w-full min-w-[700px] text-sm border-collapse text-left">
+                  <thead>
+                    <tr className="text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-muted/20 border-b border-border/50">
+                      <th className="sticky top-0 bg-white/75 dark:bg-zinc-950/75 backdrop-blur-md z-10 py-3 pl-6 pr-4 border-b border-border/50">{tOt("employeeLabel")}</th>
+                      <th className="sticky top-0 bg-white/75 dark:bg-zinc-950/75 backdrop-blur-md z-10 py-3 px-4 border-b border-border/50 text-center">{tOt("from")}</th>
+                      <th className="sticky top-0 bg-white/75 dark:bg-zinc-950/75 backdrop-blur-md z-10 py-3 px-4 border-b border-border/50 text-center">{tOt("to")}</th>
+                      <th className="sticky top-0 bg-white/75 dark:bg-zinc-950/75 backdrop-blur-md z-10 py-3 px-4 border-b border-border/50">{tOt("reason")}</th>
+                      <th className="sticky top-0 bg-white/75 dark:bg-zinc-950/75 backdrop-blur-md z-10 py-3 pl-4 pr-6 border-b border-border/50 text-right">{tc("status")}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/30">
+                    {filteredOvertimes.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="text-center text-gray-500 py-10">
+                          {tOt("noRequests")}
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredOvertimes.map((ot) => (
+                        <tr key={ot.id} className="group transition-colors hover:bg-muted/40">
+                          <td className="py-3.5 pl-6 pr-4 font-medium leading-tight">
+                            {ot.employee_overtime_employee_idToemployee
+                              ? `${ot.employee_overtime_employee_idToemployee.first_name} ${ot.employee_overtime_employee_idToemployee.last_name}`
+                              : ot.employee_id
+                              ? `Employee #${ot.employee_id}`
+                              : "Unknown Employee"}
+                          </td>
+                          <td className="py-3.5 px-4 text-center text-muted-foreground">{formatDate(ot.start_date)}</td>
+                          <td className="py-3.5 px-4 text-center text-muted-foreground">{formatDate(ot.end_date)}</td>
+                          <td className="py-3.5 px-4">{ot.reason || tOt("noReason")}</td>
+                          <td className="py-3.5 pl-4 pr-6 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              {getStatusIcon(ot.status)}
+                              {getStatusBadge(ot.status)}
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody >
+                </table>
               </div>
-            )}
-          </>
-        )}
-      </CardContent>
+
+              {/* Pagination Controls */}
+              {total > 0 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-border/30 px-6 py-4 mt-4">
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={String(limit)}
+                      onValueChange={(val) => {
+                        setLimit(Number(val));
+                        setPage(1);
+                      }}
+                    >
+                      <SelectTrigger className="w-[80px] h-8 rounded-xl shadow-sm">
+                        <SelectValue placeholder="10" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="10">10</SelectItem>
+                        <SelectItem value="20">20</SelectItem>
+                        <SelectItem value="50">50</SelectItem>
+                        <SelectItem value="100">100</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <span className="text-xs text-muted-foreground">
+                      {locale === "km" ? "ជួរក្នុងមួយទំព័រ" : "Rows per page"}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 rounded-xl shadow-sm text-xs font-medium cursor-pointer"
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={page === 1}
+                    >
+                      {tc("previous") || "មុន"}
+                    </Button>
+                    <span className="text-xs text-muted-foreground font-semibold px-2">
+                      {tc("page") || "ទំព័រ"} {page} {tc("of") || "នៃ"} {totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 rounded-xl shadow-sm text-xs font-medium cursor-pointer"
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={page >= totalPages}
+                    >
+                      {tc("next") || "បន្ទាប់"}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
       </Card>
     </div>
   );

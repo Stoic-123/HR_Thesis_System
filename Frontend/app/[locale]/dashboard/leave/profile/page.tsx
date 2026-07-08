@@ -84,7 +84,7 @@ export default function LeaveProfilePage() {
       if (employeesData?.result) {
         const filteredEmployees = employeesData.data.filter((emp: Employee) => {
           const roleName = emp.role_name?.toLowerCase() || "";
-          return roleName.includes("employee");
+          return roleName.includes("employee") || roleName.includes("manager");
         });
         setEmployees(filteredEmployees);
       }

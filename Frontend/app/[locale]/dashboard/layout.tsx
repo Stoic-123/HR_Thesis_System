@@ -237,7 +237,7 @@ export default function DashboardLayout({
       <div className="pointer-events-none absolute top-[40%] -right-[10%] z-0 h-[40%] w-[40%] rounded-full bg-indigo-500/5 blur-[120px]" />
       <Sidebar collapsed={isSidebarCollapsed} />
       <main className="flex min-w-0 flex-1 flex-col transition-opacity duration-300">
-        <header className="sticky top-0 z-10 border-b border-white/40 bg-white/60 px-6 backdrop-blur-xl">
+        <header className="sticky top-0 z-30 border-b border-white/40 bg-white/60 px-6 backdrop-blur-xl">
           <div className="flex h-20 w-full items-center justify-between gap-4">
             <div className="min-w-0 flex flex-1 items-center gap-2 max-w-xl">
               <Button
@@ -504,7 +504,9 @@ export default function DashboardLayout({
             <Loader2 className="size-8 animate-spin text-primary" />
           </div>
         )}
-        <HRChatbot />
+        {(user?.employee?.role === "Admin" || user?.employee?.permissions?.includes("chatbot:access")) && (
+          <HRChatbot />
+        )}
       </main>
     </div>
   );

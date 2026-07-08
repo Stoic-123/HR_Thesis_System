@@ -10,6 +10,27 @@ export const smartSearchController = async (req, res) => {
     }
 
     const company_id = req.user.company_id;
+    const employee_id = req.user.employee_id;
+
+    // Fetch user details to verify permissions
+    const currentEmployee = await prisma.employee.findUnique({
+      where: { id: employee_id },
+      include: {
+        role: {
+          include: {
+            rolebaseaccess: true
+          }
+        }
+      },
+    });
+
+    const hasChatbotPermission =
+      currentEmployee?.role?.name === "Admin" ||
+      currentEmployee?.role?.rolebaseaccess?.some(p => p.path === "chatbot:access");
+
+    if (!hasChatbotPermission) {
+      return res.status(403).json({ success: false, message: "Forbidden: You do not have permission to access the HR AI Chatbot." });
+    }
 
     if (!query) {
       return res.status(400).json({ success: false, message: "Query is required" });
@@ -133,7 +154,7 @@ export const smartSearchController = async (req, res) => {
     ];
 
     console.log(`[Smart Search] DB Fast Path missed. Calling Ollama fallback for query: "${query}"...`);
-    const aiResult = await chatWithAI(searchPrompt, process.env.AI_MODEL || "qwen2.5:1.5b");
+    const aiResult = await chatWithAI(searchPrompt, process.env.AI_MODEL || "qwen2.5:1.5b", null, company_id);
     console.log(`[Smart Search] Raw AI Response:`, aiResult);
 
     // Parse IDs from AI response robustly

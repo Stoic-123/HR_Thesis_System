@@ -20,17 +20,9 @@ export const getHRContext = async (company_id, department_id = null) => {
           id: true,
           first_name: true,
           last_name: true,
-          age: true,
-          gender: true,
-          phone_number1: true,
-          email: true,
-          address: true,
-          joined_at: true,
           positions: { select: { name: true } },
           department_employee_department_idTodepartment: { select: { name: true } },
           is_active: true,
-          relationship_status: true,
-          total_children: true,
         },
       }),
       prisma.department.findMany({
@@ -55,17 +47,9 @@ export const getHRContext = async (company_id, department_id = null) => {
       employees: employees.map(e => ({
         id: e.id,
         name: `${e.first_name} ${e.last_name}`,
-        age: e.age,
-        sex: e.gender,
-        phone: e.phone_number1,
-        email: e.email,
-        addr: e.address,
-        joined: e.joined_at?.toISOString().split('T')[0],
-        pos: e.positions?.name,
+        pos: e.positions?.name || "N/A",
         dept: e.department_employee_department_idTodepartment?.name || "N/A",
         status: e.is_active,
-        rel: e.relationship_status,
-        kids: e.total_children,
       })),
       departments: departments.map(d => ({ id: d.id, name: d.name })),
       positions: positions.map(p => ({ id: p.id, name: p.name })),
@@ -74,7 +58,6 @@ export const getHRContext = async (company_id, department_id = null) => {
     };
   } catch (error) {
     console.error("[AI Service] Context Error:", error);
-    // Return empty context instead of null to prevent "Cannot read properties of null"
     return { employees: [], departments: [], positions: [], leaveTypes: [], holidays: [] };
   }
 };

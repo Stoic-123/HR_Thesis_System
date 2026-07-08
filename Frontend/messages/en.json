@@ -199,6 +199,7 @@
     "leaveGroupIdLabel": "Leave Group ID",
     "overtimeGroupIdLabel": "Overtime Group ID",
     "announcementGroupIdLabel": "Announcement Group ID",
+    "backupGroupIdLabel": "Backup Group ID",
     "botTokenLabel": "Bot Token",
     "defaultPasswordTitle": "Default Password",
     "defaultPasswordDesc": "The default password automatically assigned to newly created employee accounts and password resets.",
@@ -222,7 +223,17 @@
     "enterLocationName": "Please enter the location name",
     "radiusPositive": "Radius must be a number greater than zero",
     "errorLoading": "Unable to load company data",
-    "errorLoadingDesc": "Please try again or contact the system administrator."
+    "errorLoadingDesc": "Please try again or contact the system administrator.",
+    "aiSettingsTitle": "AI Chatbot Settings",
+    "aiSettingsDesc": "Configure the AI provider and models used for the chatbot and system automation.",
+    "aiProviderLabel": "AI Provider",
+    "aiModelLabel": "AI Model",
+    "aiApiKeyLabel": "API Key / Token",
+    "aiApiKeyPlaceholder": "Enter your secret API Key / Token",
+    "aiModelPlaceholder": "e.g., Qwen/Qwen2.5-7B-Instruct, google/gemini-2.5-flash:free, or qwen2.5:1.5b",
+    "aiLocalOption": "Local Model (Ollama)",
+    "aiHuggingFaceOption": "Hugging Face API",
+    "aiOpenrouterOption": "OpenRouter API"
   },
   "department": {
     "title": "Department",
@@ -790,7 +801,8 @@
     "approvedCount": "Approved",
     "pendingCount": "Pending",
     "allRequests": "All Requests",
-    "weekBadge": "This Month"
+    "weekBadge": "This Month",
+    "exportPDF": "Export PDF"
   },
   "leaveProfile": {
     "title": "Employee Leave Profiles",

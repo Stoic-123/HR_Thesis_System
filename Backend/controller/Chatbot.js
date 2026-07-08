@@ -1,116 +1,38 @@
 import { chatWithAI } from "../lib/ai/ollama.js";
 import { getHRContext } from "../service/AI.js";
 import prisma from "../lib/prisma.js";
-import { updateEmployee } from "../service/Employee.js";
+
+function buildEmployeeNameFilter(searchString) {
+  if (!searchString) return {};
+  const parts = searchString.trim().split(/\s+/);
+  if (parts.length > 1) {
+    return {
+      OR: [
+        {
+          AND: [
+            { first_name: { contains: parts[0] } },
+            { last_name: { contains: parts[1] } }
+          ]
+        },
+        {
+          AND: [
+            { first_name: { contains: parts[1] } },
+            { last_name: { contains: parts[0] } }
+          ]
+        }
+      ]
+    };
+  } else {
+    return {
+      OR: [
+        { first_name: { contains: searchString } },
+        { last_name: { contains: searchString } }
+      ]
+    };
+  }
+}
 
 const tools = {
-  update_employee_department: async (args, company_id) => {
-    try {
-      const { employee_id, department_id } = args;
-      let targetDeptId = parseInt(department_id);
-
-      // If department_id is not a number, try to find it by name
-      if (isNaN(targetDeptId) && typeof department_id === 'string') {
-        const dept = await prisma.department.findFirst({
-          where: { name: { contains: department_id }, company_id: parseInt(company_id) }
-        });
-        if (dept) targetDeptId = dept.id;
-      }
-
-      if (isNaN(targetDeptId)) {
-        return { success: false, message: `Department "${department_id}" is not a valid ID or name.` };
-      }
-
-      await updateEmployee(employee_id, { department_id: targetDeptId });
-      return { success: true, message: `Successfully moved employee to the new department.` };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  },
-  update_employee: async (args, company_id) => {
-    try {
-      const { employee_id, new_args } = args;
-
-      // Handle name-to-id conversion for department_id if passed as string
-      if (new_args.department_id && isNaN(parseInt(new_args.department_id)) && typeof new_args.department_id === 'string') {
-        const dept = await prisma.department.findFirst({
-          where: { name: { contains: new_args.department_id }, company_id: parseInt(company_id) }
-        });
-        if (dept) new_args.department_id = dept.id;
-      }
-
-      // Handle name-to-id conversion for position_id if passed as string
-      if (new_args.position_id && isNaN(parseInt(new_args.position_id)) && typeof new_args.position_id === 'string') {
-        const pos = await prisma.positions.findFirst({
-          where: { name: { contains: new_args.position_id }, department: { company_id: parseInt(company_id) } }
-        });
-        if (pos) new_args.position_id = pos.id;
-      }
-
-      await updateEmployee(employee_id, new_args);
-      return { success: true, message: `Successfully updated employee information.` };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  },
-  add_department: async (args, company_id) => {
-    try {
-      const { name } = args;
-      await prisma.department.create({ data: { name, company_id: parseInt(company_id) } });
-      return { success: true, message: `Successfully created new department: ${name}.` };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  },
-  add_position: async (args, company_id) => {
-    try {
-      let { name, department_id } = args;
-      let dept = null;
-
-      // Robust department finding
-      if (department_id && !isNaN(parseInt(department_id))) {
-        // Try by ID first
-        dept = await prisma.department.findUnique({
-          where: { id: parseInt(department_id), company_id: parseInt(company_id) }
-        });
-      }
-
-      if (!dept && typeof department_id === 'string') {
-        // AI might have passed the name instead of ID
-        dept = await prisma.department.findFirst({
-          where: { name: { contains: department_id }, company_id: parseInt(company_id) }
-        });
-      }
-
-      if (!dept) {
-        // Last resort: search context for name match if department_id was meant to be a name
-        return { success: false, message: `Department "${department_id}" not found. Please provide a valid department ID or exact name.` };
-      }
-
-      await prisma.positions.create({
-        data: { name, department_id: dept.id }
-      });
-      return { success: true, message: `Successfully created new position "${name}" in "${dept.name}" department.` };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  },
-  add_holiday: async (args, company_id) => {
-    try {
-      const { name, start_date, end_date } = args;
-      await prisma.holiday.create({
-        data: {
-          name,
-          start_date: new Date(start_date),
-          end_date: new Date(end_date || start_date),
-          company_id: parseInt(company_id)
-        }
-      });
-      return { success: true, message: `Successfully added holiday: ${name}.` };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
-  },
   get_today_attendance: async (args, company_id, deptFilter) => {
     try {
       const todayStart = new Date();
@@ -169,10 +91,8 @@ const tools = {
       };
 
       if (isNaN(parseInt(employee_name_or_id))) {
-        whereClause.OR = [
-          { first_name: { contains: employee_name_or_id } },
-          { last_name: { contains: employee_name_or_id } },
-        ];
+        const nameFilter = buildEmployeeNameFilter(employee_name_or_id);
+        whereClause.OR = nameFilter.OR;
       } else {
         whereClause.id = parseInt(employee_name_or_id);
       }
@@ -247,6 +167,277 @@ const tools = {
     } catch (error) {
       return { success: false, message: error.message };
     }
+  },
+  get_employee_profile: async (args, company_id, deptFilter) => {
+    try {
+      const { employee_name_or_id } = args;
+      if (!employee_name_or_id) {
+        return { success: false, message: "Please specify the employee name or ID." };
+      }
+
+      const whereClause = {
+        company_id: parseInt(company_id),
+      };
+
+      if (isNaN(parseInt(employee_name_or_id))) {
+        const nameFilter = buildEmployeeNameFilter(employee_name_or_id);
+        whereClause.OR = nameFilter.OR;
+      } else {
+        whereClause.id = parseInt(employee_name_or_id);
+      }
+
+      if (deptFilter) {
+        whereClause.department_id = parseInt(deptFilter);
+      }
+
+      const employee = await prisma.employee.findFirst({
+        where: whereClause,
+        include: {
+          positions: true,
+          department_employee_department_idTodepartment: true,
+        }
+      });
+
+      if (!employee) {
+        return { success: false, message: `Employee "${employee_name_or_id}" not found or access denied.` };
+      }
+
+      const deptName = employee.department_employee_department_idTodepartment?.name || "N/A";
+      const posName = employee.positions?.name || "N/A";
+
+      const lines = [
+        `Profile details for **${employee.first_name} ${employee.last_name}** (ID: ${employee.id}):`,
+        `* **Department:** ${deptName}`,
+        `* **Position:** ${posName}`,
+        `* **Age:** ${employee.age || "N/A"}`,
+        `* **Gender:** ${employee.gender || "N/A"}`,
+        `* **Email:** ${employee.email || "N/A"}`,
+        `* **Phone:** ${employee.phone_number1 || "N/A"}`,
+        `* **Address:** ${employee.address || "N/A"}`,
+        `* **Joined Date:** ${employee.joined_at ? employee.joined_at.toISOString().split('T')[0] : "N/A"}`,
+        `* **Relationship Status:** ${employee.relationship_status || "N/A"}`,
+        `* **Children:** ${employee.total_children ?? "N/A"}`,
+        `* **Status:** ${employee.is_active || "active"}`
+      ];
+
+      return { success: true, message: lines.join("\n") };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  },
+  get_leave_records: async (args, company_id, deptFilter) => {
+    try {
+      let { employee_name_or_id, status, start_date, end_date, group_by, limit } = args;
+
+      const whereClause = {
+        employee_leaverecord_employee_idToemployee: {
+          company_id: parseInt(company_id),
+          is_active: "active"
+        }
+      };
+
+      if (deptFilter) {
+        whereClause.employee_leaverecord_employee_idToemployee.department_id = parseInt(deptFilter);
+      }
+
+      if (employee_name_or_id) {
+        if (isNaN(parseInt(employee_name_or_id))) {
+          const nameFilter = buildEmployeeNameFilter(employee_name_or_id);
+          whereClause.employee_leaverecord_employee_idToemployee.OR = nameFilter.OR;
+        } else {
+          whereClause.employee_id = parseInt(employee_name_or_id);
+        }
+      }
+
+      if (status) {
+        whereClause.status = status;
+      }
+
+      if (start_date || end_date) {
+        whereClause.start_date = {};
+        if (start_date) {
+          whereClause.start_date.gte = new Date(start_date);
+        }
+        if (end_date) {
+          whereClause.start_date.lte = new Date(end_date);
+        }
+      }
+
+      const records = await prisma.leaverecord.findMany({
+        where: whereClause,
+        include: {
+          employee_leaverecord_employee_idToemployee: true,
+          leavetype: true
+        },
+        orderBy: { start_date: 'desc' },
+        take: 1000
+      });
+
+      if (records.length === 0) {
+        return { success: true, message: "No leave records found matching the criteria." };
+      }
+
+      // Auto-grouping check: if company-wide query and records are numerous, group by employee for cleaner display
+      if (!group_by && !employee_name_or_id && records.length > 15) {
+        group_by = 'employee';
+      }
+
+      if (group_by === 'employee') {
+        const counts = {};
+        records.forEach(r => {
+          const emp = r.employee_leaverecord_employee_idToemployee;
+          const key = r.employee_id;
+          if (!counts[key]) {
+            counts[key] = {
+              name: `${emp.first_name} ${emp.last_name}`,
+              id: emp.id,
+              count: 0
+            };
+          }
+          counts[key].count++;
+        });
+
+        const sorted = Object.values(counts).sort((a, b) => b.count - a.count);
+        const limited = limit ? sorted.slice(0, parseInt(limit)) : sorted;
+
+        const summaryText = limited.map((item, index) => 
+          `${index + 1}. **${item.name}** (ID: ${item.id}): ${item.count} leave requests`
+        ).join("\n");
+
+        const dateRangeStr = (start_date || end_date) 
+          ? ` from ${start_date || ''} to ${end_date || ''}` 
+          : "";
+
+        return {
+          success: true,
+          message: `Top Employees by Leave Request Count${dateRangeStr}:\n${summaryText}`
+        };
+      }
+
+      // Safe limit of 25 for raw list to prevent prompt bloat
+      const displayRecords = records.slice(0, 25);
+      const summaryText = displayRecords.map(r => {
+        const emp = r.employee_leaverecord_employee_idToemployee;
+        const start = r.start_date.toISOString().split('T')[0];
+        const end = r.end_date.toISOString().split('T')[0];
+        return `* **${emp.first_name} ${emp.last_name}** (ID: ${emp.id}): ${r.leavetype.name} from ${start} to ${end} (${r.status}, Reason: ${r.reason || 'None'})`;
+      }).join("\n");
+
+      return {
+        success: true,
+        message: `Leave Request Records:\n${summaryText}`
+      };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  },
+  get_attendance_records: async (args, company_id, deptFilter) => {
+    try {
+      let { employee_name_or_id, start_date, end_date, is_late, status, group_by, limit } = args;
+
+      const whereClause = {
+        employee: {
+          company_id: parseInt(company_id),
+          is_active: "active"
+        }
+      };
+
+      if (deptFilter) {
+        whereClause.employee.department_id = parseInt(deptFilter);
+      }
+
+      if (employee_name_or_id) {
+        if (isNaN(parseInt(employee_name_or_id))) {
+          const nameFilter = buildEmployeeNameFilter(employee_name_or_id);
+          whereClause.employee.OR = nameFilter.OR;
+        } else {
+          whereClause.employee_id = parseInt(employee_name_or_id);
+        }
+      }
+
+      if (is_late !== undefined && is_late !== null) {
+        whereClause.is_late = is_late === true || is_late === 'true' || is_late === 1 || is_late === '1' || String(is_late).toLowerCase() === 'yes';
+      }
+
+      if (status) {
+        whereClause.status = status;
+      }
+
+      if (start_date || end_date) {
+        whereClause.work_at = {};
+        if (start_date) {
+          whereClause.work_at.gte = new Date(start_date);
+        }
+        if (end_date) {
+          whereClause.work_at.lte = new Date(end_date);
+        }
+      }
+
+      const records = await prisma.attendancerecord.findMany({
+        where: whereClause,
+        include: {
+          employee: true,
+          timemode: true
+        },
+        orderBy: { work_at: 'desc' },
+        take: 1000
+      });
+
+      if (records.length === 0) {
+        return { success: true, message: "No attendance records found matching the criteria." };
+      }
+
+      // Auto-grouping check: if company-wide query and records are numerous, group by employee for cleaner display
+      if (!group_by && !employee_name_or_id && records.length > 15) {
+        group_by = 'employee';
+      }
+
+      if (group_by === 'employee') {
+        const counts = {};
+        records.forEach(r => {
+          const key = r.employee_id;
+          if (!counts[key]) {
+            counts[key] = {
+              name: `${r.employee.first_name} ${r.employee.last_name}`,
+              id: r.employee.id,
+              count: 0
+            };
+          }
+          counts[key].count++;
+        });
+
+        const sorted = Object.values(counts).sort((a, b) => b.count - a.count);
+        const limited = limit ? sorted.slice(0, parseInt(limit)) : sorted;
+
+        const summaryText = limited.map((item, index) => 
+          `${index + 1}. **${item.name}** (ID: ${item.id}): ${item.count} times`
+        ).join("\n");
+
+        const dateRangeStr = (start_date || end_date) 
+          ? ` from ${start_date || ''} to ${end_date || ''}` 
+          : "";
+
+        return {
+          success: true,
+          message: `Top Employees by Attendance Count${dateRangeStr}:\n${summaryText}`
+        };
+      }
+
+      // Safe limit of 25 for raw list to prevent prompt bloat
+      const displayRecords = records.slice(0, 25);
+      const summaryText = displayRecords.map(r => {
+        const dateStr = r.work_at.toISOString().split('T')[0];
+        const timeStr = r.work_at.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+        return `* **${r.employee.first_name} ${r.employee.last_name}** (ID: ${r.employee.id}): ${dateStr} at ${timeStr} (Mode: ${r.timemode.name}, Status: ${r.status}, Late: ${r.is_late ? 'Yes' : 'No'})`;
+      }).join("\n");
+
+      return {
+        success: true,
+        message: `Attendance Records:\n${summaryText}`
+      };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
   }
 };
 
@@ -268,8 +459,22 @@ export const chatController = async (req, res) => {
     // Fetch user details to determine role/department constraints
     const currentEmployee = await prisma.employee.findUnique({
       where: { id: employee_id },
-      include: { role: true },
+      include: {
+        role: {
+          include: {
+            rolebaseaccess: true
+          }
+        }
+      },
     });
+
+    const hasChatbotPermission =
+      currentEmployee?.role?.name === "Admin" ||
+      currentEmployee?.role?.rolebaseaccess?.some(p => p.path === "chatbot:access");
+
+    if (!hasChatbotPermission) {
+      return res.status(403).json({ success: false, message: "Forbidden: You do not have permission to access the HR AI Chatbot." });
+    }
 
     const isHrOrAdmin =
       currentEmployee?.role?.name?.toLowerCase().includes("admin") ||
@@ -285,25 +490,25 @@ export const chatController = async (req, res) => {
 
     let toolInstructions = isHrOrAdmin
       ? `Available tools:
-         - update_employee_department {"employee_id": number, "department_id": number}
-         - update_employee {"employee_id": number, "new_args": {"field": "value"}}
-         - add_department {"name": "string"}
-         - add_position {"name": "string", "department_id": number}
-         - add_holiday {"name": "string", "start_date": "YYYY-MM-DD", "end_date": "YYYY-MM-DD"}
-         - get_today_attendance {}
+         - get_today_attendance {} (Use this for fetching today's scan/attendance list)
+         - get_employee_profile {"employee_name_or_id": "string"} (Use this to get detailed profile info like phone, email, age, address, relationship status, joined date, children, etc. of a specific employee)
          - get_employee_leave_balance {"employee_name_or_id": "string"} (ONLY for checking a single specific employee by name/ID)
+         - get_leave_records {"employee_name_or_id": "string", "status": "string", "start_date": "YYYY-MM-DD", "end_date": "YYYY-MM-DD"} (Use this to search the log of leave requests/applications. ALL parameters are optional. If employee_name_or_id is omitted or null, it will query across ALL active employees)
+         - get_attendance_records {"employee_name_or_id": "string", "start_date": "YYYY-MM-DD", "end_date": "YYYY-MM-DD", "is_late": boolean, "status": "string"} (Use this to search historical attendance logs. ALL parameters are optional. If employee_name_or_id is omitted or null, it will search across ALL active employees in the company. Perfect for queries like 'who was late this month', 'top late employees', or listing attendance logs)
          - get_company_leave_summary {} (Use this for company-wide queries, list of all leaves, comparisons, sorting, or queries like 'who has taken the most leaves', 'unpaid the most', or 'top leave users')`
       : `Available tools:
-         - update_employee_department {"employee_id": number, "department_id": number} (ONLY for employees in your department)
-         - update_employee {"employee_id": number, "new_args": {"field": "value"}} (ONLY for employees in your department)
          - get_today_attendance {} (Get list of scanned employees today in your department)
+         - get_employee_profile {"employee_name_or_id": "string"} (ONLY to get detailed profile info like phone, email, age, address, relationship status, joined date, children, etc. of an employee in your department)
          - get_employee_leave_balance {"employee_name_or_id": "string"} (ONLY for checking a single specific employee in your department by name/ID)
+         - get_leave_records {"employee_name_or_id": "string", "status": "string", "start_date": "YYYY-MM-DD", "end_date": "YYYY-MM-DD"} (ONLY for searching the log of leave requests/applications for employees in your department. If employee_name_or_id is omitted, searches your whole department)
+         - get_attendance_records {"employee_name_or_id": "string", "start_date": "YYYY-MM-DD", "end_date": "YYYY-MM-DD", "is_late": boolean, "status": "string"} (ONLY for searching historical attendance logs of employees in your department. If employee_name_or_id is omitted, searches your whole department)
          - get_company_leave_summary {} (Use this for queries in your department like 'who has taken the most leaves', 'unpaid the most', 'top leave users', or list of all department leaves)`;
 
     const systemPrompt = `
       ${roleDescription}
       
       CONTEXT:
+      - CURRENT DATE/TIME: ${new Date().toISOString()} (Use this for calculating date ranges like 'last 3 months', 'this month', or previous years relative to today)
       - EMPLOYEES: ${JSON.stringify(context.employees)}
       - DEPARTMENTS: ${JSON.stringify(context.departments)}
       - POSITIONS: ${JSON.stringify(context.positions)}
@@ -311,24 +516,26 @@ export const chatController = async (req, res) => {
       - HOLIDAYS: ${JSON.stringify(context.holidays)}
       
       CAPABILITIES:
-      1. You can search, move, and update employee information (age, name, etc.).
-      2. Admin only: You can manage departments (add), positions (add), and holidays.
+      1. You can search employee basic information (id, name, department, position).
+      2. You can view detailed profile information of an employee (such as email, phone, age, address, relationship status, kids, joined date) using the get_employee_profile tool.
+      3. You can query the log of leave requests/applications (status, dates, reasons) using the get_leave_records tool.
+      4. You can query historical attendance logs (punctuality, late entries) using the get_attendance_records tool.
       
       RESTRICTIONS:
-      - You are NOT allowed to delete anything (employees, departments, positions, etc.).
-      - If a user is not Admin/HR and asks for administrative changes (such as adding departments, holidays, or positions), politely refuse and explain that they must request an HR or Admin user to perform or approve this action.
-      - Refuse to update or fetch information about employees who are NOT in the EMPLOYEES context list.
-      - If a user asks for something you cannot do (e.g., "order pizza", "hack the system", "delete everyone"), respond politely that it is outside your current HR management capabilities.
+      - You are strictly a READ-ONLY assistant. You do NOT have the ability to make administrative changes, update profiles, add department/holiday/position records, or create anything.
+      - Refuse to fetch information about employees who are NOT in the EMPLOYEES context list.
+      - If a user asks for something you cannot do (e.g., "order pizza", "hack the system", "delete everyone", "update employee name"), respond politely that it is outside your current read-only HR capabilities.
       
       OUTPUT RULES:
-      1. NEVER output raw JSON, code blocks, tool calls, tool examples, or database IDs to the user. If you are writing a conversational response, NEVER include JSON formats or tool structures like \`{"tool": ...}\`.
-      2. NEVER output markdown tables (e.g., using | or ---). Tables are strictly forbidden as they do not fit in the chat UI.
-      3. Format details using a clean bulleted list, like:
-         * **Field Name:** Value
-      4. Clean up raw data before rendering:
-         - If a value is "null", "N/A", empty, or undefined, do NOT show that line/field at all (e.g., if age is null, skip the Age line).
-         - Render dates in a simple, friendly format (e.g. YYYY-MM-DD).
-      5. Always respond in polite, conversational, professional English. Do not use technical phrases like "Here is the JSON".
+      1. Always respond in a polite, premium, conversational, and highly professional HR manner.
+      2. Keep responses clean, clear, and well-structured.
+      3. For any lists, rankings, or multiple items, use clean bullet points (e.g. "- Item details") or numbers, and integrate relevant emojis (like 🥇, 🥈, 🥉, 📅, 👤, 📝) to make the text engaging and professional.
+      4. Avoid surrounding entire bullets or sentences in double asterisks (e.g. do NOT write "**- Sok Dara is present**"). Keep bold formatting limited to key words or field names (e.g. "- **Status:** Active").
+      5. NEVER output raw JSON blocks, code blocks, database IDs (such as employee IDs or profile IDs in database formats), or tool call definitions to the user.
+      6. NEVER output markdown tables (e.g. using "|" or "---"). Tables are forbidden. Use beautifully formatted bullet lists instead.
+      7. Clean up raw data before formatting:
+         - If a profile value is "null", "N/A", empty, or undefined, omit that field entirely from the response.
+         - Render all dates in a simple, friendly calendar format (e.g. YYYY-MM-DD).
       
       ACTION AND QUERY RULES:
       1. To perform any action or query database records (such as fetching today's scan/attendance list, updating employees, or adding items), you MUST call the appropriate tool by returning ONLY a JSON object: {"tool": "tool_name", "args": {...}}.
@@ -346,57 +553,41 @@ export const chatController = async (req, res) => {
       { role: "user", content: message }
     ];
 
-    // Stream response from Ollama
+    // Stream response from Ollama (collect first stage in background to prevent tool leaks)
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
 
-    let isToolCallDetected = null;
+    let isToolCallDetected = false;
     let accumulatedText = "";
-    let isStreamingBlocked = false;
 
     try {
-      await chatWithAI(messages, process.env.AI_MODEL || "qwen2.5:1.5b", (token) => {
-        accumulatedText += token;
-        
-        // If we detect a code block or JSON block starting, block further streaming to client
-        if (accumulatedText.includes("```json") || accumulatedText.includes('{"tool":')) {
-          isStreamingBlocked = true;
-        }
-
-        if (isToolCallDetected === null) {
-          const trimmed = accumulatedText.trim();
-          if (trimmed.length > 0) {
-            if (trimmed.startsWith("{")) {
-              isToolCallDetected = true;
-            } else {
-              isToolCallDetected = false;
-              if (!isStreamingBlocked) {
-                // Stream the accumulated text so far
-                res.write(`data: ${JSON.stringify({ token: trimmed })}\n\n`);
-              }
-            }
-          }
-        } else if (isToolCallDetected === false) {
-          if (!isStreamingBlocked) {
-            // Stream directly to the client in real-time
-            res.write(`data: ${JSON.stringify({ token })}\n\n`);
-          }
-        }
-      });
-    } catch (streamError) {
-      console.error("[Chatbot Controller] Streaming Error:", streamError);
-      if (isToolCallDetected === null || isToolCallDetected === false) {
-        res.write(`data: ${JSON.stringify({ error: "Connection to AI model interrupted." })}\n\n`);
-        res.write('data: [DONE]\n\n');
-        return res.end();
+      const firstStageResult = await chatWithAI(
+        messages,
+        process.env.AI_MODEL || "qwen2.5:1.5b",
+        (token) => {
+          accumulatedText += token;
+        },
+        company_id
+      );
+      if (!accumulatedText && firstStageResult) {
+        accumulatedText = firstStageResult;
       }
-      throw streamError;
+    } catch (streamError) {
+      console.error("[Chatbot Controller] First stage Error:", streamError);
+      let friendlyMessage = streamError.message || "Connection to AI model interrupted.";
+      if (friendlyMessage.includes("Rate limit exceeded") || friendlyMessage.includes("429") || friendlyMessage.toLowerCase().includes("rate-limited")) {
+        friendlyMessage = "⚠️ **AI Rate Limit Exceeded**\n\nI'm sorry, but we have reached the daily query limit for the free AI model on OpenRouter.\n\n**How to resolve this:**\n- Go to **System Settings** -> **Company Settings** and change the AI provider to a local model (Ollama) or Hugging Face.\n- Or, configure a paid API key or add credits to your OpenRouter account in **Company Settings** to unlock higher rate limits.";
+      }
+      res.write(`data: ${JSON.stringify({ token: friendlyMessage })}\n\n`);
+      res.write('data: [DONE]\n\n');
+      return res.end();
     }
 
-    // After stream completes, check if there is a JSON tool call embedded anywhere in the response
+    // After stream completes, check if there is a JSON tool call or XML tool call embedded anywhere in the response
     const embeddedJsonMatch = accumulatedText.match(/\{[\s\S]*"tool"[\s\S]*\}/);
-    if (embeddedJsonMatch) {
+    const embeddedXmlMatch = accumulatedText.match(/<tool_call>[\s\S]*<\/tool_call>/);
+    if (embeddedJsonMatch || embeddedXmlMatch) {
       isToolCallDetected = true;
     }
 
@@ -414,6 +605,40 @@ export const chatController = async (req, res) => {
             toolCall = JSON.parse(jsonMatch[0]);
           } catch (innerE) {
             console.warn("[Chatbot] Found JSON-like block but failed to parse:", innerE);
+          }
+        }
+      }
+
+      // If JSON parsing failed, try XML-style tool call parsing
+      if (!toolCall || !toolCall.tool) {
+        const xmlMatch = accumulatedText.match(/<tool_call>([\s\S]*?)<\/tool_call>/);
+        if (xmlMatch) {
+          try {
+            const xmlContent = xmlMatch[1].trim();
+            const lines = xmlContent.split('\n').map(l => l.trim()).filter(Boolean);
+            const toolName = lines[0].replace(/<[^>]*>/g, "").trim();
+
+            const args = {};
+            const keyRegex = /<arg_key>([\s\S]*?)<\/arg_key>\s*<arg_value>([\s\S]*?)<\/arg_value>/g;
+            let match;
+            while ((match = keyRegex.exec(xmlContent)) !== null) {
+              const key = match[1].trim();
+              let val = match[2].trim();
+
+              if (val.toLowerCase() === 'true') val = true;
+              else if (val.toLowerCase() === 'false') val = false;
+              else if (!isNaN(val) && val !== '') val = Number(val);
+
+              args[key] = val;
+            }
+
+            toolCall = {
+              tool: toolName,
+              args: args
+            };
+            console.log("[Chatbot] Successfully parsed XML tool call:", toolCall);
+          } catch (xmlError) {
+            console.error("[Chatbot] Failed to parse XML tool call:", xmlError);
           }
         }
       }
@@ -437,6 +662,33 @@ export const chatController = async (req, res) => {
         ) {
           normalizedTool = "get_employee_leave_balance";
         }
+        if (
+          normalizedTool === "get_employee_profile" ||
+          normalizedTool === "get_profile" ||
+          normalizedTool === "get_employee" ||
+          normalizedTool === "check_profile" ||
+          normalizedTool === "employee_profile"
+        ) {
+          normalizedTool = "get_employee_profile";
+        }
+        if (
+          normalizedTool === "get_leave_records" ||
+          normalizedTool === "get_leave_logs" ||
+          normalizedTool === "get_leave_history" ||
+          normalizedTool === "get_leave_requests" ||
+          normalizedTool === "check_leaves"
+        ) {
+          normalizedTool = "get_leave_records";
+        }
+        if (
+          normalizedTool === "get_attendance_records" ||
+          normalizedTool === "get_attendance_logs" ||
+          normalizedTool === "get_attendance_history" ||
+          normalizedTool === "check_attendance" ||
+          normalizedTool === "list_attendance_history"
+        ) {
+          normalizedTool = "get_attendance_records";
+        }
         toolCall.tool = normalizedTool;
       }
 
@@ -444,29 +696,11 @@ export const chatController = async (req, res) => {
         console.log(`[Chatbot] Executing tool: ${toolCall.tool}`, toolCall.args);
         let result;
 
-        // Perform security and RBAC validation on tool execution
-        const adminOnlyTools = ["add_department", "add_position", "add_holiday"];
-        if (!isHrOrAdmin && adminOnlyTools.includes(toolCall.tool)) {
-          result = { success: false, message: "You do not have administrative permission to create or edit system records (departments, positions, holidays)." };
-        } else if (!isHrOrAdmin && (toolCall.tool === "update_employee" || toolCall.tool === "update_employee_department")) {
-          // Ensure targeted employee is in the same department
-          const targetEmpId = parseInt(toolCall.args.employee_id);
-          const targetEmployee = await prisma.employee.findUnique({
-            where: { id: targetEmpId }
-          });
-          
-          if (!targetEmployee || targetEmployee.department_id !== currentEmployee?.department_id) {
-            result = { success: false, message: "Access denied. You can only modify employees within your own department." };
-          }
-        }
-
-        if (result === undefined) {
-          try {
-            result = await tools[toolCall.tool](toolCall.args, company_id, null);
-          } catch (err) {
-            console.error(`[Chatbot] Tool execution crashed:`, err);
-            result = { success: false, message: "The system encountered an unexpected error while performing this action." };
-          }
+        try {
+          result = await tools[toolCall.tool](toolCall.args, company_id, deptFilter);
+        } catch (err) {
+          console.error(`[Chatbot] Tool execution crashed:`, err);
+          result = { success: false, message: "The system encountered an unexpected error while performing this action." };
         }
         
         // Log the AI action
@@ -487,11 +721,47 @@ export const chatController = async (req, res) => {
           ? result.message 
           : `⚠️ I'm sorry, I couldn't complete that action. ${result.message}`;
 
-        res.write(`data: ${JSON.stringify({ token: displayMessage })}\n\n`);
+        // Feed the database result back to the AI model so it can synthesize a professional response
+        const summarizeMessages = [
+          ...messages,
+          { role: "assistant", content: accumulatedText },
+          { role: "system", content: `Here is the database result from the tool execution:
+            ---
+            ${displayMessage}
+            ---
+            Using this data, generate a premium, professional conversational response for the user.
+            Rules:
+            1. Respond naturally, politely, and clearly.
+            2. For lists or reports (e.g. rankings, late logs, leave summaries), format it beautifully. Use clear headings, emojis (like 🥇, 🥈, 🥉), and clean bulleted lists (do not use double asterisks ** around the entire bullet text; keep it clean and readable).
+            3. Add a short "Summary" or "Recommendation" section at the end of lists, providing professional HR guidance.
+            4. Make sure not to output any raw JSON or raw tool syntax.`
+          }
+        ];
+
+        try {
+          await chatWithAI(
+            summarizeMessages,
+            process.env.AI_MODEL || "qwen2.5:1.5b",
+            (summaryToken) => {
+              res.write(`data: ${JSON.stringify({ token: summaryToken })}\n\n`);
+            },
+            company_id
+          );
+        } catch (summaryErr) {
+          console.error("[Chatbot Controller] Synthesis failed, falling back to raw output:", summaryErr);
+          let friendlyMessage = displayMessage;
+          if (summaryErr.message.includes("Rate limit exceeded") || summaryErr.message.includes("429") || summaryErr.message.toLowerCase().includes("rate-limited")) {
+            friendlyMessage = `⚠️ **AI Rate Limit Exceeded**\n\nThe free AI provider request limit was reached while generating the summary.\n\n**Here is the raw data retrieved from our database:**\n\n${displayMessage}\n\n*Note: Change providers or configure a paid API key in **Company Settings** to avoid this limit in the future.*`;
+          }
+          res.write(`data: ${JSON.stringify({ token: friendlyMessage })}\n\n`);
+        }
       } else {
         // If it looked like a tool call but wasn't valid, treat the whole text as chat response
         res.write(`data: ${JSON.stringify({ token: accumulatedText })}\n\n`);
       }
+    } else {
+      // Regular conversational response (e.g. greetings or direct answers)
+      res.write(`data: ${JSON.stringify({ token: accumulatedText })}\n\n`);
     }
 
     res.write('data: [DONE]\n\n');

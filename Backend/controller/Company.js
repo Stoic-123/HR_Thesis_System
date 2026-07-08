@@ -29,6 +29,9 @@ export const addCompanyController = async (req, res) => {
       telegram_announcement_group_id,
       telegram_backup_group_id,
       telegram_bot_token,
+      ai_provider,
+      ai_api_key,
+      ai_model,
     } = req.body;
     if (!name) {
       res
@@ -49,6 +52,10 @@ export const addCompanyController = async (req, res) => {
       telegram_announcement_group_id,
       telegram_backup_group_id,
       telegram_bot_token,
+      undefined,
+      ai_provider,
+      ai_api_key,
+      ai_model
     );
 
     // Audit Log
@@ -95,6 +102,9 @@ export const updateCompanyController = async (req, res) => {
       telegram_backup_group_id,
       telegram_bot_token,
       default_password,
+      ai_provider,
+      ai_api_key,
+      ai_model,
       old_logo_path,
     } = req.body;
     const company_id = req.user.company_id;
@@ -143,6 +153,9 @@ export const updateCompanyController = async (req, res) => {
       telegram_backup_group_id,
       telegram_bot_token,
       default_password,
+      ai_provider,
+      ai_api_key,
+      ai_model,
       company_id
     );
 

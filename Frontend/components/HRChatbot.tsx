@@ -19,6 +19,87 @@ import { chatWithAI, smartSearchEmployees } from "@/services/ai.services";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 
+function renderFormattedContent(content: string) {
+  if (!content) return null;
+
+  const parseBold = (text: string) => {
+    const parts = text.split(/\*\*([\s\S]*?)\*\*/g);
+    return parts.map((part, i) => {
+      if (i % 2 === 1) {
+        return <strong key={i} className="font-semibold text-zinc-950 dark:text-white">{part}</strong>;
+      }
+      return part;
+    });
+  };
+
+  const lines = content.split("\n");
+  return (
+    <div className="space-y-1.5 text-zinc-700 dark:text-zinc-300">
+      {lines.map((line, index) => {
+        const trimmed = line.trim();
+
+        // 1. Horizontal Rules
+        if (trimmed === "---") {
+          return <hr key={index} className="my-2 border-zinc-200 dark:border-zinc-700" />;
+        }
+
+        // 2. Headings
+        if (trimmed.startsWith("###")) {
+          const title = trimmed.replace(/^###\s*/, "");
+          return (
+            <h3 key={index} className="text-sm font-bold text-zinc-900 dark:text-white mt-2 mb-1">
+              {parseBold(title)}
+            </h3>
+          );
+        }
+        if (trimmed.startsWith("##")) {
+          const title = trimmed.replace(/^##\s*/, "");
+          return (
+            <h2 key={index} className="text-base font-bold text-zinc-900 dark:text-white mt-3 mb-1">
+              {parseBold(title)}
+            </h2>
+          );
+        }
+
+        // 3. Bullet Lists
+        if (trimmed.startsWith("* ") || trimmed.startsWith("- ")) {
+          const bulletText = trimmed.replace(/^[*+-]\s*/, "");
+          return (
+            <div key={index} className="flex items-start gap-1.5 pl-1.5">
+              <span className="text-primary mt-1 text-[10px]">•</span>
+              <span className="text-xs leading-relaxed">{parseBold(bulletText)}</span>
+            </div>
+          );
+        }
+
+        // 4. Numbered List
+        if (/^\d+\.\s+/.test(trimmed)) {
+          const numText = trimmed.replace(/^\d+\.\s+/, "");
+          const match = trimmed.match(/^(\d+)\./);
+          const num = match ? match[1] : "1";
+          return (
+            <div key={index} className="flex items-start gap-1.5 pl-0.5">
+              <span className="text-primary font-semibold text-xs">{num}.</span>
+              <span className="text-xs leading-relaxed">{parseBold(numText)}</span>
+            </div>
+          );
+        }
+
+        // 5. Normal text line
+        if (trimmed === "") {
+          return <div key={index} className="h-1" />;
+        }
+
+        return (
+          <p key={index} className="text-xs leading-relaxed">
+            {parseBold(line)}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
 export function HRChatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -171,10 +252,16 @@ export function HRChatbot() {
                 )}
               >
                 <div className={cn(
-                  "p-2 rounded-lg",
-                  msg.role === "bot" ? "bg-white border shadow-sm" : "bg-primary text-white"
+                  "p-3 rounded-2xl max-w-[85%] text-xs shadow-sm",
+                  msg.role === "bot" 
+                    ? "bg-white border rounded-tl-sm text-zinc-800" 
+                    : "bg-primary text-white rounded-tr-sm"
                 )}>
-                  <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                  {msg.role === "bot" ? (
+                    renderFormattedContent(msg.content)
+                  ) : (
+                    <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                  )}
                 </div>
               </div>
             ))}

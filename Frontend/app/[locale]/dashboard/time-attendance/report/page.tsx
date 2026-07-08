@@ -221,7 +221,7 @@ const TimeAttendanceReportPage = () => {
       ],
       tableHeaders: [
         { kh: "ឈ្មោះបុគ្គលិក", en: "Employee Name" },
-        { kh: "កាលបរិច្ឆេទ", en: "Date" },
+        { kh: "កាលបរិច្ឆេទ", en: "Date", align: "center" },
         ...(timeModes.length > 0
           ? timeModes.map(tm => {
               const key = tm.name.toLowerCase().replace(/_/g, "").replace(/\s/g, "");
@@ -240,14 +240,14 @@ const TimeAttendanceReportPage = () => {
                 kh = "ចូលធ្វើការវិញ";
                 en = "Lunch In";
               }
-              return { kh, en };
+              return { kh, en, align: "center" as const };
             })
           : [
-              { kh: "ម៉ោងចូល", en: "Check In" },
-              { kh: "ម៉ោងចេញ", en: "Check Out" }
+              { kh: "ម៉ោងចូល", en: "Check In", align: "center" as const },
+              { kh: "ម៉ោងចេញ", en: "Check Out", align: "center" as const }
             ]
         ),
-        { kh: "ស្ថានភាព", en: "Status", align: "right" }
+        { kh: "ស្ថានភាព", en: "Status", align: "center" }
       ],
       tableRows: rows.map(row => {
         const scansCells = timeModes.length > 0
@@ -271,12 +271,12 @@ const TimeAttendanceReportPage = () => {
               }
               return {
                 text: `<span class="${colorClass} font-mono">${scanText}</span>`,
-                align: "left" as const
+                align: "center" as const
               };
             })
           : [
-              { text: `<span class="text-emerald font-mono">${row.checkIn || "--:--"}</span>`, align: "left" as const },
-              { text: `<span class="text-rose font-mono">${row.checkOut || "--:--"}</span>`, align: "left" as const }
+              { text: `<span class="text-emerald font-mono">${row.checkIn || "--:--"}</span>`, align: "center" as const },
+              { text: `<span class="text-rose font-mono">${row.checkOut || "--:--"}</span>`, align: "center" as const }
             ];
 
         const statusLabel = row.status === "present" ? "មកទាន់ពេល" : row.status === "late" ? "យឺតយ៉ាវ" : "ចេញមុន";
@@ -285,9 +285,9 @@ const TimeAttendanceReportPage = () => {
         return {
           cells: [
             { text: `<strong>${row.employee}</strong>`, align: "left" as const },
-            { text: formatKhmerDate(row.date), align: "left" as const },
+            { text: formatKhmerDate(row.date), align: "center" as const },
             ...scansCells,
-            { text: `<span class="${statusColor}">${statusLabel}</span>`, align: "right" as const }
+            { text: `<span class="${statusColor}">${statusLabel}</span>`, align: "center" as const }
           ]
         };
       }),

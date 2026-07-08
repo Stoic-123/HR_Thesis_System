@@ -38,10 +38,13 @@ import {
   Trash2,
   Edit2,
   ExternalLink,
-  Plus
+  Plus,
+  Sparkles,
+  Cpu
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -89,6 +92,9 @@ export default function CompanyPage() {
     telegram_announcement_group_id: "",
     telegram_backup_group_id: "",
     telegram_bot_token: "",
+    ai_provider: "ollama",
+    ai_api_key: "",
+    ai_model: "qwen2.5:1.5b",
     default_password: "",
   });
 
@@ -111,6 +117,9 @@ export default function CompanyPage() {
         telegram_announcement_group_id: company.telegram_announcement_group_id || "",
         telegram_backup_group_id: company.telegram_backup_group_id || "",
         telegram_bot_token: company.telegram_bot_token || "",
+        ai_provider: company.ai_provider || "ollama",
+        ai_api_key: company.ai_api_key || "",
+        ai_model: company.ai_model || "qwen2.5:1.5b",
         default_password: company.default_password || "Hr12345",
       });
       if (company.logo_path) {
@@ -213,6 +222,9 @@ export default function CompanyPage() {
     data.append("telegram_announcement_group_id", formData.telegram_announcement_group_id);
     data.append("telegram_backup_group_id", formData.telegram_backup_group_id);
     data.append("telegram_bot_token", formData.telegram_bot_token);
+    data.append("ai_provider", formData.ai_provider);
+    data.append("ai_api_key", formData.ai_api_key);
+    data.append("ai_model", formData.ai_model);
     data.append("default_password", formData.default_password);
     data.append("old_logo_path", company?.logo_path || "");
 
@@ -532,6 +544,60 @@ export default function CompanyPage() {
                   </CardContent>
                 </Card>
 
+                {/* AI Chatbot Settings Card */}
+                <Card className="border border-white/60 bg-white/70 shadow-sm backdrop-blur-xl rounded-3xl">
+                  <CardHeader>
+                    <CardTitle className="text-lg font-bold flex items-center gap-2 text-gray-800">
+                      <Sparkles className="size-5 text-indigo-500 animate-pulse" />
+                      {t("aiSettingsTitle")}
+                    </CardTitle>
+                    <CardDescription>
+                      {t("aiSettingsDesc")}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <span className="text-[11px] font-bold text-gray-400 block uppercase tracking-wider">{t("aiProviderLabel")}</span>
+                        <div className="bg-white/90 border border-indigo-50/50 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 shadow-sm">
+                          {company.ai_provider === 'ollama' && t("aiLocalOption")}
+                          {company.ai_provider === 'huggingface' && t("aiHuggingFaceOption")}
+                          {company.ai_provider === 'openrouter' && t("aiOpenrouterOption")}
+                          {!company.ai_provider && t("aiLocalOption")}
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <span className="text-[11px] font-bold text-gray-400 block uppercase tracking-wider">{t("aiModelLabel")}</span>
+                        <div className="bg-white/90 border border-indigo-50/50 rounded-xl px-3.5 py-2.5 font-mono text-xs text-gray-800 shadow-sm">
+                          {company.ai_model || "qwen2.5:1.5b"}
+                        </div>
+                      </div>
+                    </div>
+
+                    {(company.ai_provider && company.ai_provider !== 'ollama') && (
+                      <div className="p-5 rounded-2xl bg-gray-50 border border-gray-100 space-y-3">
+                        <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                          <Lock className="size-4.5 text-gray-400" />
+                          {t("aiApiKeyLabel")}
+                        </h3>
+                        <div className="bg-white border border-gray-100 rounded-xl px-4 py-3 font-mono text-sm text-gray-800 flex items-center justify-between shadow-sm">
+                          <span className="truncate flex-1 max-w-[90%]">
+                            {company.ai_api_key 
+                              ? "••••••••••••••••••••••••••••••••••••••••••••••••" 
+                              : <span className="text-gray-400 italic font-sans text-xs">{tc("notSet")}</span>}
+                          </span>
+                          {company.ai_api_key && (
+                            <Badge variant="secondary" className="rounded-full bg-gray-100 text-gray-600 hover:bg-gray-100 text-[10px]">
+                              {t("secure")}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
                 {/* Default Password Card */}
                 <Card className="border border-white/60 bg-white/70 shadow-sm backdrop-blur-xl rounded-3xl">
                   <CardHeader>
@@ -797,6 +863,66 @@ export default function CompanyPage() {
                           {t("defaultPasswordHelp")}
                         </p>
                       </div>
+                    </div>
+
+                    {/* AI Chatbot Settings Card */}
+                    <div className="p-5 rounded-2xl bg-indigo-50/30 border border-indigo-100/50 space-y-4">
+                      <h3 className="text-sm font-bold text-indigo-900 flex items-center gap-2">
+                        <Sparkles size={16} className="text-indigo-500" />
+                        {t("aiSettingsTitle")}
+                      </h3>
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <Label htmlFor="ai_provider" className="text-xs font-semibold text-indigo-800">{t("aiProviderLabel")}</Label>
+                          <Select
+                            value={formData.ai_provider}
+                            onValueChange={(val) => {
+                              let defaultModel = 'qwen2.5:1.5b';
+                              if (val === 'huggingface') {
+                                defaultModel = 'Qwen/Qwen2.5-7B-Instruct';
+                              } else if (val === 'openrouter') {
+                                defaultModel = 'openrouter/free';
+                              }
+                              setFormData({ ...formData, ai_provider: val, ai_model: defaultModel });
+                            }}
+                          >
+                            <SelectTrigger id="ai_provider" className="h-10 rounded-xl border-indigo-100/80 bg-white/60 focus:bg-white text-sm">
+                              <SelectValue placeholder="Select Provider" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="ollama">{t("aiLocalOption")}</SelectItem>
+                              <SelectItem value="huggingface">{t("aiHuggingFaceOption")}</SelectItem>
+                              <SelectItem value="openrouter">{t("aiOpenrouterOption")}</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <Label htmlFor="ai_model" className="text-xs font-semibold text-indigo-800">{t("aiModelLabel")}</Label>
+                          <Input
+                            id="ai_model"
+                            value={formData.ai_model}
+                            onChange={(e) => setFormData({ ...formData, ai_model: e.target.value })}
+                            placeholder={t("aiModelPlaceholder")}
+                            className="h-10 rounded-xl border-indigo-100/80 bg-white/60 focus:bg-white text-sm"
+                          />
+                        </div>
+                      </div>
+
+                      {formData.ai_provider !== 'ollama' && (
+                        <div className="space-y-1.5 animate-fadeIn">
+                          <Label htmlFor="ai_api_key" className="text-xs font-semibold text-indigo-800">{t("aiApiKeyLabel")}</Label>
+                          <Input
+                            id="ai_api_key"
+                            type="password"
+                            value={formData.ai_api_key}
+                            onChange={(e) => setFormData({ ...formData, ai_api_key: e.target.value })}
+                            placeholder={t("aiApiKeyPlaceholder")}
+                            className="h-10 rounded-xl border-indigo-100/80 bg-white/60 focus:bg-white text-sm"
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
 

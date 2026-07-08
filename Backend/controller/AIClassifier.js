@@ -8,6 +8,29 @@ export const classifyIntentController = async (req, res) => {
       return res.status(401).json({ success: false, message: "Authentication required" });
     }
 
+    const employee_id = req.user.employee_id;
+    const prismaModule = (await import("../lib/prisma.js")).default;
+
+    // Fetch user details to verify permissions
+    const currentEmployee = await prismaModule.employee.findUnique({
+      where: { id: employee_id },
+      include: {
+        role: {
+          include: {
+            rolebaseaccess: true
+          }
+        }
+      },
+    });
+
+    const hasChatbotPermission =
+      currentEmployee?.role?.name === "Admin" ||
+      currentEmployee?.role?.rolebaseaccess?.some(p => p.path === "chatbot:access");
+
+    if (!hasChatbotPermission) {
+      return res.status(403).json({ success: false, message: "Forbidden: You do not have permission to access the HR AI Chatbot." });
+    }
+
     if (!query) {
       return res.status(400).json({ success: false, message: "Query is required" });
     }
@@ -27,7 +50,8 @@ export const classifyIntentController = async (req, res) => {
       { role: "user", content: query }
     ];
 
-    const category = await chatWithAI(classificationPrompt, process.env.AI_MODEL || "qwen2.5:1.5b");
+    const company_id = req.user.company_id;
+    const category = await chatWithAI(classificationPrompt, process.env.AI_MODEL || "qwen2.5:1.5b", null, company_id);
     const cleanCategory = category.trim().toUpperCase();
 
     // Map categories to routes
