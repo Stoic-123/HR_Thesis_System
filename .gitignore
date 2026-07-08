@@ -58,3 +58,7 @@ APPENDIX_A_DATA_DICTIONARY.pdf
 APPENDIX_C_PROGRAM_INSTALLATION.html
 APPENDIX_C_PROGRAM_INSTALLATION.md
 
+# Ignore installation images
+Installation_Image/
+
+
