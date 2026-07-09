@@ -599,15 +599,34 @@ export const chatController = async (req, res) => {
         const cleaned = accumulatedText.trim().replace(/^```json\n?/, "").replace(/\n?```$/, "");
         toolCall = JSON.parse(cleaned);
       } catch (e) {
-        const jsonMatch = accumulatedText.match(/\{[\s\S]*"tool"[\s\S]*\}/);
-        if (jsonMatch) {
-          try {
-            toolCall = JSON.parse(jsonMatch[0]);
-          } catch (innerE) {
-            console.warn("[Chatbot] Found JSON-like block but failed to parse:", innerE);
+        // More robust parsing: find the first JSON object that contains the "tool" property
+        const toolIndex = accumulatedText.indexOf('"tool"');
+        if (toolIndex !== -1) {
+          const startBrace = accumulatedText.lastIndexOf('{', toolIndex);
+          if (startBrace !== -1) {
+            let depth = 0;
+            for (let i = startBrace; i < accumulatedText.length; i++) {
+              if (accumulatedText[i] === '{') depth++;
+              else if (accumulatedText[i] === '}') {
+                depth--;
+                if (depth === 0) {
+                  const candidate = accumulatedText.substring(startBrace, i + 1);
+                  try {
+                    const parsed = JSON.parse(candidate);
+                    if (parsed && parsed.tool) {
+                      toolCall = parsed;
+                      break;
+                    }
+                  } catch (innerE) {
+                    // Ignore parsing error and continue scanning
+                  }
+                }
+              }
+            }
           }
         }
       }
+
 
       // If JSON parsing failed, try XML-style tool call parsing
       if (!toolCall || !toolCall.tool) {
