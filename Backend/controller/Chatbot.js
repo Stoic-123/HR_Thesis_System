@@ -2,6 +2,23 @@ import { chatWithAI } from "../lib/ai/ollama.js";
 import { getHRContext } from "../service/AI.js";
 import prisma from "../lib/prisma.js";
 
+/**
+ * Strips any raw tool-call JSON blobs from AI response text before showing it to the user.
+ * This is a last-resort defense: if the model leaks {"tool":...} into its narrative, we remove it.
+ */
+function sanitizeResponseText(text) {
+  if (!text) return text;
+  // Remove ```json ... ``` code blocks containing tool calls
+  let sanitized = text.replace(/```json[\s\S]*?```/gi, '');
+  // Remove bare { "tool": ... } objects (greedy JSON object detection)
+  sanitized = sanitized.replace(/\{\s*"tool"\s*:[\s\S]*?\}\s*\}?/g, '');
+  // Remove any leftover markdown code fences
+  sanitized = sanitized.replace(/```[\s\S]*?```/g, '');
+  // Clean up extra blank lines created by removals
+  sanitized = sanitized.replace(/\n{3,}/g, '\n\n').trim();
+  return sanitized;
+}
+
 function buildEmployeeNameFilter(searchString) {
   if (!searchString) return {};
   const parts = searchString.trim().split(/\s+/);
@@ -538,13 +555,14 @@ export const chatController = async (req, res) => {
          - Render all dates in a simple, friendly calendar format (e.g. YYYY-MM-DD).
       
       ACTION AND QUERY RULES:
-      1. To perform any action or query database records (such as fetching today's scan/attendance list, updating employees, or adding items), you MUST call the appropriate tool by returning ONLY a JSON object: {"tool": "tool_name", "args": {...}}.
-      2. Do NOT write any conversational text, introductory remarks, or explanations if you are calling a tool. Return ONLY the JSON object.
-      3. NEVER ask the user for their login credentials, passwords, or verification. The user is already securely authenticated by the system.
-      4. For actions on specific employees, if multiple matches exist, ask for clarification.
-      5. ${toolInstructions}
+      1. ANY question about attendance, late arrivals, leave records, employee profiles, or who was absent/late REQUIRES a tool call. You MUST call the tool. NEVER answer these from memory or make up numbers.
+      2. To call a tool, output ONLY a raw JSON object and NOTHING else: {"tool": "tool_name", "args": {...}}. No introduction, no explanation, no text before or after.
+      3. NEVER invent, estimate, or guess attendance counts, leave counts, or any HR data. If you do not have real data from a tool, say you need to look it up and call the tool.
+      4. NEVER ask the user for their login credentials, passwords, or verification. The user is already securely authenticated by the system.
+      5. For actions on specific employees, if multiple matches exist, ask for clarification.
+      6. ${toolInstructions}
       
-      IMPORTANT: Be polite and professional. If you are unsure, ask for more details.
+      CRITICAL: If the user asks who is most late, who has the most leave, how many late arrivals, or any attendance/leave question — you MUST call a tool. Do NOT answer from context. Context only shows employee names, not attendance or leave numbers.
     `;
 
     const messages = [
@@ -741,28 +759,39 @@ export const chatController = async (req, res) => {
           : `⚠️ I'm sorry, I couldn't complete that action. ${result.message}`;
 
         // Feed the database result back to the AI model so it can synthesize a professional response
+        // NOTE: We do NOT include the raw tool call JSON as assistant context — it causes the model to regurgitate it.
         const summarizeMessages = [
           ...messages,
-          { role: "assistant", content: accumulatedText },
-          { role: "system", content: `Here is the database result from the tool execution:
+          { role: "system", content: `The system queried the database and got this result:
             ---
             ${displayMessage}
             ---
-            Using this data, generate a premium, professional conversational response for the user.
+            Based ONLY on this data above, write a premium, professional HR response for the user.
             Rules:
-            1. Respond naturally, politely, and clearly.
-            2. For lists or reports (e.g. rankings, late logs, leave summaries), format it beautifully. Use clear headings, emojis (like 🥇, 🥈, 🥉), and clean bulleted lists (do not use double asterisks ** around the entire bullet text; keep it clean and readable).
-            3. Add a short "Summary" or "Recommendation" section at the end of lists, providing professional HR guidance.
-            4. Make sure not to output any raw JSON or raw tool syntax.`
+            1. Respond naturally, politely, and clearly in plain text.
+            2. For rankings or lists, format beautifully with emojis (🥇, 🥈, 🥉) and clean bullet points.
+            3. Add a short professional "Summary" or "Recommendation" at the end.
+            4. NEVER output raw JSON, code blocks, tool syntax, or numbers you did not get from the data above.
+            5. Do NOT reference or describe how you retrieved the data. Just present the findings professionally.`
           }
         ];
 
         try {
+          let summaryBuffer = "";
           await chatWithAI(
             summarizeMessages,
             process.env.AI_MODEL || "qwen2.5:1.5b",
             (summaryToken) => {
-              res.write(`data: ${JSON.stringify({ token: summaryToken })}\n\n`);
+              summaryBuffer += summaryToken;
+              // Sanitize on-the-fly: only stream clean text, drop tool-call fragments
+              const clean = sanitizeResponseText(summaryBuffer);
+              // Only write tokens that haven't been sent yet
+              const lastSent = summaryBuffer.length - summaryToken.length;
+              const cleanedPrev = sanitizeResponseText(summaryBuffer.slice(0, lastSent));
+              const newCleanChunk = clean.slice(cleanedPrev.length);
+              if (newCleanChunk) {
+                res.write(`data: ${JSON.stringify({ token: newCleanChunk })}\n\n`);
+              }
             },
             company_id
           );
@@ -780,7 +809,9 @@ export const chatController = async (req, res) => {
       }
     } else {
       // Regular conversational response (e.g. greetings or direct answers)
-      res.write(`data: ${JSON.stringify({ token: accumulatedText })}\n\n`);
+      // Sanitize: strip any tool-call JSON the model may have leaked into a plain response
+      const cleanResponse = sanitizeResponseText(accumulatedText);
+      res.write(`data: ${JSON.stringify({ token: cleanResponse })}\n\n`);
     }
 
     res.write('data: [DONE]\n\n');
