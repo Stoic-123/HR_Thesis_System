@@ -27,6 +27,16 @@ RUN npm install --onnxruntime-node-install=skip && npm cache clean --force
 COPY prisma ./prisma/
 RUN npx prisma generate
 
+# Prune devDependencies to keep node_modules lightweight
+RUN npm prune --production
+
+# Remove unused platform binaries from onnxruntime-node to save disk space
+RUN rm -rf node_modules/onnxruntime-node/bin/napi-v6/win32 \
+           node_modules/onnxruntime-node/bin/napi-v6/darwin \
+           node_modules/onnxruntime-node/bin/napi-v6/linux/ia32 \
+           node_modules/onnxruntime-node/bin/napi-v6/linux/arm \
+           node_modules/onnxruntime-node/bin/napi-v6/linux/arm64
+
 # Copy the rest of the source
 COPY . .
 
@@ -58,5 +68,6 @@ RUN mkdir -p public/uploads/documents \
 EXPOSE 8080
 
 CMD ["sh", "-c", "npx prisma db push && node server.js"]
+
 
 
