@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { createNotification, notifyAdmins } from "../service/Notification.js";
+import { validateFile } from "../utils/fileValidation.js";
 const prisma = new PrismaClient();
 
 // ==========================================
@@ -42,7 +43,15 @@ const getAssets = async (req, res) => {
       where: { company_id: req.user.company_id },
       include: {
         category: true,
-        employee: true
+        employee: true,
+        assethistory: {
+          include: {
+            employee: true
+          },
+          orderBy: {
+            created_at: 'desc'
+          }
+        }
       },
       orderBy: { created_at: 'desc' }
     });
@@ -55,14 +64,54 @@ const getAssets = async (req, res) => {
 const createAsset = async (req, res) => {
   try {
     const { category_id, name, serial_number, condition } = req.body;
+
+    let image_path = null;
+    if (req.files && req.files.image_path) {
+      const fileCheck = validateFile(req.files.image_path, "image");
+      if (!fileCheck.isValid) {
+        return res.status(400).json({ result: false, message: fileCheck.message });
+      }
+      const image = req.files.image_path;
+      const imageName = Date.now() + "_" + image.name;
+      const uploadPath = "./public/uploads/assets/" + imageName;
+      await image.mv(uploadPath);
+      image_path = "/uploads/assets/" + imageName;
+    }
+
+    let targetSerialNumber = serial_number;
+    if (!targetSerialNumber) {
+      const category = await prisma.assetcategory.findUnique({ where: { id: parseInt(category_id) } });
+      const prefix = category ? category.name.substring(0, 2).toLowerCase() : "as";
+      const prefixWithDash = prefix + "-";
+
+      const categoryAssets = await prisma.asset.findMany({
+        where: {
+          company_id: req.user.company_id,
+          category_id: parseInt(category_id),
+          serial_number: { startsWith: prefixWithDash }
+        }
+      });
+
+      let maxNum = 0;
+      categoryAssets.forEach(a => {
+        const suffix = a.serial_number.substring(prefixWithDash.length);
+        const num = parseInt(suffix, 10);
+        if (!isNaN(num) && num > maxNum) {
+          maxNum = num;
+        }
+      });
+      targetSerialNumber = `${prefix}-${String(maxNum + 1).padStart(4, '0')}`;
+    }
+
     const asset = await prisma.asset.create({
       data: {
         company_id: req.user.company_id,
         category_id: parseInt(category_id),
         name,
-        serial_number,
+        serial_number: targetSerialNumber,
         condition: condition || 'good',
-        status: 'available'
+        status: 'available',
+        image_path
       }
     });
     res.status(201).json({ result: true, data: asset });
@@ -104,6 +153,24 @@ const directAssign = async (req, res) => {
         assigned_date: new Date()
       }
     });
+
+    // Resolve any pending requests of the same category for this employee
+    const pendingRequest = await prisma.assetrequest.findFirst({
+      where: {
+        requested_by: parseInt(employee_id),
+        category_id: asset.category_id,
+        status: { in: ['pending_manager', 'pending_hr'] }
+      }
+    });
+    if (pendingRequest) {
+      await prisma.assetrequest.update({
+        where: { id: pendingRequest.id },
+        data: {
+          status: 'assigned',
+          asset_id: asset.id
+        }
+      });
+    }
 
     res.status(200).json({ result: true, data: updated, message: "Asset assigned successfully" });
   } catch (error) {
@@ -154,6 +221,21 @@ const confirmReturn = async (req, res) => {
           condition_in: condition_in || asset.condition,
           returned_date: new Date()
         }
+      });
+    }
+
+    // Update any assignment request for this asset to 'available' (Returned)
+    const activeRequest = await prisma.assetrequest.findFirst({
+      where: {
+        asset_id: asset.id,
+        requested_by: previous_assignee_id,
+        status: 'assigned'
+      }
+    });
+    if (activeRequest) {
+      await prisma.assetrequest.update({
+        where: { id: activeRequest.id },
+        data: { status: 'available' }
       });
     }
 
@@ -426,6 +508,137 @@ const approveHR = async (req, res) => {
   }
 };
 
+const updateAsset = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { category_id, name, serial_number, condition, status, assigned_to } = req.body;
+
+    const asset = await prisma.asset.findUnique({ where: { id: parseInt(id) } });
+    if (!asset) return res.status(404).json({ result: false, message: "Asset not found" });
+
+    let image_path = asset.image_path;
+    if (req.files && req.files.image_path) {
+      const fileCheck = validateFile(req.files.image_path, "image");
+      if (!fileCheck.isValid) {
+        return res.status(400).json({ result: false, message: fileCheck.message });
+      }
+      const image = req.files.image_path;
+      const imageName = Date.now() + "_" + image.name;
+      const uploadPath = "./public/uploads/assets/" + imageName;
+      await image.mv(uploadPath);
+      image_path = "/uploads/assets/" + imageName;
+    }
+
+    let targetStatus = status !== undefined ? status : asset.status;
+    let targetAssignedTo = assigned_to !== undefined ? (assigned_to ? parseInt(assigned_to) : null) : asset.assigned_to;
+    let targetAssignedDate = asset.assigned_date;
+
+    // 1. If we change status to 'under_repair' or 'retired' (Broken), we MUST auto-return it if it is currently assigned.
+    if ((targetStatus === "under_repair" || targetStatus === "retired") && asset.assigned_to) {
+      const previous_assignee_id = asset.assigned_to;
+      targetAssignedTo = null;
+      targetAssignedDate = null;
+
+      // Find the latest active history record and update it
+      const history = await prisma.assethistory.findFirst({
+        where: {
+          asset_id: asset.id,
+          previous_assignee_id: previous_assignee_id,
+          returned_date: null
+        },
+        orderBy: { created_at: 'desc' }
+      });
+      if (history) {
+        await prisma.assethistory.update({
+          where: { id: history.id },
+          data: {
+            condition_in: condition || asset.condition,
+            returned_date: new Date()
+          }
+        });
+      }
+
+      // Update any active assignment request for this asset to 'available' (Returned)
+      const activeRequest = await prisma.assetrequest.findFirst({
+        where: {
+          asset_id: asset.id,
+          requested_by: previous_assignee_id,
+          status: 'assigned'
+        }
+      });
+      if (activeRequest) {
+        await prisma.assetrequest.update({
+          where: { id: activeRequest.id },
+          data: { status: 'available' }
+        });
+      }
+    }
+
+    // 2. If we change status from 'under_repair' back to active ('available' / 'assigned'):
+    if (asset.status === "under_repair" && (targetStatus === "available" || targetStatus === "assigned")) {
+      // Find the last person who handled this asset (the latest assethistory record)
+      const lastHistory = await prisma.assethistory.findFirst({
+        where: { asset_id: asset.id },
+        orderBy: { created_at: 'desc' }
+      });
+
+      if (lastHistory) {
+        // Auto-assign back to that employee
+        targetStatus = "assigned";
+        targetAssignedTo = lastHistory.previous_assignee_id;
+        targetAssignedDate = new Date();
+
+        // Create a new assignment history record
+        await prisma.assethistory.create({
+          data: {
+            asset_id: asset.id,
+            company_id: req.user.company_id,
+            previous_assignee_id: lastHistory.previous_assignee_id,
+            condition_out: condition || asset.condition,
+            assigned_date: new Date()
+          }
+        });
+      } else {
+        // No previous handler, just make it available
+        targetStatus = "available";
+        targetAssignedTo = null;
+        targetAssignedDate = null;
+      }
+    }
+
+    const updated = await prisma.asset.update({
+      where: { id: parseInt(id) },
+      data: {
+        category_id: category_id ? parseInt(category_id) : asset.category_id,
+        name: name !== undefined ? name : asset.name,
+        serial_number: serial_number !== undefined ? serial_number : asset.serial_number,
+        condition: condition !== undefined ? condition : asset.condition,
+        status: targetStatus,
+        assigned_to: targetAssignedTo,
+        assigned_date: targetAssignedDate,
+        image_path
+      }
+    });
+
+    res.status(200).json({ result: true, data: updated, message: "Asset updated successfully" });
+  } catch (error) {
+    res.status(500).json({ result: false, message: error.message });
+  }
+};
+
+const deleteAsset = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const asset = await prisma.asset.findUnique({ where: { id: parseInt(id) } });
+    if (!asset) return res.status(404).json({ result: false, message: "Asset not found" });
+
+    await prisma.asset.delete({ where: { id: parseInt(id) } });
+    res.status(200).json({ result: true, message: "Asset deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ result: false, message: error.message });
+  }
+};
+
 export default {
   getCategories,
   createCategory,
@@ -437,5 +650,7 @@ export default {
   getRequestsMobile,
   createRequest,
   approveManager,
-  approveHR
+  approveHR,
+  updateAsset,
+  deleteAsset
 };

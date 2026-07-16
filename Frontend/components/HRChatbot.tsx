@@ -19,8 +19,24 @@ import { chatWithAI, smartSearchEmployees } from "@/services/ai.services";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 
+function sanitizeBotContent(content: string): string {
+  if (!content) return content;
+  // Remove ```json ... ``` blocks that contain tool calls
+  let clean = content.replace(/```json[\s\S]*?```/gi, '');
+  // Remove bare {"tool": ...} JSON objects (handles multi-line and nested braces)
+  clean = clean.replace(/\{\s*"tool"\s*:[\s\S]*?\}\s*\}?/g, '');
+  // Remove any remaining ``` fences
+  clean = clean.replace(/```[\s\S]*?```/g, '');
+  // Remove orphaned lines that are just "Step N: ..." introductory text preceding a stripped block
+  clean = clean.replace(/^(Step \d+:.*)\n?$/gm, '');
+  // Collapse excessive blank lines
+  clean = clean.replace(/\n{3,}/g, '\n\n').trim();
+  return clean;
+}
+
 function renderFormattedContent(content: string) {
   if (!content) return null;
+  const sanitized = sanitizeBotContent(content);
 
   const parseBold = (text: string) => {
     const parts = text.split(/\*\*([\s\S]*?)\*\*/g);
@@ -32,7 +48,7 @@ function renderFormattedContent(content: string) {
     });
   };
 
-  const lines = content.split("\n");
+  const lines = sanitized.split("\n");
   return (
     <div className="space-y-1.5 text-zinc-700 dark:text-zinc-300">
       {lines.map((line, index) => {
@@ -99,6 +115,7 @@ function renderFormattedContent(content: string) {
     </div>
   );
 }
+
 
 export function HRChatbot() {
   const [isOpen, setIsOpen] = useState(false);

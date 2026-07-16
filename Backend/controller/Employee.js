@@ -12,6 +12,7 @@ import { addAuditLog } from "../service/AuditLog.js";
 import prisma from "../lib/prisma.js";
 import { createCanvas, loadImage } from "canvas";
 import { detectObjects } from "../lib/scanner/yolo.js";
+import { validateFile } from "../utils/fileValidation.js";
 
 export const addEmployeeController = async (req, res) => {
   try {
@@ -19,6 +20,10 @@ export const addEmployeeController = async (req, res) => {
 
     if (req.files) {
       if (req.files.profile_path) {
+        const fileCheck = validateFile(req.files.profile_path, "image");
+        if (!fileCheck.isValid) {
+          return res.status(400).json({ result: false, message: fileCheck.message });
+        }
         const profile = req.files.profile_path;
         const profileName = Date.now() + "_" + profile.name;
         const uploadPath = "./public/uploads/profiles/" + profileName;
@@ -100,6 +105,10 @@ export const updateEmployeeController = async (req, res) => {
     const user_id = req.user.id;
 
     if (req.files && req.files.profile_path) {
+      const fileCheck = validateFile(req.files.profile_path, "image");
+      if (!fileCheck.isValid) {
+        return res.status(400).json({ result: false, message: fileCheck.message });
+      }
       const profile = req.files.profile_path;
       const profileName = Date.now() + "_" + profile.name;
       const uploadPath = "./public/uploads/profiles/" + profileName;
@@ -137,6 +146,11 @@ export const uploadEmployeeDocumentController = async (req, res) => {
 
     if (!req.files || !req.files.document) {
       return res.status(400).json({ result: false, message: "No document uploaded" });
+    }
+
+    const fileCheck = validateFile(req.files.document, "document");
+    if (!fileCheck.isValid) {
+      return res.status(400).json({ result: false, message: fileCheck.message });
     }
 
     const document = req.files.document;

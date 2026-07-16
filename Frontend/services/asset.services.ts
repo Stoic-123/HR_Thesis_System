@@ -8,6 +8,21 @@ export type AssetCategory = {
   description: string;
 };
 
+export type AssetHistory = {
+  id: number;
+  asset_id: number;
+  company_id: number;
+  previous_assignee_id: number;
+  condition_out: string;
+  condition_in?: string | null;
+  assigned_date: string;
+  returned_date?: string | null;
+  employee?: {
+    first_name: string;
+    last_name: string;
+  };
+};
+
 export type Asset = {
   id: number;
   category_id: number;
@@ -17,6 +32,7 @@ export type Asset = {
   status: string;
   assigned_to: number | null;
   assigned_date: string | null;
+  image_path?: string | null;
   employee?: {
     id: number;
     first_name: string;
@@ -24,6 +40,7 @@ export type Asset = {
     profile_path?: string;
   };
   category?: AssetCategory;
+  assethistory?: AssetHistory[];
 };
 
 export type AssetRequest = {
@@ -66,7 +83,10 @@ export const getAssets = async () => {
 };
 
 export const createAsset = async (data: any) => {
-  const res = await api.post(`${API_URL}`, data);
+  const isMultipart = data instanceof FormData;
+  const res = await api.post(`${API_URL}`, data, {
+    headers: isMultipart ? { "Content-Type": "multipart/form-data" } : {}
+  });
   return res.data;
 };
 
@@ -102,5 +122,18 @@ export const approveManagerAssetRequest = async (id: number, data: { action: 'ap
 
 export const approveHRAssetRequest = async (id: number, data: { asset_id?: number; hr_comment?: string; condition_out?: string }) => {
   const res = await api.post(`${API_URL}/requests/${id}/approve-hr`, data);
+  return res.data;
+};
+
+export const updateAsset = async (id: number, data: any) => {
+  const isMultipart = data instanceof FormData;
+  const res = await api.put(`${API_URL}/${id}`, data, {
+    headers: isMultipart ? { "Content-Type": "multipart/form-data" } : {}
+  });
+  return res.data;
+};
+
+export const deleteAsset = async (id: number) => {
+  const res = await api.delete(`${API_URL}/${id}`);
   return res.data;
 };

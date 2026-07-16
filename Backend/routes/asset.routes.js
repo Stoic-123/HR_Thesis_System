@@ -12,6 +12,8 @@ router.post('/categories', assetController.createCategory);
 // ASSETS
 router.get('/', assetController.getAssets);
 router.post('/', assetController.createAsset);
+router.put('/:id', assetController.updateAsset);
+router.delete('/:id', assetController.deleteAsset);
 
 // DIRECT ASSIGNMENT
 router.post('/:id/direct-assign', assetController.directAssign);

@@ -27,6 +27,8 @@ import {
 import { computePayrollPreview, SALARY_TAX_BRACKETS_USD } from "@/lib/payrollTax";
 import { cn } from "@/lib/utils";
 import { translatePayrollStatus } from "@/lib/payrollStatus";
+import { useMe } from "@/hooks/useMe";
+import { exportPayslipToPDF } from "@/lib/pdf-export";
 
 const EDITABLE_FIELDS = [
   "allowance",
@@ -99,6 +101,23 @@ function SummaryStat({
 export default function PayrollDetailPage() {
   const t = useTranslations("payroll");
   const tc = useTranslations("common");
+  const { data: user } = useMe();
+
+  const handleDownloadPayslip = () => {
+    if (!payroll) return;
+    const apiBaseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+    const companyLogo = user?.employee?.company?.logo_path
+      ? (user.employee.company.logo_path.startsWith("http")
+          ? user.employee.company.logo_path
+          : `${apiBaseURL}${user.employee.company.logo_path}`)
+      : "";
+
+    exportPayslipToPDF({
+      payroll,
+      companyName: user?.employee?.company?.name || "ក្រុមហ៊ុន សារណៈ",
+      companyLogo,
+    });
+  };
   const params = useParams();
   const id = Number(params.id);
   const [payroll, setPayroll] = useState<PayrollRecord | null>(null);
@@ -196,10 +215,8 @@ export default function PayrollDetailPage() {
             <Link href="/dashboard/payroll/review">{tc("back")}</Link>
           </Button>
           {payroll.status === "paid" && (
-            <Button asChild size="sm">
-              <a href={getPayslipUrl(id)} target="_blank" rel="noreferrer">
-                {t("downloadPayslip")}
-              </a>
+            <Button onClick={handleDownloadPayslip} size="sm">
+              {t("downloadPayslip")}
             </Button>
           )}
         </div>

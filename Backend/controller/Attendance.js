@@ -7,6 +7,7 @@ import { sendApprovalRequest } from "../service/TelegramApproval.js";
 import path from "path";
 import { Jimp } from "jimp";
 import { toICTDate, formatICTDate } from "../utils/timezone.js";
+import { validateFile } from "../utils/fileValidation.js";
 
 const ATTENDANCE_GRACE_MINUTES = 10;
 
@@ -831,6 +832,10 @@ export const onlineAttendanceController = async (req, res) => {
     let absolutePhotoPath = null; // absolute disk path for Telegram sendPhoto
 
     if (req.files && req.files.photo) {
+      const fileCheck = validateFile(req.files.photo, "image");
+      if (!fileCheck.isValid) {
+        return res.status(400).json({ result: false, message: fileCheck.message });
+      }
       const file     = req.files.photo;
       const filename = `${Date.now()}_${file.name}`;
       const relPath  = `/uploads/leaves/${filename}`;

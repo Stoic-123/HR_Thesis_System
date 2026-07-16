@@ -87,6 +87,9 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use(
   fileUpload({
     createParentPath: true,
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+    abortOnLimit: true,
+    responseOnLimit: "File size limit exceeded (max 10MB)",
   }),
 );
 

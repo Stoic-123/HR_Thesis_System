@@ -44,6 +44,42 @@ export const sendTelegramMessage = async (botToken, chatId, text, options = {}) 
 };
 
 /**
+ * Edit an existing text message in a group.
+ */
+export const editTelegramMessage = async (botToken, chatId, messageId, text) => {
+  if (!botToken || !chatId || !messageId || !text) return false;
+  try {
+    const res = await fetch(`${TELEGRAM_API}/bot${botToken}/editMessageText`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, message_id: messageId, text, parse_mode: 'HTML' }),
+    });
+    return await res.json();
+  } catch (e) {
+    console.error('[Telegram] editMessageText error:', e.message);
+    return false;
+  }
+};
+
+/**
+ * Edit caption of a photo message.
+ */
+export const editTelegramCaption = async (botToken, chatId, messageId, caption) => {
+  if (!botToken || !chatId || !messageId || !caption) return false;
+  try {
+    const res = await fetch(`${TELEGRAM_API}/bot${botToken}/editMessageCaption`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, message_id: messageId, caption, parse_mode: 'HTML' }),
+    });
+    return await res.json();
+  } catch (e) {
+    console.error('[Telegram] editMessageCaption error:', e.message);
+    return false;
+  }
+};
+
+/**
  * Send a photo with an HTML caption.
  * `photoPath` is an absolute path on disk.
  * Returns true on success, false on any error (never throws).

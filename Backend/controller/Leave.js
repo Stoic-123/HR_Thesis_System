@@ -3,6 +3,7 @@ import { CreateNewLeave, GetAllLeaves, ApproveLeave, RejectLeave, GetPendingLeav
 import { getLeaveTypeCode } from "../service/LeaveProfile.js";
 import { addAuditLog } from "../service/AuditLog.js";
 import { toICTDate } from "../utils/timezone.js";
+import { validateFile } from "../utils/fileValidation.js";
 
 export const createNewLeaveController = async (req, res) => {
   try {
@@ -18,6 +19,10 @@ export const createNewLeaveController = async (req, res) => {
 
     let photo_path = "";
     if (req.files && req.files.photo_path) {
+      const fileCheck = validateFile(req.files.photo_path, "document");
+      if (!fileCheck.isValid) {
+        return res.status(400).json({ result: false, message: fileCheck.message });
+      }
       const photo = req.files.photo_path;
       const photoName = Date.now() + "_" + photo.name;
       const photoPath = "public/uploads/leaves/" + photoName;

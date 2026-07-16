@@ -7,6 +7,7 @@ import { refineDetection } from "../lib/scanner/opencv-refinement.js";
 import { perspectiveTransform, getCardDimensions } from "../lib/scanner/perspective-transform.js";
 import { enhanceDocument } from "../lib/scanner/enhancement.js";
 import prisma from "../lib/prisma.js";
+import { validateFile } from "../utils/fileValidation.js";
 
 /**
  * POST /api/scanner/detect
@@ -18,6 +19,11 @@ export const detectDocumentController = async (req, res) => {
   try {
     if (!req.files || !req.files.image) {
       return res.status(400).json({ success: false, message: "No image uploaded" });
+    }
+
+    const fileCheck = validateFile(req.files.image, "image");
+    if (!fileCheck.isValid) {
+      return res.status(400).json({ success: false, message: fileCheck.message });
     }
 
     const imageFile = req.files.image;
@@ -83,6 +89,11 @@ export const scanDocumentController = async (req, res) => {
       return res.status(400).json({ success: false, message: "No image uploaded" });
     }
 
+    const fileCheck = validateFile(req.files.image, "image");
+    if (!fileCheck.isValid) {
+      return res.status(400).json({ success: false, message: fileCheck.message });
+    }
+
     const imageFile = req.files.image;
     const img = await loadImage(imageFile.data);
 
@@ -94,44 +105,6 @@ export const scanDocumentController = async (req, res) => {
     // 1. AI Detection
     const detections = await detectObjects(canvas);
     console.log("[Scanner] Detections count:", detections.length, "Detections:", JSON.stringify(detections, null, 2));
-
-    // AI/YOLO Verification for Images based on selected document type
-    const { document_type_id } = req.body;
-    if (document_type_id) {
-      const docType = await prisma.documenttype.findUnique({
-        where: { id: parseInt(document_type_id) }
-      });
-      if (docType) {
-        const typeName = docType.name.toLowerCase();
-        const isPassportSelected = typeName.includes("passport");
-        const isIdCardSelected = typeName.includes("card") || typeName.includes("id") || typeName.includes("identity") || typeName.includes("license");
-
-        if (isPassportSelected || isIdCardSelected) {
-          if (detections.length > 0) {
-            const topDetection = detections[0];
-            const detectedClass = topDetection.class;
-            if (isPassportSelected && detectedClass !== "passport") {
-              return res.status(400).json({
-                success: false,
-                message: "លិខិតឆ្លងដែនមិនត្រឹមត្រូវ៖ ឯកសារនេះមើលទៅមិនដូចជាលិខិតឆ្លងដែន (Passport) ទេ។ (Invalid Passport: This document does not look like a passport.)"
-              });
-            }
-
-            if (isIdCardSelected && detectedClass !== "id_card" && detectedClass !== "khmer_id") {
-              return res.status(400).json({
-                success: false,
-                message: "កាតសម្គាល់ខ្លួនមិនត្រឹមត្រូវ៖ ឯកសារនេះមើលទៅមិនដូចជាកាតសម្គាល់ខ្លួន (ID Card) ទេ។ (Invalid ID Card: This document does not look like an ID card.)"
-              });
-            }
-          } else {
-            return res.status(400).json({
-              success: false,
-              message: "មិនអាចរកឃើញឯកសារសម្គាល់ខ្លួននៅក្នុងរូបភាពនេះទេ។ សូមព្យាយាមថតឱ្យច្បាស់ជាងនេះ។ (No valid document detected in the image. Please try uploading a clearer photo.)"
-            });
-          }
-        }
-      }
-    }
 
     if (detections.length === 0) {
       return res.status(404).json({ success: false, message: "No document detected" });
@@ -157,13 +130,63 @@ export const scanDocumentController = async (req, res) => {
     // 4. Enhancement
     const enhancedMat = enhanceDocument(croppedMat);
 
-    // 5. Output to Buffer
+    // 5. Output to Canvas
     const outputCanvas = createCanvas(dims.width, dims.height);
     const outputCtx = outputCanvas.getContext("2d");
     const outputImgData = outputCtx.createImageData(enhancedMat.cols, enhancedMat.rows);
     outputImgData.data.set(enhancedMat.data);
     outputCtx.putImageData(outputImgData, 0, 0);
-    
+
+    // AI/YOLO Verification for Images based on selected document type
+    const { document_type_id } = req.body;
+    if (document_type_id) {
+      const docType = await prisma.documenttype.findUnique({
+        where: { id: parseInt(document_type_id) }
+      });
+      if (docType) {
+        const typeName = docType.name.toLowerCase();
+        const isPassportSelected = typeName.includes("passport");
+        const isIdCardSelected = typeName.includes("card") || typeName.includes("id") || typeName.includes("identity") || typeName.includes("license");
+
+        if (isPassportSelected || isIdCardSelected) {
+          // Detect objects on the cropped canvas to verify its type
+          const croppedDetections = await detectObjects(outputCanvas);
+          console.log("[Scanner] Cropped Detections count:", croppedDetections.length, "Cropped Detections:", JSON.stringify(croppedDetections, null, 2));
+
+          let detectedClass = null;
+          if (croppedDetections.length > 0) {
+            detectedClass = croppedDetections[0].class;
+          } else {
+            // Fallback to original detection class if no detection inside the cropped canvas
+            detectedClass = detection.class;
+          }
+
+          const isCardDetected = detectedClass === "id_card" || detectedClass === "khmer_id";
+          const isDocDetected = detectedClass === "document" || detectedClass === "passport";
+
+          if (isPassportSelected && isCardDetected) {
+            mat.delete();
+            croppedMat.delete();
+            enhancedMat.delete();
+            return res.status(400).json({
+              success: false,
+              message: "លិខិតឆ្លងដែនមិនត្រឹមត្រូវ៖ ឯកសារនេះមើលទៅដូចជាកាតសម្គាល់ខ្លួន (ID Card) ទៅវិញទេ។ (Invalid Passport: This document looks like an ID card.)"
+            });
+          }
+
+          if (isIdCardSelected && isDocDetected) {
+            mat.delete();
+            croppedMat.delete();
+            enhancedMat.delete();
+            return res.status(400).json({
+              success: false,
+              message: "កាតសម្គាល់ខ្លួនមិនត្រឹមត្រូវ៖ ឯកសារនេះមើលទៅដូចជាក្រដាស/លិខិតឆ្លងដែន (Passport/Document) ទៅវិញទេ។ (Invalid ID Card: This document looks like a paper/passport.)"
+            });
+          }
+        }
+      }
+    }
+
     const buffer = outputCanvas.toBuffer("image/jpeg", { quality: 0.95 });
 
     // Cleanup

@@ -2,6 +2,7 @@ import { addCompany, getCompany, updateCompany } from "../service/Company.js";
 import { addAuditLog } from "../service/AuditLog.js";
 import path from "path";
 import fs from "fs";
+import { validateFile } from "../utils/fileValidation.js";
 
 
 export const addCompanyController = async (req, res) => {
@@ -9,6 +10,10 @@ export const addCompanyController = async (req, res) => {
     let logoPath = null;
     if (req.files) {
       if (req.files.logo_path) {
+        const fileCheck = validateFile(req.files.logo_path, "image");
+        if (!fileCheck.isValid) {
+          return res.status(400).json({ result: false, message: fileCheck.message });
+        }
         const logo = req.files.logo_path;
         const logo_name = Date.now() + "_" + logo.name;
         const uploadPath = "./public/uploads/logos/" + logo_name;
@@ -120,6 +125,10 @@ export const updateCompanyController = async (req, res) => {
     let logo_path = old_logo_path;
 
     if (req.files && req.files.logo_path) {
+      const fileCheck = validateFile(req.files.logo_path, "image");
+      if (!fileCheck.isValid) {
+        return res.status(400).json({ result: false, message: fileCheck.message });
+      }
       const logo = req.files.logo_path;
       const logo_name = Date.now() + "_" + logo.name;
       const uploadPath = "./public/uploads/logos/" + logo_name;

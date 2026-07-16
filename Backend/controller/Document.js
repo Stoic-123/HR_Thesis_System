@@ -8,6 +8,7 @@ import {
 import prisma from "../lib/prisma.js";
 import { createCanvas, loadImage } from "canvas";
 import { detectObjects } from "../lib/scanner/yolo.js";
+import { validateFile } from "../utils/fileValidation.js";
 
 
 
@@ -44,6 +45,11 @@ export const addDocumentController = async (req, res) => {
 
     // ✅ Safe file check
     if (req.files && req.files.document_path) {
+      const fileCheck = validateFile(req.files.document_path, "document");
+      if (!fileCheck.isValid) {
+        return res.status(400).json({ result: false, message: fileCheck.message });
+      }
+
       const docs = Array.isArray(req.files.document_path)
         ? req.files.document_path
         : [req.files.document_path];
@@ -71,6 +77,7 @@ export const addDocumentController = async (req, res) => {
 
                 const detections = await detectObjects(canvas);
                 if (detections.length > 0) {
+                  const topDetection = detections[0];
                   const detectedClass = topDetection.class;
                   const isCardDetected = detectedClass === "id_card" || detectedClass === "khmer_id";
                   const isDocDetected = detectedClass === "document" || detectedClass === "passport";

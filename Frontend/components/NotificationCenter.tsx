@@ -16,6 +16,35 @@ type Notification = {
   created_at: string;
 };
 
+function TruncatedNotificationText({ text, limit = 80, isRead }: { text: string; limit?: number; isRead: boolean }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  if (!text) return null;
+  if (text.length <= limit) {
+    return (
+      <p className={`text-xs mt-1 leading-relaxed whitespace-pre-line ${isRead ? "text-gray-500" : "text-gray-800"}`}>
+        {text}
+      </p>
+    );
+  }
+
+  const truncated = text.slice(0, limit);
+
+  return (
+    <p 
+      onMouseEnter={() => setIsExpanded(true)}
+      onMouseLeave={() => setIsExpanded(false)}
+      className={`text-xs mt-1 leading-relaxed whitespace-pre-line transition-all duration-200 ${isRead ? "text-gray-500" : "text-gray-850"}`}
+    >
+      {isExpanded ? text : `${truncated}`}
+      {!isExpanded && (
+        <span className="text-primary font-bold cursor-pointer hover:underline ml-1">
+          ...
+        </span>
+      )}
+    </p>
+  );
+}
+
 export function NotificationCenter() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -56,8 +85,9 @@ export function NotificationCenter() {
     setTimeout(() => setShouldShake(false), 1000);
     
     // Play custom premium toast alert
+    const truncatedBody = notif.body && notif.body.length > 100 ? `${notif.body.slice(0, 100)}...` : notif.body;
     toast(notif.title, {
-      description: notif.body,
+      description: truncatedBody,
       action: {
         label: "Mark Read",
         onClick: () => markAsRead(notif.id),
@@ -87,6 +117,10 @@ export function NotificationCenter() {
     document.addEventListener("click", handleOutsideClick);
     return () => document.removeEventListener("click", handleOutsideClick);
   }, [isOpen]);
+
+  const visibleNotifications = notifications.filter(
+    (n) => (n.title && n.title.trim()) || (n.body && n.body.trim())
+  );
 
   return (
     <div className="relative" onClick={(e) => e.stopPropagation()}>
@@ -142,7 +176,7 @@ export function NotificationCenter() {
 
             {/* List */}
             <div className="max-h-96 overflow-y-auto space-y-1.5 custom-scrollbar pr-1">
-              {notifications.length === 0 ? (
+              {visibleNotifications.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-10 text-center">
                   <div className="rounded-full bg-gray-50 p-3 mb-3">
                     <Inbox className="size-6 text-gray-400" />
@@ -151,7 +185,7 @@ export function NotificationCenter() {
                   <p className="text-xs text-gray-400 max-w-[200px] mt-1">We will notify you when things require your attention.</p>
                 </div>
               ) : (
-                notifications.map((notif) => (
+                visibleNotifications.map((notif) => (
                   <div
                     key={notif.id}
                     onClick={() => {
@@ -175,11 +209,7 @@ export function NotificationCenter() {
                       )}
                     </div>
                     
-                    <p className={`text-xs mt-1 leading-relaxed ${
-                      notif.is_read ? "text-gray-500" : "text-gray-800"
-                    }`}>
-                      {notif.body}
-                    </p>
+                    <TruncatedNotificationText text={notif.body} isRead={notif.is_read} />
                     
                     <span className="text-[10px] text-gray-400 mt-2">
                       {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true })}

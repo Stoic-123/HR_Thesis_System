@@ -181,26 +181,19 @@ const menuItems: MenuItem[] = [
     ],
   },
   {
-    title: "Documents",
-    labelKey: "documents",
-    icon: FileArchive,
-    submenu: [
-      {
+    title: "Holiday",
+    labelKey: "holiday",
+    icon: CalendarDays,
+    href: "/dashboard/holiday",
+    permission: "department:manage",
+  },
+    {
         title: "Document Type",
         labelKey: "documentType",
         icon: FileText,
         href: "/dashboard/document-type",
         permission: "role:manage",
       },
-      {
-        title: "Holiday",
-        labelKey: "holiday",
-        icon: CalendarDays,
-        href: "/dashboard/holiday",
-        permission: "department:manage",
-      },
-    ],
-  },
   {
     title: "Overtime",
     labelKey: "overtime",
@@ -261,36 +254,15 @@ const menuItems: MenuItem[] = [
     title: "KPI",
     labelKey: "kpi",
     icon: Target,
-    submenu: [
-      {
-        title: "Dashboard",
-        labelKey: "kpiDashboard",
-        icon: LayoutDashboard,
-        href: "/dashboard/kpi",
-        permission: "kpi:evaluate",
-      },
-      {
-        title: "Cycles",
-        labelKey: "kpiCycles",
-        icon: Target,
-        href: "/dashboard/kpi/cycles",
-        permission: "role:manage",
-      },
-      {
-        title: "Templates",
-        labelKey: "kpiTemplates",
-        icon: FileText,
-        href: "/dashboard/kpi/templates",
-        permission: "role:manage",
-      },
-      {
-        title: "Assign",
-        labelKey: "kpiAssign",
-        icon: UsersRound,
-        href: "/dashboard/kpi/assign",
-        permission: "kpi:evaluate",
-      },
-    ],
+    href: "/dashboard/kpi",
+    permission: "kpi:evaluate",
+  },
+   {
+    title: "Asset",
+    labelKey: "asset",
+    icon: Laptop,
+    href: "/dashboard/asset",
+    permission: "asset:approve",
   },
   {
     title: "System",
@@ -313,41 +285,7 @@ const menuItems: MenuItem[] = [
       },
     ],
   },
-  {
-    title: "Asset",
-    labelKey: "asset",
-    icon: Laptop,
-    submenu: [
-      {
-        title: "Dashboard",
-        labelKey: "assetDashboard",
-        icon: LayoutDashboard,
-        href: "/dashboard/asset",
-        permission: "asset:approve",
-      },
-      {
-        title: "Inventory",
-        labelKey: "assetInventory",
-        icon: FileText,
-        href: "/dashboard/asset/inventory",
-        permission: "asset:approve",
-      },
-      {
-        title: "Categories",
-        labelKey: "assetCategories",
-        icon: FileText,
-        href: "/dashboard/asset/categories",
-        permission: "role:manage",
-      },
-      {
-        title: "Requests",
-        labelKey: "assetRequests",
-        icon: FileText,
-        href: "/dashboard/asset/requests",
-        permission: "asset:approve",
-      },
-    ],
-  },
+ 
 ];
 
 export function Sidebar({ collapsed = false }: { collapsed?: boolean }) {

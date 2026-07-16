@@ -21,10 +21,13 @@ import {
 } from "@/components/ui/select";
 import {
   exportPayrollExcel,
-  exportPayrollPdf,
   getPayrollPeriods,
+  getPayrolls,
   type PayrollPeriod,
 } from "@/services/payroll.services";
+import { useMe } from "@/hooks/useMe";
+import { exportReportToPDF } from "@/lib/pdf-export";
+import dayjs from "dayjs";
 import { toast } from "sonner";
 
 const API_BASE =
@@ -37,6 +40,7 @@ export default function PayrollReportsPage() {
   const [periodId, setPeriodId] = useState<string>("");
   const [year, setYear] = useState(String(new Date().getFullYear()));
   const [loading, setLoading] = useState<string | null>(null);
+  const { data: user } = useMe();
 
   useEffect(() => {
     getPayrollPeriods().then((res) => {
@@ -52,16 +56,112 @@ export default function PayrollReportsPage() {
         year: Number(year),
         payroll_period_id: periodId ? Number(periodId) : undefined,
       };
-      const res =
-        format === "excel"
-          ? await exportPayrollExcel(body)
-          : await exportPayrollPdf(body);
 
-      if (res.result && res.data?.downloadUrl) {
-        window.open(`${API_BASE}${res.data.downloadUrl}`, "_blank");
-        toast.success(t("exportSuccess"));
+      if (format === "excel") {
+        const res = await exportPayrollExcel(body);
+        if (res.result && res.data?.downloadUrl) {
+          window.open(`${API_BASE}${res.data.downloadUrl}`, "_blank");
+          toast.success(t("exportSuccess"));
+        }
+      } else {
+        // PDF Export on Frontend to follow exact attendance / overtime theme
+        let params: any = {};
+        if (reportType === "monthly" && periodId) {
+          params.payroll_period_id = Number(periodId);
+        }
+
+        const res = await getPayrolls(params);
+        if (res.result) {
+          let records = res.data || [];
+
+          // Filter by year if report type is summary or history with year constraints
+          if (reportType === "summary" && year) {
+            records = records.filter((r: any) => {
+              const dateStr = r.payrollperiod?.start_date;
+              return dateStr && dayjs(dateStr).year() === Number(year);
+            });
+          }
+
+          let titleKh = "របាយការណ៍សង្ខេបប្រាក់បៀវត្សរ៍";
+          let titleEn = "Payroll Summary Report";
+          let typeLabel = "សង្ខេប / Summary";
+
+          if (reportType === "monthly") {
+            const periodName = periods.find(p => String(p.id) === periodId)?.name || "";
+            titleKh = "របាយការណ៍បើកប្រាក់បៀវត្សរ៍ប្រចាំខែ";
+            titleEn = `Monthly Payroll Report`;
+            typeLabel = `ប្រចាំខែ - ${periodName} / Monthly - ${periodName}`;
+          } else if (reportType === "history") {
+            titleKh = "របាយការណ៍ប្រវត្តិបើកប្រាក់បៀវត្សរ៍";
+            titleEn = "Payroll History Report";
+            typeLabel = "ប្រវត្តិ / History";
+          }
+
+          const userFullName = user?.employee ? `${user.employee.first_name} ${user.employee.last_name}` : "";
+          const apiBaseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+          const companyLogo = user?.employee?.company?.logo_path
+            ? (user.employee.company.logo_path.startsWith("http")
+                ? user.employee.company.logo_path
+                : `${apiBaseURL}${user.employee.company.logo_path}`)
+            : "";
+
+          exportReportToPDF({
+            titleKh,
+            titleEn,
+            companyName: user?.employee?.company?.name || "ក្រុមហ៊ុន សារណៈ",
+            companyLogo,
+            orientation: "landscape",
+            metadata: [
+              { labelKh: "កាលបរិច្ឆេទ", labelEn: "Date", value: dayjs().format("YYYY-MM-DD") },
+              { labelKh: "ប្រភេទរបាយការណ៍", labelEn: "Report Type", value: typeLabel },
+              { labelKh: "រៀបចំដោយ", labelEn: "Prepared By", value: userFullName || "រដ្ឋបាល / Admin" }
+            ],
+            tableHeaders: [
+              { kh: "ឈ្មោះបុគ្គលិក", en: "Employee Name" },
+              { kh: "គ្រាកាល", en: "Period", align: "center" },
+              { kh: "ប្រាក់ខែគោល", en: "Base Salary", align: "right" },
+              { kh: "ប្រាក់ឧបត្ថម្ភ", en: "Allowance", align: "right" },
+              { kh: "ម៉ោងបន្ថែម", en: "Overtime", align: "right" },
+              { kh: "ប្រាក់លើកទឹកចិត្ត", en: "Bonus", align: "right" },
+              { kh: "ការកាត់ប្រាក់", en: "Deduction", align: "right" },
+              { kh: "ពន្ធ", en: "Tax", align: "right" },
+              { kh: "ប្រាក់ខែសរុប", en: "Gross Salary", align: "right" },
+              { kh: "ប្រាក់ខែសុទ្ធ", en: "Net Salary", align: "right" },
+              { kh: "ស្ថានភាព", en: "Status", align: "center" }
+            ],
+            tableRows: records.map((row: any) => {
+              const empName = row.employee ? `${row.employee.first_name} ${row.employee.last_name}` : "N/A";
+              const periodName = row.payrollperiod?.name || "-";
+
+              const statusText = row.status.toUpperCase();
+              let statusColor = "text-emerald";
+              if (row.status === "draft") statusColor = "text-amber";
+              if (row.status === "paid") statusColor = "text-emerald";
+
+              return {
+                cells: [
+                  { text: `<strong>${empName}</strong>`, align: "left" as const },
+                  { text: periodName, align: "center" as const },
+                  { text: `$${row.base_salary.toFixed(2)}`, align: "right" as const },
+                  { text: `$${row.allowance.toFixed(2)}`, align: "right" as const },
+                  { text: `$${row.overtime.toFixed(2)}`, align: "right" as const },
+                  { text: `$${row.bonus.toFixed(2)}`, align: "right" as const },
+                  { text: `$${row.deduction.toFixed(2)}`, align: "right" as const },
+                  { text: `$${row.tax.toFixed(2)}`, align: "right" as const },
+                  { text: `$${row.gross_salary.toFixed(2)}`, align: "right" as const },
+                  { text: `$${row.net_salary.toFixed(2)}`, align: "right" as const },
+                  { text: `<span class="${statusColor}">${statusText}</span>`, align: "center" as const }
+                ]
+              };
+            }),
+            preparedBy: userFullName
+          });
+          toast.success(t("exportSuccess"));
+        } else {
+          toast.error(t("exportError"));
+        }
       }
-    } catch {
+    } catch (error) {
       toast.error(t("exportError"));
     } finally {
       setLoading(null);
