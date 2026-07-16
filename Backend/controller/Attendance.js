@@ -640,6 +640,17 @@ export const clockController = async (req, res) => {
 
     const employee = user.employee;
 
+    // Verify if employee working profile is configured (strict requirement)
+    const workingProfile = await prisma.employeeworkingprofile.findUnique({
+      where: { employee_id: employee.id },
+    });
+    if (!workingProfile) {
+      return res.status(400).json({
+        result: false,
+        message: "Your working profile is not configured. Please contact HR/Admin to set up your schedule before scanning.",
+      });
+    }
+
     // Enforce 5-minute cooldown between scans
     const lastRecord = await prisma.attendancerecord.findFirst({
       where: { employee_id: employee.id },
@@ -901,12 +912,18 @@ export const onlineAttendanceController = async (req, res) => {
 
     const employee = user.employee;
 
-    // Check if this employee has location bypass enabled in their working profile
+    // Verify if employee working profile is configured (strict requirement)
     const workingProfile = await prisma.employeeworkingprofile.findUnique({
       where: { employee_id: employee.id },
       select: { allow_online_bypass_location: true },
     });
-    const bypassLocation = workingProfile?.allow_online_bypass_location === true;
+    if (!workingProfile) {
+      return res.status(400).json({
+        result: false,
+        message: "Your working profile is not configured. Please contact HR/Admin to set up your schedule before checking in.",
+      });
+    }
+    const bypassLocation = workingProfile.allow_online_bypass_location === true;
 
     // Block new bypass scan while a previous approval is still pending
     if (bypassLocation && !hasActivity) {
