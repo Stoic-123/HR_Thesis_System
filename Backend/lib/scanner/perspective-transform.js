@@ -2,8 +2,8 @@
 
 import { getCV } from "./cv-helper.js";
 
-export function perspectiveTransform(mat, points, targetWidth, targetHeight) {
-  const cv = getCV();
+export async function perspectiveTransform(mat, points, targetWidth, targetHeight) {
+  const cv = await getCV();
   if (!cv) return mat;
 
   const srcCoords = new Float32Array(8);

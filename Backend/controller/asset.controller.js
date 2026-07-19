@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { createNotification, notifyAdmins } from "../service/Notification.js";
 import { validateFile } from "../utils/fileValidation.js";
+import { uploadToStorage, deleteFromStorage } from "../service/Storage.js";
 const prisma = new PrismaClient();
 
 // ==========================================
@@ -73,9 +74,7 @@ const createAsset = async (req, res) => {
       }
       const image = req.files.image_path;
       const imageName = Date.now() + "_" + image.name;
-      const uploadPath = "./public/uploads/assets/" + imageName;
-      await image.mv(uploadPath);
-      image_path = "/uploads/assets/" + imageName;
+      image_path = await uploadToStorage(image.data, "assets", imageName, image.mimetype);
     }
 
     let targetSerialNumber = serial_number;
@@ -524,9 +523,9 @@ const updateAsset = async (req, res) => {
       }
       const image = req.files.image_path;
       const imageName = Date.now() + "_" + image.name;
-      const uploadPath = "./public/uploads/assets/" + imageName;
-      await image.mv(uploadPath);
-      image_path = "/uploads/assets/" + imageName;
+      // Delete old image from R2 before uploading new one
+      if (asset.image_path) await deleteFromStorage(asset.image_path);
+      image_path = await uploadToStorage(image.data, "assets", imageName, image.mimetype);
     }
 
     let targetStatus = status !== undefined ? status : asset.status;

@@ -1,11 +1,11 @@
 // Backend/controller/Scanner.js
 
 import { createCanvas, loadImage } from "canvas";
-import cv from "@techstark/opencv-js";
 import { detectObjects } from "../lib/scanner/yolo.js";
 import { refineDetection } from "../lib/scanner/opencv-refinement.js";
 import { perspectiveTransform, getCardDimensions } from "../lib/scanner/perspective-transform.js";
 import { enhanceDocument } from "../lib/scanner/enhancement.js";
+import { getCV } from "../lib/scanner/cv-helper.js";
 import prisma from "../lib/prisma.js";
 import { validateFile } from "../utils/fileValidation.js";
 
@@ -42,12 +42,13 @@ export const detectDocumentController = async (req, res) => {
     }
 
     // 2. OpenCV refinement to get precise corner points
+    const cv = await getCV();
     const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const mat = new cv.Mat(canvas.height, canvas.width, cv.CV_8UC4);
     mat.data.set(imgData.data);
 
     const detection = detections[0];
-    const cardResult = refineDetection(mat, detection, DETECT_SIZE, DETECT_SIZE);
+    const cardResult = await refineDetection(mat, detection, DETECT_SIZE, DETECT_SIZE);
     mat.delete();
 
     if (!cardResult) {
@@ -111,12 +112,13 @@ export const scanDocumentController = async (req, res) => {
     }
 
     // 2. OpenCV Refinement
+    const cv = await getCV();
     const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const mat = new cv.Mat(canvas.height, canvas.width, cv.CV_8UC4);
     mat.data.set(imgData.data);
 
     const detection = detections[0];
-    const cardResult = refineDetection(mat, detection, img.width, img.height);
+    const cardResult = await refineDetection(mat, detection, img.width, img.height);
 
     if (!cardResult) {
       mat.delete();
@@ -125,10 +127,10 @@ export const scanDocumentController = async (req, res) => {
 
     // 3. Perspective Transform (Crop)
     const dims = getCardDimensions(cardResult.points);
-    const croppedMat = perspectiveTransform(mat, cardResult.points, dims.width, dims.height);
+    const croppedMat = await perspectiveTransform(mat, cardResult.points, dims.width, dims.height);
 
     // 4. Enhancement
-    const enhancedMat = enhanceDocument(croppedMat);
+    const enhancedMat = await enhanceDocument(croppedMat);
 
     // 5. Output to Canvas
     const outputCanvas = createCanvas(dims.width, dims.height);

@@ -8,6 +8,7 @@ import path from "path";
 import { Jimp } from "jimp";
 import { toICTDate, formatICTDate } from "../utils/timezone.js";
 import { validateFile } from "../utils/fileValidation.js";
+import { uploadToStorage, getStorageUrl } from "../service/Storage.js";
 
 const ATTENDANCE_GRACE_MINUTES = 10;
 
@@ -849,26 +850,22 @@ export const onlineAttendanceController = async (req, res) => {
       }
       const file     = req.files.photo;
       const filename = `${Date.now()}_${file.name}`;
-      const relPath  = `/uploads/leaves/${filename}`;
-      const absPath  = path.join(process.cwd(), 'public', 'uploads', 'leaves', filename);
-      await file.mv(absPath);
 
-      // Compress: resize to max 800px wide, save as JPEG @ 70% quality
-      // This keeps faces clear while cutting typical selfie size from ~2MB → ~80-150KB
+      // Compress: resize to max 800px wide, JPEG @ 70% quality — then upload buffer directly to R2
+      let uploadBuffer = file.data;
       try {
-        const img = await Jimp.fromFile(absPath);
+        const img = await Jimp.fromBuffer(file.data);
         if (img.bitmap.width > 800) {
           img.resize({ w: 800 });
         }
-        // Jimp v1: pass quality via write options
-        await img.write(absPath, { quality: 70 });
+        uploadBuffer = await img.getBuffer("image/jpeg", { quality: 70 });
       } catch (compressErr) {
-        // Compression failure is non-fatal — the original file is still there
         console.error('[Compress] Failed to compress attendance photo:', compressErr.message);
+        // Fall back to original buffer
       }
 
-      savedPhotoPath    = relPath;
-      absolutePhotoPath = absPath;
+      savedPhotoPath    = await uploadToStorage(uploadBuffer, "leaves", filename, "image/jpeg");
+      absolutePhotoPath = getStorageUrl(savedPhotoPath); // R2 public URL for Telegram
     }
 
     if (!latitude || !longitude) {

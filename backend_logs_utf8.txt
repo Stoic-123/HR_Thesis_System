@@ -1,0 +1,110 @@
+﻿Prisma schema loaded from prisma/schema.prisma
+Datasource "db": MySQL database "hrms" at "db:3306"
+
+The database is already in sync with the Prisma schema.
+
+Running generate... (Use --skip-generate to skip the generators)
+[2K[1A[2K[GRunning generate... - Prisma Client
+[2K[1A[2K[GΓ£ö Generated Prisma Client (v6.19.3) to ./node_modules/@prisma/client in 1.42s
+
+Γùç injected env (0) from .env // tip: Γîÿ override existing { override: true }
+Prisma schema loaded from prisma/schema.prisma
+Datasource "db": MySQL database "hrms" at "db:3306"
+
+The database is already in sync with the Prisma schema.
+
+Running generate... (Use --skip-generate to skip the generators)
+[2K[1A[2K[GRunning generate... - Prisma Client
+[2K[1A[2K[GΓ£ö Generated Prisma Client (v6.19.3) to ./node_modules/@prisma/client in 907ms
+
+Γùç injected env (0) from .env // tip: Γùê encrypted .env [www.dotenvx.com]
+Prisma schema loaded from prisma/schema.prisma
+Datasource "db": MySQL database "hrms" at "db:3306"
+
+The database is already in sync with the Prisma schema.
+
+Running generate... (Use --skip-generate to skip the generators)
+[2K[1A[2K[GRunning generate... - Prisma Client
+[2K[1A[2K[GΓ£ö Generated Prisma Client (v6.19.3) to ./node_modules/@prisma/client in 746ms
+
+Γùç injected env (0) from .env // tip: Γîÿ custom filepath { path: '/custom/path/.env' }
+Prisma schema loaded from prisma/schema.prisma
+Datasource "db": MySQL database "hrms" at "db:3306"
+
+The database is already in sync with the Prisma schema.
+
+Running generate... (Use --skip-generate to skip the generators)
+[2K[1A[2K[GRunning generate... - Prisma Client
+[2K[1A[2K[GΓ£ö Generated Prisma Client (v6.19.3) to ./node_modules/@prisma/client in 586ms
+
+Γùç injected env (0) from .env // tip: Γîü auth for agents [www.vestauth.com]
+Prisma schema loaded from prisma/schema.prisma
+Datasource "db": MySQL database "hrms" at "db:3306"
+
+The database is already in sync with the Prisma schema.
+
+Running generate... (Use --skip-generate to skip the generators)
+[2K[1A[2K[GRunning generate... - Prisma Client
+[2K[1A[2K[GΓ£ö Generated Prisma Client (v6.19.3) to ./node_modules/@prisma/client in 598ms
+
+Γùç injected env (0) from .env // tip: Γîÿ multiple files { path: ['.env.local', '.env'] }
+Prisma schema loaded from prisma/schema.prisma
+Datasource "db": MySQL database "hrms" at "db:3306"
+
+The database is already in sync with the Prisma schema.
+
+Running generate... (Use --skip-generate to skip the generators)
+[2K[1A[2K[GRunning generate... - Prisma Client
+[2K[1A[2K[GΓ£ö Generated Prisma Client (v6.19.3) to ./node_modules/@prisma/client in 885ms
+
+Γùç injected env (0) from .env // tip: Γîÿ suppress logs { quiet: true }
+Prisma schema loaded from prisma/schema.prisma
+Datasource "db": MySQL database "hrms" at "db:3306"
+
+The database is already in sync with the Prisma schema.
+
+Running generate... (Use --skip-generate to skip the generators)
+[2K[1A[2K[GRunning generate... - Prisma Client
+[2K[1A[2K[GΓ£ö Generated Prisma Client (v6.19.3) to ./node_modules/@prisma/client in 586ms
+
+Γùç injected env (0) from .env // tip: Γîÿ suppress logs { quiet: true }
+Prisma schema loaded from prisma/schema.prisma
+Datasource "db": MySQL database "hrms" at "db:3306"
+
+The database is already in sync with the Prisma schema.
+
+Running generate... (Use --skip-generate to skip the generators)
+[2K[1A[2K[GRunning generate... - Prisma Client
+[2K[1A[2K[GΓ£ö Generated Prisma Client (v6.19.3) to ./node_modules/@prisma/client in 2.87s
+
+Γùç injected env (0) from .env // tip: Γùê secrets for agents [www.dotenvx.com]
+Prisma schema loaded from prisma/schema.prisma
+Datasource "db": MySQL database "hrms" at "db:3306"
+
+The database is already in sync with the Prisma schema.
+
+Running generate... (Use --skip-generate to skip the generators)
+[2K[1A[2K[GRunning generate... - Prisma Client
+[2K[1A[2K[GΓ£ö Generated Prisma Client (v6.19.3) to ./node_modules/@prisma/client in 572ms
+
+Γùç injected env (0) from .env // tip: Γîü auth for agents [www.vestauth.com]
+Prisma schema loaded from prisma/schema.prisma
+Datasource "db": MySQL database "hrms" at "db:3306"
+
+The database is already in sync with the Prisma schema.
+
+Running generate... (Use --skip-generate to skip the generators)
+[2K[1A[2K[GRunning generate... - Prisma Client
+[2K[1A[2K[GΓ£ö Generated Prisma Client (v6.19.3) to ./node_modules/@prisma/client in 2.82s
+
+Γùç injected env (0) from .env // tip: Γîÿ suppress logs { quiet: true }
+Prisma schema loaded from prisma/schema.prisma
+Datasource "db": MySQL database "hrms" at "db:3306"
+
+The database is already in sync with the Prisma schema.
+
+Running generate... (Use --skip-generate to skip the generators)
+[2K[1A[2K[GRunning generate... - Prisma Client
+[2K[1A[2K[GΓ£ö Generated Prisma Client (v6.19.3) to ./node_modules/@prisma/client in 798ms
+
+Γùç injected env (0) from .env // tip: Γùê encrypted .env [www.dotenvx.com]

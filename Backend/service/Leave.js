@@ -4,6 +4,7 @@ import { sendApprovalRequest, editDecisionMessage } from "./TelegramApproval.js"
 import path from "path";
 import { createNotification, notifyAdmins, notifyManager } from "./Notification.js";
 import { formatICTDate } from "../utils/timezone.js";
+import { getStorageUrl } from "./Storage.js";
 
 // Helper function to group dates into consecutive ranges
 const groupDatesIntoRanges = (dates) => {
@@ -197,7 +198,7 @@ export const CreateNewLeave = async (
         ]
       };
 
-      const absolutePhotoPath = photo_path ? path.join(process.cwd(), 'public', photo_path.replace(/^\/+/, '')) : null;
+      const absolutePhotoPath = photo_path ? getStorageUrl(photo_path) : null;
       let targetChatId = null;
       let messageId = null;
 

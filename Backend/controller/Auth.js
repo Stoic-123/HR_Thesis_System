@@ -103,13 +103,14 @@ export const employeeLoginController = async (req, res) => {
       company_id,
       existingEmployee.token_version,
     );
+    const isProduction = !!process.env.COOKIE_DOMAIN;
     const cookieOptions = {
       maxAge: 24 * 60 * 60 * 1000, // 1 day
       httpOnly: true,
-      secure: true,
-      sameSite: "none",
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
     };
-    if (process.env.COOKIE_DOMAIN) {
+    if (isProduction && process.env.COOKIE_DOMAIN) {
       cookieOptions.domain = process.env.COOKIE_DOMAIN;
     }
     await res.cookie("auth_token", token, cookieOptions); 
@@ -122,8 +123,9 @@ export const employeeLoginController = async (req, res) => {
     console.log("[Auth] Returned token to client:", token);
   } catch (error) {
     console.error("[AuthMiddleware] Verification failed:", error);
-    const clearCookieOptions = { httpOnly: true, sameSite: "none", secure: true };
-    if (process.env.COOKIE_DOMAIN) {
+    const isProduction = !!process.env.COOKIE_DOMAIN;
+    const clearCookieOptions = { httpOnly: true, sameSite: isProduction ? "none" : "lax", secure: isProduction };
+    if (isProduction && process.env.COOKIE_DOMAIN) {
       clearCookieOptions.domain = process.env.COOKIE_DOMAIN;
     }
     res.clearCookie("auth_token", clearCookieOptions);
@@ -173,12 +175,13 @@ export const employeeLogoutController = async (req, res) => {
 
   await InvalidateToken(userId);
 
+  const isProduction = !!process.env.COOKIE_DOMAIN;
   const clearCookieOptions = {
     httpOnly: true,
-    sameSite: "none",
-    secure: true,
+    sameSite: isProduction ? "none" : "lax",
+    secure: isProduction,
   };
-  if (process.env.COOKIE_DOMAIN) {
+  if (isProduction && process.env.COOKIE_DOMAIN) {
     clearCookieOptions.domain = process.env.COOKIE_DOMAIN;
   }
   res.clearCookie("auth_token", clearCookieOptions);

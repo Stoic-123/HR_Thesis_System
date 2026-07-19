@@ -1,6 +1,34 @@
+# ── Dependencies (reinstalled during build) ───────────────────────────────────
 node_modules
+
+# ── Environment / secrets ─────────────────────────────────────────────────────
 .env
+.env.*
+!.env.example
+
+# ── Uploads (mounted as a Docker volume at runtime) ───────────────────────────
 public/uploads
+
+# ── Dev / debug artefacts ─────────────────────────────────────────────────────
 *.log
 .telegram_offset*
+
+# ── DB seed (mounted read-only via docker-compose, not needed in image) ───────
 prisma/seed.sql
+
+# ── TypeScript source files for scanner (compiled .js copies are included) ────
+lib/scanner/*.ts
+
+# ── Misc dev tooling ──────────────────────────────────────────────────────────
+.git
+.gitignore
+.vscode
+*.md
+!README.md
+
+# ── Test / scratch scripts at repo root ───────────────────────────────────────
+check-roles.js
+check-telegram-users.js
+get-company-info.js
+migrate-to-r2.js
+query-roles.js

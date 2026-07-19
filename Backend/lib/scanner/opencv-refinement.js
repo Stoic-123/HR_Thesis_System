@@ -2,13 +2,13 @@
 
 import { getCV, sortPoints } from "./cv-helper.js";
 
-export function refineDetection(
+export async function refineDetection(
   fullMat,
   detection,
   originalWidth,
   originalHeight
 ) {
-  const cv = getCV();
+  const cv = await getCV();
   if (!cv) return null;
 
   // --- 1. AI NATIVE SEGMENTATION MASK (IF AVAILABLE) ---

@@ -81,12 +81,31 @@ export const editTelegramCaption = async (botToken, chatId, messageId, caption) 
 
 /**
  * Send a photo with an HTML caption.
- * `photoPath` is an absolute path on disk.
- * Returns true on success, false on any error (never throws).
+ * `photoPath` can be either:
+ *   - An absolute path on disk (legacy/local), OR
+ *   - An HTTPS URL (Cloudflare R2 or any public CDN)
+ * Returns the Telegram API result on success, false on any error (never throws).
  */
 export const sendTelegramPhoto = async (botToken, chatId, photoPath, caption, options = {}) => {
   if (!botToken || !chatId || !photoPath) return false;
   try {
+    // If it's a URL, send via URL directly
+    if (photoPath.startsWith('http')) {
+      const payload = {
+        chat_id: chatId,
+        photo: photoPath,
+        caption: caption || '',
+        parse_mode: 'HTML',
+        ...options,
+      };
+      const res = await fetch(`${TELEGRAM_API}/bot${botToken}/sendPhoto`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) return await res.json();
+    }
+
     // Check file exists
     if (!fs.existsSync(photoPath)) {
       console.warn('[Telegram] Photo not found, falling back to text:', photoPath);

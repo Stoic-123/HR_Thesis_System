@@ -2,8 +2,8 @@
 
 import { getCV } from "./cv-helper.js";
 
-export function enhanceDocument(mat) {
-  const cv = getCV();
+export async function enhanceDocument(mat) {
+  const cv = await getCV();
   if (!cv) return mat;
 
   // 1. Convert RGBA → RGB for processing

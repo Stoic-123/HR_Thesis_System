@@ -13,6 +13,7 @@ import prisma from "../lib/prisma.js";
 import { createCanvas, loadImage } from "canvas";
 import { detectObjects } from "../lib/scanner/yolo.js";
 import { validateFile } from "../utils/fileValidation.js";
+import { uploadToStorage } from "../service/Storage.js";
 
 export const addEmployeeController = async (req, res) => {
   try {
@@ -26,9 +27,7 @@ export const addEmployeeController = async (req, res) => {
         }
         const profile = req.files.profile_path;
         const profileName = Date.now() + "_" + profile.name;
-        const uploadPath = "./public/uploads/profiles/" + profileName;
-        await profile.mv(uploadPath);
-        profile_path = "/uploads/profiles/" + profileName;
+        profile_path = await uploadToStorage(profile.data, "profiles", profileName, profile.mimetype);
       }
     }
     const {
@@ -111,9 +110,7 @@ export const updateEmployeeController = async (req, res) => {
       }
       const profile = req.files.profile_path;
       const profileName = Date.now() + "_" + profile.name;
-      const uploadPath = "./public/uploads/profiles/" + profileName;
-      await profile.mv(uploadPath);
-      updateData.profile_path = "/uploads/profiles/" + profileName;
+      updateData.profile_path = await uploadToStorage(profile.data, "profiles", profileName, profile.mimetype);
     }
 
     const result = await updateEmployee(id, updateData);
@@ -204,9 +201,7 @@ export const uploadEmployeeDocumentController = async (req, res) => {
     }
 
     const documentName = Date.now() + "_" + document.name;
-    const uploadPath = "./public/uploads/documents/" + documentName;
-    await document.mv(uploadPath);
-    const document_path = "/uploads/documents/" + documentName;
+    const document_path = await uploadToStorage(document.data, "documents", documentName, document.mimetype);
 
     const result = await addDocument(id, document_type_id, document_path);
 

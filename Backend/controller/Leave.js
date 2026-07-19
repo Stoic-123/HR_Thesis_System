@@ -4,6 +4,7 @@ import { getLeaveTypeCode } from "../service/LeaveProfile.js";
 import { addAuditLog } from "../service/AuditLog.js";
 import { toICTDate } from "../utils/timezone.js";
 import { validateFile } from "../utils/fileValidation.js";
+import { uploadToStorage } from "../service/Storage.js";
 
 export const createNewLeaveController = async (req, res) => {
   try {
@@ -25,9 +26,7 @@ export const createNewLeaveController = async (req, res) => {
       }
       const photo = req.files.photo_path;
       const photoName = Date.now() + "_" + photo.name;
-      const photoPath = "public/uploads/leaves/" + photoName;
-      await photo.mv(photoPath);
-      photo_path = "/uploads/leaves/" + photoName;
+      photo_path = await uploadToStorage(photo.data, "leaves", photoName, photo.mimetype);
     }
 
     const { leave_type_id, dates, reason } = req.body;

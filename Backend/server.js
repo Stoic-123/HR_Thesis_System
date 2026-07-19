@@ -1,3 +1,14 @@
+process.on("uncaughtException", (err) => {
+  console.error("💥 CRITICAL UNCAUGHT EXCEPTION:");
+  console.error(err.stack || err);
+  process.exit(1);
+});
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("💥 CRITICAL UNHANDLED REJECTION:");
+  console.error(reason?.stack || reason);
+  process.exit(1);
+});
+
 import express from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
@@ -97,7 +108,16 @@ app.use(globalRateLimiter);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use("/uploads", express.static("public/uploads"));
+// Serve uploaded files — redirect to Cloudflare R2 public URL.
+// DB paths are stored as /uploads/folder/file.ext; the R2 key is folder/file.ext
+app.get("/uploads/*path", (req, res) => {
+  const r2Base = (process.env.R2_PUBLIC_URL || "").replace(/\/$/, "");
+  const key = req.path.replace(/^\/uploads\//, ""); // e.g. "profiles/xxx.jpg"
+  if (!r2Base) {
+    return res.status(503).json({ error: "R2_PUBLIC_URL is not configured" });
+  }
+  return res.redirect(302, `${r2Base}/${key}`);
+});
 
 // Public routes
 app.use("/api/auth", authRoutes);

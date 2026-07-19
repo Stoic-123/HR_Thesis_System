@@ -1,8 +1,7 @@
 import { addCompany, getCompany, updateCompany } from "../service/Company.js";
 import { addAuditLog } from "../service/AuditLog.js";
-import path from "path";
-import fs from "fs";
 import { validateFile } from "../utils/fileValidation.js";
+import { uploadToStorage, deleteFromStorage } from "../service/Storage.js";
 
 
 export const addCompanyController = async (req, res) => {
@@ -16,9 +15,7 @@ export const addCompanyController = async (req, res) => {
         }
         const logo = req.files.logo_path;
         const logo_name = Date.now() + "_" + logo.name;
-        const uploadPath = "./public/uploads/logos/" + logo_name;
-        await logo.mv(uploadPath);
-        logoPath = "/uploads/logos/" + logo_name;
+        logoPath = await uploadToStorage(logo.data, "logos", logo_name, logo.mimetype);
       }
     }
     const {
@@ -131,19 +128,11 @@ export const updateCompanyController = async (req, res) => {
       }
       const logo = req.files.logo_path;
       const logo_name = Date.now() + "_" + logo.name;
-      const uploadPath = "./public/uploads/logos/" + logo_name;
+      logo_path = await uploadToStorage(logo.data, "logos", logo_name, logo.mimetype);
 
-      // Save new file
-      await logo.mv(uploadPath);
-
-      // Set new path for DB
-      logo_path = "/uploads/logos/" + logo_name;
-
+      // Delete old logo from R2
       if (old_logo_path) {
-        const oldFile = path.join("./public", old_logo_path);
-        if (fs.existsSync(oldFile)) {
-          fs.unlinkSync(oldFile);
-        }
+        await deleteFromStorage(old_logo_path);
       }
     }
 

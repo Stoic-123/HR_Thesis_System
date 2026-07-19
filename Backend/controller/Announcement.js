@@ -8,8 +8,7 @@ import {
   editTelegramCaption,
 } from "../service/Telegram.js";
 import { validateFile } from "../utils/fileValidation.js";
-import fs from "fs";
-import path from "path";
+import { uploadToStorage, deleteFromStorage, getStorageUrl } from "../service/Storage.js";
 
 const safeParse = (val) => {
   if (!val) return null;
@@ -41,16 +40,7 @@ export const createAnnouncement = async (req, res) => {
       }
       const image = req.files.image;
       const imageName = Date.now() + "_" + image.name;
-      const uploadPath = "./public/uploads/announcements/" + imageName;
-
-      // Ensure directory exists
-      const dir = "./public/uploads/announcements";
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
-
-      await image.mv(uploadPath);
-      image_path = "/uploads/announcements/" + imageName;
+      image_path = await uploadToStorage(image.data, "announcements", imageName, image.mimetype);
     }
 
     const parsedDates = safeParse(dates);
@@ -161,11 +151,11 @@ export const createAnnouncement = async (req, res) => {
       try {
         let tgRes = null;
         if (image_path) {
-          const photoPath = path.join(process.cwd(), "public", image_path);
+          const photoUrl = getStorageUrl(image_path);
           tgRes = await sendTelegramPhoto(
             company.telegram_bot_token,
             activeGroupId,
-            photoPath,
+            photoUrl,
             tgMessage
           );
         } else {
@@ -306,19 +296,12 @@ export const updateAnnouncement = async (req, res) => {
       }
       const image = req.files.image;
       const imageName = Date.now() + "_" + image.name;
-      const uploadPath = "./public/uploads/announcements/" + imageName;
-      const dir = "./public/uploads/announcements";
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-      await image.mv(uploadPath);
-      image_path = "/uploads/announcements/" + imageName;
+      image_path = await uploadToStorage(image.data, "announcements", imageName, image.mimetype);
       imageChanged = true;
 
-      // Delete old image file if it exists
+      // Delete old image from R2
       if (existing.image_path) {
-        const oldFile = path.join("./public", existing.image_path);
-        if (fs.existsSync(oldFile)) {
-          try { fs.unlinkSync(oldFile); } catch (_) {}
-        }
+        await deleteFromStorage(existing.image_path);
       }
     }
 
@@ -413,16 +396,14 @@ export const updateAnnouncement = async (req, res) => {
           }
 
           // Send new message (with photo if image available, else text)
-          const photoPath = image_path
-            ? path.join(process.cwd(), "public", image_path)
-            : null;
+          const photoUrl = image_path ? getStorageUrl(image_path) : null;
 
           let tgRes;
-          if (photoPath && fs.existsSync(photoPath)) {
+          if (photoUrl) {
             tgRes = await sendTelegramPhoto(
               company.telegram_bot_token,
               activeGroupId,
-              photoPath,
+              photoUrl,
               tgMessage
             );
           } else {

@@ -9,6 +9,7 @@ import prisma from "../lib/prisma.js";
 import { createCanvas, loadImage } from "canvas";
 import { detectObjects } from "../lib/scanner/yolo.js";
 import { validateFile } from "../utils/fileValidation.js";
+import { uploadToStorage } from "../service/Storage.js";
 
 
 
@@ -107,11 +108,7 @@ export const addDocumentController = async (req, res) => {
 
       for (const doc of docs) {
         const docName = Date.now() + "_" + doc.name;
-        const uploadPath = "./public/uploads/documents/" + docName;
-
-        await doc.mv(uploadPath);
-
-        document_path = "/uploads/documents/" + docName;
+        document_path = await uploadToStorage(doc.data, "documents", docName, doc.mimetype);
       }
     }
 
