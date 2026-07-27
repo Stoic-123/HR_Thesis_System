@@ -127,12 +127,16 @@ export const chatWithAI = async (messages, defaultModel = "qwen2.5:1.5b", onStre
     }
 
     if (provider !== "ollama") {
-      if (!apiKey) {
-        throw new Error(`API Key / Token is required for provider: ${provider}. Please configure it in your Company settings.`);
+      try {
+        if (!apiKey) {
+          throw new Error(`API Key / Token is required for provider: ${provider}. Please configure it in your Company settings.`);
+        }
+        console.log(`[AI Routing] Routing to Cloud API (${provider}) using model: ${model}`);
+        return await callCloudApi(provider, model, apiKey, messages, onStream);
+      } catch (cloudErr) {
+        console.warn(`[AI Routing] Cloud API (${provider}) failed: ${cloudErr.message}. Falling back to local Ollama...`);
+        // Fallback to local Ollama below
       }
-      console.log(`[AI Routing] Routing to Cloud API (${provider}) using model: ${model}`);
-      console.log(`[AI Routing] API Key info: Length=${apiKey.length}, Prefix="${apiKey.substring(0, 9)}...", Suffix="...${apiKey.substring(apiKey.length - 4)}"`);
-      return await callCloudApi(provider, model, apiKey, messages, onStream);
     }
 
     // Fallback to local Ollama
@@ -161,7 +165,7 @@ export const chatWithAI = async (messages, defaultModel = "qwen2.5:1.5b", onStre
     });
     return response.message.content;
   } catch (error) {
-    if (provider === "ollama" && error.message.includes("not found")) {
+    if (error.message.includes("not found")) {
       throw new Error(`AI Model '${model}' is not installed. Please run 'ollama pull ${model}' in your terminal.`);
     }
     console.error("[AI Service] Chat Error:", error);

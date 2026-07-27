@@ -57,41 +57,175 @@ const tools = {
       const todayEnd = new Date();
       todayEnd.setHours(23, 59, 59, 999);
 
-      const whereClause = {
-        employee: {
-          company_id: parseInt(company_id),
-          is_active: "active"
-        },
-        work_at: {
-          gte: todayStart,
-          lte: todayEnd,
-        },
+      const empWhere = {
+        company_id: parseInt(company_id),
+        is_active: "active",
+        OR: [
+          { role_id: null },
+          { role: { name: { not: "Admin" } } }
+        ]
       };
+      if (deptFilter) empWhere.department_id = parseInt(deptFilter);
 
-      if (deptFilter) {
-        whereClause.employee.department_id = parseInt(deptFilter);
-      }
+      const [allEmployees, records, leaveRecords] = await Promise.all([
+        prisma.employee.findMany({ where: empWhere }),
+        prisma.attendancerecord.findMany({
+          where: {
+            employee: empWhere,
+            work_at: { gte: todayStart, lte: todayEnd },
+          },
+          include: { employee: true },
+        }),
+        prisma.leaverecord.findMany({
+          where: {
+            employee_leaverecord_employee_idToemployee: empWhere,
+            status: "approved",
+            start_date: { lte: todayEnd },
+            end_date: { gte: todayStart },
+          },
+          include: {
+            employee_leaverecord_employee_idToemployee: true,
+            leavetype: true,
+          },
+        }),
+      ]);
 
-      const records = await prisma.attendancerecord.findMany({
-        where: whereClause,
-        include: {
-          employee: true,
+      const scannedEmpIds = new Set(records.map((r) => r.employee_id));
+      const onLeaveEmpIds = new Set(leaveRecords.map((l) => l.employee_id));
+
+      const checkedInList = records.map(
+        (r) =>
+          `- **${r.employee.first_name} ${r.employee.last_name}:** Checked in at ${r.work_at.toLocaleTimeString("en-US", { hour12: true, hour: "2-digit", minute: "2-digit" })} (${r.status || "on time"})`
+      );
+
+      const onLeaveList = leaveRecords.map((l) => {
+        const emp = l.employee_leaverecord_employee_idToemployee;
+        return `- **${emp.first_name} ${emp.last_name}:** On ${l.leavetype?.name || "Approved Leave"}`;
+      });
+
+      const absentList = allEmployees
+        .filter((e) => !scannedEmpIds.has(e.id) && !onLeaveEmpIds.has(e.id))
+        .map((e) => `- **${e.first_name} ${e.last_name}:** Absent / Not Scanned`);
+
+      const dateStr = todayStart.toISOString().split("T")[0];
+      let summaryText = `📊 **Today's Attendance Status (${dateStr})**:\n\n`;
+
+      summaryText += `✅ **Checked In (${checkedInList.length}):**\n` + (checkedInList.length > 0 ? checkedInList.join("\n") : "- None yet") + "\n\n";
+      summaryText += `🏖️ **On Approved Leave (${onLeaveList.length}):**\n` + (onLeaveList.length > 0 ? onLeaveList.join("\n") : "- None") + "\n\n";
+      summaryText += `❌ **Absent / Not Scanned (${absentList.length}):**\n` + (absentList.length > 0 ? absentList.join("\n") : "- None");
+
+      return { success: true, message: summaryText };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  },
+  get_pending_leave_requests: async (args, company_id, deptFilter) => {
+    try {
+      const empWhere = {
+        company_id: parseInt(company_id),
+        is_active: "active",
+      };
+      if (deptFilter) empWhere.department_id = parseInt(deptFilter);
+
+      const records = await prisma.leaverecord.findMany({
+        where: {
+          employee_leaverecord_employee_idToemployee: empWhere,
+          status: "pending",
         },
+        include: {
+          employee_leaverecord_employee_idToemployee: true,
+          leavetype: true,
+        },
+        orderBy: { request_at: "desc" },
       });
 
       if (records.length === 0) {
-        return { success: true, message: "No employee has scanned today." };
+        return {
+          success: true,
+          message: "🎉 No pending leave requests at this time. All leave applications have been processed!",
+        };
       }
 
-      const summary = records.map(r => ({
-        employee: `${r.employee.first_name} ${r.employee.last_name}`,
-        time: r.work_at.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
-        status: r.status,
-        type: r.type,
-      }));
+      const summaryText = records
+        .map((r) => {
+          const emp = r.employee_leaverecord_employee_idToemployee;
+          const start = r.start_date ? r.start_date.toISOString().split("T")[0] : "N/A";
+          const end = r.end_date ? r.end_date.toISOString().split("T")[0] : "N/A";
+          return `- **${emp.first_name} ${emp.last_name}:** Applied for **${r.leavetype?.name || "Leave"}** from **${start}** to **${end}** (Reason: ${r.reason || "No reason specified"})`;
+        })
+        .join("\n");
 
-      const summaryText = summary.map(s => `* **${s.employee}:** checked in at ${s.time} (${s.type === 'FINGER' ? 'Fingerprint' : 'Online'})`).join("\n");
-      return { success: true, message: `Today's scan list:\n${summaryText}` };
+      return {
+        success: true,
+        message: `📋 **Pending Leave Requests (${records.length}):**\n\n${summaryText}`,
+      };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  },
+  get_department_headcount: async (args, company_id, deptFilter) => {
+    try {
+      const empWhere = {
+        company_id: parseInt(company_id),
+        is_active: "active",
+      };
+      if (deptFilter) empWhere.department_id = parseInt(deptFilter);
+
+      const departments = await prisma.department.findMany({
+        where: { company_id: parseInt(company_id) },
+        include: {
+          employee_department_idToemployee: {
+            where: { is_active: "active" },
+          },
+        },
+      });
+
+      if (departments.length === 0) {
+        return { success: true, message: "No departments found for this company." };
+      }
+
+      const totalEmployees = departments.reduce((acc, d) => acc + (d.employee_department_idToemployee?.length || 0), 0);
+      const summaryText = departments
+        .map((d) => `- **${d.name}:** ${d.employee_department_idToemployee?.length || 0} active employee(s)`)
+        .join("\n");
+
+      return {
+        success: true,
+        message: `🏢 **Department Headcount Breakdown (Total Active: ${totalEmployees}):**\n\n${summaryText}`,
+      };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  },
+  get_available_assets: async (args, company_id, deptFilter) => {
+    try {
+      const assets = await prisma.asset.findMany({
+        where: {
+          company_id: parseInt(company_id),
+        },
+        include: {
+          assetcategory: true,
+        },
+      });
+
+      if (assets.length === 0) {
+        return { success: true, message: "No company assets found in the inventory." };
+      }
+
+      const availableAssets = assets.filter(
+        (a) => a.status?.toLowerCase() === "available" || (!a.assigned_to && a.status?.toLowerCase() !== "maintenance" && a.status?.toLowerCase() !== "retired")
+      );
+      const assignedAssets = assets.filter((a) => a.status?.toLowerCase() === "allocated" || a.assigned_to);
+
+      const availText =
+        availableAssets.length > 0
+          ? availableAssets.map((a) => `- **${a.asset_name}** (${a.asset_code || "No Code"}) — Category: ${a.assetcategory?.category_name || "General"}`).join("\n")
+          : "- None available right now";
+
+      return {
+        success: true,
+        message: `📦 **Company Asset Inventory Overview:**\n\n🟢 **Available for Allocation (${availableAssets.length}):**\n${availText}\n\n🔵 **Currently Allocated (${assignedAssets.length})**`,
+      };
     } catch (error) {
       return { success: false, message: error.message };
     }
@@ -507,14 +641,20 @@ export const chatController = async (req, res) => {
 
     let toolInstructions = isHrOrAdmin
       ? `Available tools:
-         - get_today_attendance {} (Use this for fetching today's scan/attendance list)
+         - get_today_attendance {} (Use this for fetching today's scan/attendance list, checking who is absent, who is on leave, or who scanned today)
+         - get_department_headcount {} (Use this for queries like 'Show department headcount', 'department employee count', or breakdown of headcount per department)
+         - get_pending_leave_requests {} (Use this for fetching ALL pending leave applications/requests waiting for manager/HR approval across the company)
+         - get_available_assets {} (Use this for queries like 'Available company assets', 'company assets', 'free hardware', or asset inventory status)
          - get_employee_profile {"employee_name_or_id": "string"} (Use this to get detailed profile info like phone, email, age, address, relationship status, joined date, children, etc. of a specific employee)
          - get_employee_leave_balance {"employee_name_or_id": "string"} (ONLY for checking a single specific employee by name/ID)
          - get_leave_records {"employee_name_or_id": "string", "status": "string", "start_date": "YYYY-MM-DD", "end_date": "YYYY-MM-DD"} (Use this to search the log of leave requests/applications. ALL parameters are optional. If employee_name_or_id is omitted or null, it will query across ALL active employees)
          - get_attendance_records {"employee_name_or_id": "string", "start_date": "YYYY-MM-DD", "end_date": "YYYY-MM-DD", "is_late": boolean, "status": "string"} (Use this to search historical attendance logs. ALL parameters are optional. If employee_name_or_id is omitted or null, it will search across ALL active employees in the company. Perfect for queries like 'who was late this month', 'top late employees', or listing attendance logs)
          - get_company_leave_summary {} (Use this for company-wide queries, list of all leaves, comparisons, sorting, or queries like 'who has taken the most leaves', 'unpaid the most', or 'top leave users')`
       : `Available tools:
-         - get_today_attendance {} (Get list of scanned employees today in your department)
+         - get_today_attendance {} (Get list of scanned employees today in your department, plus on-leave and absent)
+         - get_department_headcount {} (Get department employee headcount breakdown)
+         - get_pending_leave_requests {} (Get list of pending leave applications waiting for approval in your department)
+         - get_available_assets {} (Get list of available company assets)
          - get_employee_profile {"employee_name_or_id": "string"} (ONLY to get detailed profile info like phone, email, age, address, relationship status, joined date, children, etc. of an employee in your department)
          - get_employee_leave_balance {"employee_name_or_id": "string"} (ONLY for checking a single specific employee in your department by name/ID)
          - get_leave_records {"employee_name_or_id": "string", "status": "string", "start_date": "YYYY-MM-DD", "end_date": "YYYY-MM-DD"} (ONLY for searching the log of leave requests/applications for employees in your department. If employee_name_or_id is omitted, searches your whole department)
@@ -682,6 +822,32 @@ export const chatController = async (req, res) => {
 
       if (toolCall && toolCall.tool) {
         let normalizedTool = toolCall.tool;
+        if (
+          normalizedTool === "get_pending_leave_requests" ||
+          normalizedTool === "get_pending_leaves" ||
+          normalizedTool === "pending_leave_requests" ||
+          normalizedTool === "pending_leaves"
+        ) {
+          normalizedTool = "get_pending_leave_requests";
+        }
+        if (
+          normalizedTool === "get_department_headcount" ||
+          normalizedTool === "get_headcount" ||
+          normalizedTool === "department_headcount" ||
+          normalizedTool === "show_department_headcount" ||
+          normalizedTool === "headcount"
+        ) {
+          normalizedTool = "get_department_headcount";
+        }
+        if (
+          normalizedTool === "get_available_assets" ||
+          normalizedTool === "get_assets" ||
+          normalizedTool === "available_assets" ||
+          normalizedTool === "available_company_assets" ||
+          normalizedTool === "show_available_assets"
+        ) {
+          normalizedTool = "get_available_assets";
+        }
         if (
           normalizedTool === "get_scan_attendance_list" ||
           normalizedTool === "get_attendance" ||

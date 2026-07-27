@@ -487,8 +487,8 @@ export const getAttendanceReportController = async (req, res) => {
         employee_id: entry.employee.id,
         employee: `${entry.employee.first_name} ${entry.employee.last_name}`,
         date: entry.date,
-        checkIn: entry.timeIn || "--:--",
-        checkOut: entry.timeOut || "--:--",
+        checkIn: entry.timeIn || "Missed",
+        checkOut: entry.timeOut || "Missed",
         scans: entry.scans,
         status,
       };

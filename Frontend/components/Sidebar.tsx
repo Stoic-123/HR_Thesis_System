@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { useMe } from "@/hooks/useMe";
 import { useCompany } from "@/hooks/useCompany";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 type SubMenuItem = {
   title: string;
@@ -495,54 +496,36 @@ export function Sidebar({ collapsed = false }: { collapsed?: boolean }) {
           className={`flex items-center ${!isExpanded ? "justify-center" : ""}`}
         >
           {isExpanded && (
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-base font-semibold text-gray-900 overflow-hidden">
-                {user?.employee?.profile_path ? (
-                  <img
-                    src={`${process.env.NEXT_PUBLIC_API_URL}${user.employee.profile_path}`}
-                    alt={user.employee.full_name}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <span>
-                    {user?.employee?.full_name
-                      ? user.employee.full_name
-                          .split(" ")
-                          .map((n: any) => n[0])
-                          .join("")
-                      : "UN"}
-                  </span>
-                )}
-              </div>
+            <div className="flex items-center gap-3 min-w-0">
+              <Avatar className="h-9 w-9 shrink-0 ring-2 ring-primary/10">
+                <AvatarImage
+                  src={user?.employee?.profile_path ? `${process.env.NEXT_PUBLIC_API_URL}${user.employee.profile_path}` : ""}
+                  alt={user?.username || "User"}
+                />
+                <AvatarFallback className="bg-primary/10 text-xs font-bold text-primary">
+                  {(user?.employee?.first_name ? user.employee.first_name[0] : (user?.username?.[0] || "U")).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
               <div className="flex-1 min-w-0">
                 <div className="truncate text-sm font-semibold text-gray-900">
-                  {user?.username}
+                  {user?.employee?.first_name ? `${user.employee.first_name} ${user.employee.last_name || ""}` : (user?.username || "")}
                 </div>
                 <div className="truncate text-xs text-gray-500">
-                  {user?.employee?.email}
+                  {user?.employee?.email || user?.username}
                 </div>
               </div>
             </div>
           )}
           {!isExpanded && (
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-base font-semibold text-gray-900 overflow-hidden">
-              {user?.employee?.profile_path ? (
-                <img
-                  src={`${process.env.NEXT_PUBLIC_API_URL}${user.employee.profile_path}`}
-                  alt={user.employee.full_name}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <span>
-                  {user?.employee?.full_name
-                    ? user.employee.full_name
-                        .split(" ")
-                        .map((n: any) => n[0])
-                        .join("")
-                    : "UN"}
-                </span>
-              )}
-            </div>
+            <Avatar className="h-9 w-9 shrink-0 ring-2 ring-primary/10">
+              <AvatarImage
+                src={user?.employee?.profile_path ? `${process.env.NEXT_PUBLIC_API_URL}${user.employee.profile_path}` : ""}
+                alt={user?.username || "User"}
+              />
+              <AvatarFallback className="bg-primary/10 text-xs font-bold text-primary">
+                {(user?.employee?.first_name ? user.employee.first_name[0] : (user?.username?.[0] || "U")).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
           )}
         </div>
       </div>

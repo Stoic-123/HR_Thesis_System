@@ -7,11 +7,15 @@ import type { AbstractIntlMessages } from "next-intl";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
+      staleTime: 1000 * 60 * 3, // 3 minutes caching
+      gcTime: 1000 * 60 * 15,    // 15 minutes garbage collection
+      refetchOnWindowFocus: false, // Prevent refetching on window focus
+      refetchOnReconnect: false,   // Prevent refetching on reconnect
       retry: (failureCount, error: any) => {
         if (error?.response?.status === 401 || error?.response?.status === 403) {
           return false;
         }
-        return failureCount < 3;
+        return failureCount < 2;
       },
     },
   },

@@ -14,3 +14,12 @@ export const changePassword = async (data: {
   const res = await api.post("/api/auth/change-password", data);
   return res.data;
 };
+
+export const updateProfile = async (formData: FormData) => {
+  const res = await api.put("/api/auth/update-profile", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+  return res.data;
+};

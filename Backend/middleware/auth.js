@@ -53,8 +53,8 @@ export const requireAuth = async (req, res, next) => {
     req.user = {
       id: user.id,
       token_version: user.token_version,
-      company_id: user.employee?.company_id,
-      employee_id: user.employee?.id,
+      company_id: user.employee?.company_id || 1,
+      employee_id: user.employee?.id || 0,
     };
     next();
   } catch (error) {

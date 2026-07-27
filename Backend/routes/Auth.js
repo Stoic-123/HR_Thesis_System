@@ -6,6 +6,7 @@ import {
   changePasswordController,
   forgotPasswordController,
   resetPasswordController,
+  updateUserProfileController,
 } from "../controller/Auth.js";
 import { requireAuth } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
@@ -22,6 +23,7 @@ const router = express.Router();
 router.post("/login", authRateLimiter, validate(loginSchema), employeeLoginController);
 router.post("/logout", requireAuth, employeeLogoutController);
 router.get("/getMe", requireAuth, getUserProfileController);
+router.put("/update-profile", requireAuth, updateUserProfileController);
 router.post("/change-password", requireAuth, validate(changePasswordSchema), changePasswordController);
 router.post("/forgot-password", authRateLimiter, validate(forgotPasswordSchema), forgotPasswordController);
 router.post("/reset-password", requireAuth, authRateLimiter, validate(resetPasswordSchema), resetPasswordController);

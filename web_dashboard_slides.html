@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sarana HR System - ស្លាយបណ្តុះបណ្តាល Web Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:ital,wght@0,300..700;1,300..700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+      --bg-card: rgba(30, 41, 59, 0.75);
+      --border-card: rgba(255, 255, 255, 0.12);
+      --accent-primary: #4f46e5;
+      --accent-secondary: #9333ea;
+      --accent-cyan: #06b6d4;
+      --accent-emerald: #10b981;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-sub: #cbd5e1;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Kantumruy Pro', 'Plus Jakarta Sans', sans-serif;
+      background: #0b0f19;
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background-image: 
+        radial-gradient(circle at 10% 20%, rgba(79, 70, 229, 0.18) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(147, 51, 234, 0.18) 0%, transparent 40%);
+    }
+
+    /* Top Navigation Header */
+    header {
+      padding: 16px 36px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-card);
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(16px);
+      z-index: 20;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-weight: 700;
+      font-size: 18px;
+    }
+
+    .brand-logo {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      box-shadow: 0 4px 16px rgba(79, 70, 229, 0.4);
+    }
+
+    .brand-text-main {
+      color: #ffffff;
+      font-weight: 700;
+    }
+
+    .brand-text-sub {
+      font-size: 13px;
+      color: var(--accent-cyan);
+      font-weight: 500;
+    }
+
+    .slide-counter {
+      font-family: 'JetBrains Mono', 'Kantumruy Pro', monospace;
+      font-size: 14px;
+      color: #a5b4fc;
+      background: rgba(79, 70, 229, 0.15);
+      padding: 6px 18px;
+      border-radius: 20px;
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      font-weight: 600;
+    }
+
+    /* Main Viewport & Slide Area */
+    .viewport {
+      flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 36px;
+    }
+
+    .slide {
+      position: absolute;
+      width: 100%;
+      max-width: 1120px;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(20px) scale(0.98);
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+
+    .slide.active {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0) scale(1);
+    }
+
+    /* Glassmorphism Slide Card */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 24px;
+      padding: 38px 44px;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+    }
+
+    .slide-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #38bdf8;
+      background: rgba(56, 189, 248, 0.12);
+      padding: 6px 16px;
+      border-radius: 20px;
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      width: fit-content;
+    }
+
+    h1 {
+      font-size: 38px;
+      font-weight: 700;
+      line-height: 1.35;
+      background: linear-gradient(135deg, #ffffff 40%, #c7d2fe 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    h2 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 1.4;
+    }
+
+    p.subtitle {
+      font-size: 16px;
+      color: var(--text-sub);
+      line-height: 1.7;
+      font-weight: 400;
+    }
+
+    /* Grids */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 22px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 20px;
+    }
+
+    /* Clean Card Boxes */
+    .box {
+      background: rgba(255, 255, 255, 0.035);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 18px;
+      padding: 22px 24px;
+      transition: all 0.25s ease;
+    }
+
+    .box:hover {
+      border-color: rgba(99, 102, 241, 0.45);
+      background: rgba(99, 102, 241, 0.07);
+      transform: translateY(-2px);
+    }
+
+    .box-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .box-desc {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.65;
+    }
+
+    .code-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      background: rgba(99, 102, 241, 0.22);
+      color: #a5b4fc;
+      padding: 3px 10px;
+      border-radius: 8px;
+      display: inline-block;
+      margin-top: 4px;
+      border: 1px solid rgba(99, 102, 241, 0.3);
+    }
+
+    /* Timeline & Steps */
+    .step-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .step-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      background: rgba(255, 255, 255, 0.03);
+      padding: 16px 20px;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .step-num {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      color: white;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+    }
+
+    .step-content h4 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 1.4;
+    }
+
+    .step-content p {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      line-height: 1.6;
+    }
+
+    /* Highlight Alert Box */
+    .alert-box {
+      background: rgba(79, 70, 229, 0.12);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      border-radius: 16px;
+      padding: 20px 24px;
+    }
+
+    .alert-title {
+      color: #818cf8;
+      font-weight: 700;
+      font-size: 16px;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Footer Navigation */
+    footer {
+      padding: 18px 36px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid var(--border-card);
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(16px);
+    }
+
+    .nav-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border-card);
+      color: white;
+      padding: 10px 26px;
+      border-radius: 14px;
+      font-family: 'Kantumruy Pro', sans-serif;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .nav-btn:hover:not(:disabled) {
+      background: var(--accent-primary);
+      border-color: var(--accent-primary);
+      box-shadow: 0 4px 16px rgba(79, 70, 229, 0.4);
+    }
+
+    .nav-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    .progress-bar {
+      height: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-primary), var(--accent-cyan));
+      width: 10%;
+      transition: width 0.35s ease;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="progress-bar">
+    <div class="progress-fill" id="progressFill"></div>
+  </div>
+
+  <header>
+    <div class="brand">
+      <div class="brand-logo">⚡</div>
+      <div>
+        <div class="brand-text-main">Sarana HR System</div>
+        <div class="brand-text-sub">ស្លាយបណ្តុះបណ្តាលផ្ទាំងគ្រប់គ្រង Web Dashboard</div>
+      </div>
+    </div>
+    <div class="slide-counter" id="slideCounter">ស្លាយទី ១ នៃ ១០</div>
+  </header>
+
+  <div class="viewport">
+
+    <!-- SLIDE 1 -->
+    <div class="slide card active" id="slide-1">
+      <div class="slide-tag">🚀 មគ្គុទ្ទេសក៍បណ្តុះបណ្តាល</div>
+      <h1>ប្រព័ន្ធគ្រប់គ្រងធនធានមនុស្ស Sarana HR<br>ការប្រើប្រាស់ Web Dashboard ស្ទាត់ជំនាញ ១០០%</h1>
+      <p class="subtitle">មគ្គុទ្ទេសក៍ណែនាំលម្អិត ជំហានដោយជំហាន សម្រាប់ការរៀបចំប្រព័ន្ធ ការគ្រប់គ្រងប្រតិបត្តិការប្រចាំថ្ងៃ ការអនុម័តច្បាប់ ប្រាក់ខែ និង AI ជំនួយការ។</p>
+      
+      <div class="grid-3" style="margin-top: 8px;">
+        <div class="box">
+          <div class="box-title">🏛️ ដំណាក់កាលទី ១: ការរៀបចំ</div>
+          <div class="box-desc">ការកំណត់ក្រុមហ៊ុន នាយកដ្ឋាន មុខតំណែង បុគ្គលិក និងការកំណត់សិទ្ធិ (Roles & Permissions)។</div>
+        </div>
+        <div class="box">
+          <div class="box-title">⏱️ ដំណាក់កាលទី ២: ប្រតិបត្តិការ</div>
+          <div class="box-desc">កាលវិភាគធ្វើការ ការកត់វត្តមាន ការអនុម័តច្បាប់ឈប់សម្រាក OT និងទ្រព្យសម្បត្តិក្រុមហ៊ុន។</div>
+        </div>
+        <div class="box">
+          <div class="box-title">🤖 ដំណាក់កាលទី ៣ & ៤: ប្រាក់ខែ & AI</div>
+          <div class="box-desc">ការគណនាប្រាក់បៀវត្សស្វ័យប្រវត្តិ វាយតម្លៃ KPI និងការប្រើប្រាស់ AI Chatbot ស្វ័យប្រវត្តិ។</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 2 -->
+    <div class="slide card" id="slide-2">
+      <div class="slide-tag">ដំណាក់កាលទី ១ • ជំហានទី ១</div>
+      <h2>ការចូលប្រព័ន្ធ ទម្រង់ក្រុមហ៊ុន & ការផ្លាស់ប្តូរភាសា</h2>
+      <p class="subtitle">របៀបដែលប្រព័ន្ធរៀបចំទម្រង់ចំណុចប្រទាក់ទៅតាមអត្តសញ្ញាណក្រុមហ៊ុន និងសិទ្ធិរបស់អ្នកប្រើប្រាស់។</p>
+
+      <div class="grid-2">
+        <div class="step-list">
+          <div class="step-item">
+            <div class="step-num">១</div>
+            <div class="step-content">
+              <h4>ការចូលប្រើប្រាស់ (System Login)</h4>
+              <p>ចូលតាមរយៈ <span class="code-badge">/login</span> ដោយវាយបញ្ចូល Email/Username និង ពាក្យសម្ងាត់។ ប្រព័ន្ធនឹងស្គាល់ក្រុមហ៊ុន និងតួនាទីរបស់អ្នកភ្លាមៗ។</p>
+            </div>
+          </div>
+          <div class="step-item">
+            <div class="step-num">២</div>
+            <div class="step-content">
+              <h4>ទម្រង់ក្រុមហ៊ុនស្វ័យប្រវត្តិ (Dynamic Branding)</h4>
+              <p>ប្រព័ន្ធផ្លាស់ប្តូរ ពណ៌ប្រធានបទ (Theme) និង និមិត្តសញ្ញា (Logo) ទៅតាមក្រុមហ៊ុនដែលអ្នកកំពុងគ្រប់គ្រង។</p>
+            </div>
+          </div>
+          <div class="step-item">
+            <div class="step-num">៣</div>
+            <div class="step-content">
+              <h4>ការផ្លាស់ប្តូរភាសា (Language Switcher)</h4>
+              <p>អាចផ្លាស់ប្តូររវាង **ភាសាខ្មែរ** និង **ភាសាអង់គ្លេស** បានយ៉ាងងាយស្រួលនៅលើរបារខាងលើ (Header)។</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="alert-box" style="display: flex; flex-direction: column; justify-content: center;">
+          <div class="alert-title">💡 ចំណុចសំខាន់ត្រូវពន្យល់៖</div>
+          <p class="subtitle" style="font-size: 15px; color: #e2e8f0; margin-top: 4px;">
+            របារបញ្ជាខាងឆ្វេង (Sidebar Menu) នឹងបង្ហាញតែមុខងារណាដែលអ្នកប្រើប្រាស់មានសិទ្ធិបញ្ជាប៉ុណ្ណោះ (ឧទាហរណ៍៖ សិទ្ធិអនុម័តច្បាប់ <span class="code-badge">leave:approve</span> ឬសិទ្ធិគ្រប់គ្រងប្រាក់ខែ <span class="code-badge">payroll:manage</span>)។
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 3 -->
+    <div class="slide card" id="slide-3">
+      <div class="slide-tag">ដំណាក់កាលទី ១ • ជំហានទី ២</div>
+      <h2>ការរៀបចំរចនាសម្ព័ន្ធអង្គភាព (Organization Hierarchy)</h2>
+      <p class="subtitle">បង្កើតរចនាសម្ព័ន្ធក្រុមហ៊ុន នាយកដ្ឋាន និងតួនាទីឱ្យបានរួចរាល់ មុនពេលបញ្ចូលទិន្នន័យបុគ្គលិក។</p>
+
+      <div class="grid-3">
+        <div class="box">
+          <div class="box-title">១. ព័ត៌មានក្រុមហ៊ុន</div>
+          <span class="code-badge">/dashboard/company</span>
+          <p class="box-desc" style="margin-top: 12px;">គ្រប់គ្រងឈ្មោះផ្លូវការរបស់ក្រុមហ៊ុន អាសយដ្ឋាន ព័ត៌មានពន្ធ និងការអាប់ឡូត Logo ក្រុមហ៊ុន។</p>
+        </div>
+
+        <div class="box">
+          <div class="box-title">២. នាយកដ្ឋាន (Departments)</div>
+          <span class="code-badge">/dashboard/department</span>
+          <p class="box-desc" style="margin-top: 12px;">បង្កើតផ្នែក/នាយកដ្ឋានក្នុងក្រុមហ៊ុន (ឧទាហរណ៍៖ ផ្នែករដ្ឋបាល HR, IT, ហិរញ្ញវត្ថុ, ទីផ្សារ)។</p>
+        </div>
+
+        <div class="box">
+          <div class="box-title">៣. មុខតំណែង (Positions)</div>
+          <span class="code-badge">/dashboard/position</span>
+          <p class="box-desc" style="margin-top: 12px;">កំណត់ឈ្មោះមុខតំណែងការងារដែលភ្ជាប់ជាមួយនាយកដ្ឋាននីមួយៗ (ឧទាហរណ៍៖ ប្រធានផ្នែក HR, អ្នកគណនេយ្យ)។</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 4 -->
+    <div class="slide card" id="slide-4">
+      <div class="slide-tag">ដំណាក់កាលទី ១ • ជំហានទី ៣</div>
+      <h2>ការគ្រប់គ្រងបុគ្គលិក & កំណត់សិទ្ធិ (People & Permissions)</h2>
+      <p class="subtitle">ការភ្ជាប់ប្រវត្តិរូបបុគ្គលិកទៅនឹងគណនីប្រើប្រាស់ប្រព័ន្ធ និងការបែងចែកសិទ្ធិបញ្ជា។</p>
+
+      <div class="step-list">
+        <div class="step-item">
+          <div class="step-num">ក</div>
+          <div class="step-content">
+            <h4>ការបញ្ចូលប្រវត្តិរូបបុគ្គលិក <span class="code-badge">/dashboard/employee</span></h4>
+            <p>បញ្ចូលព័ត៌មានបុគ្គលិក៖ ឈ្មោះពេញ, ថ្ងៃខែឆ្នាំកំណើត, អត្តសញ្ញាណប័ណ្ណ, លេខទូរស័ព្ទ, ប្រាក់ខែគោល, កាលបរិច្ឆេទចូលធ្វើការ និងការចាត់តាំងនាយកដ្ឋាន។</p>
+          </div>
+        </div>
+        <div class="step-item">
+          <div class="step-num">ខ</div>
+          <div class="step-content">
+            <h4>ការបង្កើតគណនីប្រើប្រាស់ <span class="code-badge">/dashboard/user</span></h4>
+            <p>បង្កើត Username និង Password សម្រាប់បុគ្គលិក ឬអ្នកគ្រប់គ្រងដើម្បីចូលប្រើប្រាស់ប្រព័ន្ធ។</p>
+          </div>
+        </div>
+        <div class="step-item">
+          <div class="step-num">គ</div>
+          <div class="step-content">
+            <h4>ការកំណត់តួនាទី និងសិទ្ធិ <span class="code-badge">/dashboard/role</span></h4>
+            <p>កំណត់តួនាទី (Super Admin, HR Manager, Department Head) និងបើកសិទ្ធិបញ្ជាលើប៊ូតុង ឬទំព័រផ្សេងៗក្នុង Dashboard។</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 5 -->
+    <div class="slide card" id="slide-5">
+      <div class="slide-tag">ដំណាក់កាលទី ២ • ជំហានទី ៤</div>
+      <h2>ការគ្រប់គ្រងវត្តមាន & វេនធ្វើការ (Time Attendance & Shifts)</h2>
+      <p class="subtitle">ការកំណត់កាលវិភាគធ្វើការ និងការពិនិត្យរបាយការណ៍វត្តមានជាក់ស្តែង។</p>
+
+      <div class="grid-2">
+        <div class="box">
+          <div class="box-title">⏱️ កាលវិភាគ/វេនធ្វើការ (Time Mode)</div>
+          <span class="code-badge">/dashboard/timemode</span>
+          <p class="box-desc" style="margin-top: 10px;">កំណត់ម៉ោងចូល-ចេញធ្វើការ standard (ឧទាហរណ៍៖ 08:00 - 17:00), ម៉ោងសម្រាក និងការអនុគ្រោះនាទីយឺត (Grace Period ឧទាហរណ៍ ១៥នាទី)។</p>
+        </div>
+
+        <div class="box">
+          <div class="box-title">📊 របាយការណ៍វត្តមាន (Attendance Reports)</div>
+          <span class="code-badge">/dashboard/time-attendance/report</span>
+          <p class="box-desc" style="margin-top: 10px;">ពិនិត្យមើលទិន្នន័យ ស្កេនចូល-ចេញប្រចាំថ្ងៃ, ភាពត្រឹមត្រូវនៃការស្កេនផ្ទៃមុខ, អត្រាមកយឺត និង ទីតាំង GPS លើផែនទី។</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 6 -->
+    <div class="slide card" id="slide-6">
+      <div class="slide-tag">ដំណាក់កាលទី ២ • ជំហានទី ៥</div>
+      <h2>ការអនុម័តច្បាប់ឈប់សម្រាក & ម៉ោងបន្ថែម OT</h2>
+      <p class="subtitle">លំហូរការងារពិនិត្យ និងអនុម័តសំណើច្បាប់ឈប់សម្រាក និងការធ្វើការបន្ថែមម៉ោង។</p>
+
+      <div class="grid-2">
+        <div class="box">
+          <div class="box-title">🏖️ សំណើច្បាប់ឈប់សម្រាក (Leave Requests)</div>
+          <span class="code-badge">/dashboard/leave</span>
+          <p class="box-desc" style="margin-top: 8px;">ពិនិត្យសំណើច្បាប់ (ជំងឺ, ច្បាប់ប្រចាំឆ្នាំ, ច្បាប់សម្រាលកូន), ពិនិត្យលិខិតបញ្ជាក់គ្រូពេទ្យ, ចុចអនុម័ត ឬបដិសេធ ហើយប្រព័ន្ធនឹង Update ប្រតិទិនក្រុមហ៊ុនស្វ័យប្រវត្តិ។</p>
+        </div>
+
+        <div class="box">
+          <div class="box-title">⌛ សំណើធ្វើការបន្ថែមម៉ោង (Overtime OT)</div>
+          <span class="code-badge">/dashboard/overtime</span>
+          <p class="box-desc" style="margin-top: 8px;">ពិនិត្យម៉ោង OT ដែលបុគ្គលិកបានស្នើ។ ម៉ោង OT ដែលបានអនុម័តរួច នឹងត្រូវរត់ចូលប្រព័ន្ធគណនាប្រាក់ខែចុងខែដោយស្វ័យប្រវត្តិ។</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 7 -->
+    <div class="slide card" id="slide-7">
+      <div class="slide-tag">ដំណាក់កាលទី ២ • ជំហានទី ៦</div>
+      <h2>ការគ្រប់គ្រងទ្រព្យសម្បត្តិក្រុមហ៊ុន (Asset Management)</h2>
+      <p class="subtitle">ការតាមដានសម្ភារៈ និងឧបករណ៍ប្រើប្រាស់ដែលបានប្រគល់ជូនបុគ្គលិក។</p>
+
+      <div class="step-list">
+        <div class="step-item">
+          <div class="step-num">១</div>
+          <div class="step-content">
+            <h4>ពិនិត្យសំណើឧបករណ៍ <span class="code-badge">/dashboard/asset</span></h4>
+            <p>បុគ្គលិកផ្ញើសំណើសុំឧបករណ៍ប្រើប្រាស់ (ឧទាហរណ៍៖ Laptop, អេក្រង់ Monitor) តាមរយៈ Mobile App។</p>
+          </div>
+        </div>
+        <div class="step-item">
+          <div class="step-num">២</div>
+          <div class="step-content">
+            <h4>ការចាត់តាំងសម្ភារៈ (Asset Assignment)</h4>
+            <p>ផ្នែក HR/IT ជ្រើសរើស លេខស៊េរី (Serial Number) សម្ភារៈជាក់ស្តែងពីក្នុងស្តុក ហើយប្រគល់ជូនបុគ្គលិក។</p>
+          </div>
+        </div>
+        <div class="step-item">
+          <div class="step-num">៣</div>
+          <div class="step-content">
+            <h4>ការតាមដានស្ថានភាពសម្ភារៈ</h4>
+            <p>តាមដានស្ថានភាព៖ <i>កំពុងប្រើប្រាស់ (Assigned)</i>, <i>កំពុងជួសជុល (In Repair)</i>, ឬ <i>បានប្រគល់ជូនវិញ (Returned)</i>។</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 8 -->
+    <div class="slide card" id="slide-8">
+      <div class="slide-tag">ដំណាក់កាលទី ៣ • ជំហានទី ៧</div>
+      <h2>ប្រព័ន្ធគណនាប្រាក់បៀវត្សស្វ័យប្រវត្តិ (Payroll Engine)</h2>
+      <p class="subtitle">ការគណនាប្រាក់ខែចុងខែដោយស្វ័យប្រវត្តិ ផ្អែកលើទិន្នន័យវត្តមាន ម៉ោង OT និងច្បាប់ឈប់សម្រាក។</p>
+
+      <div class="grid-3">
+        <div class="box">
+          <div class="box-title">១. ជុំទូទាត់ប្រាក់ខែ</div>
+          <span class="code-badge">/dashboard/payroll/periods</span>
+          <p class="box-desc" style="margin-top: 8px;">កំណត់ខែទូទាត់ប្រាក់ខែ (ឧទាហរណ៍៖ ខែកក្កដា ឆ្នាំ២០២៦)។</p>
+        </div>
+        <div class="box">
+          <div class="box-title">២. គណនាស្វ័យប្រវត្តិ</div>
+          <span class="code-badge">/dashboard/payroll/review</span>
+          <p class="box-desc" style="margin-top: 8px;">ប្រាក់ខែគោល + ប្រាក់បន្ថែម OT - កាត់ថ្ងៃឈប់គ្មានច្បាប់ = ប្រាក់ខែសុទ្ធ (Net Pay)។</p>
+        </div>
+        <div class="box">
+          <div class="box-title">៣. ចេញប័ណ្ណប្រាក់ខែ</div>
+          <span class="code-badge">/dashboard/payroll/reports</span>
+          <p class="box-desc" style="margin-top: 8px;">បង្កើត Payslips និង ទាញយករបាយការណ៍ធនាគារ (Bank Transfer Sheet)។</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 9 -->
+    <div class="slide card" id="slide-9">
+      <div class="slide-tag">ដំណាក់កាលទី ៤ • ជំហានទី ៨</div>
+      <h2>ជំនួយការ AI ស្វ័យប្រវត្តិ ("HR System Master")</h2>
+      <p class="subtitle">AI ឆ្លាតវៃដែលអាចប្រតិបត្តិការងារក្នុងប្រព័ន្ធជំនួសអ្នកតាមរយៈការសន្ទនាធម្មតា។</p>
+
+      <div class="grid-2">
+        <div class="box">
+          <div class="box-title">💬 ការបញ្ជាតាមរយៈការ Chat</div>
+          <p class="box-desc" style="margin-top: 8px;">អ្នកអាចវាយបញ្ជាជាភាសាធម្មតាក្នុងផ្ទាំង HRChatbot៖</p>
+          <ul style="margin-top: 10px; margin-left: 18px; color: #a5b4fc; font-size: 14px; line-height: 1.8;">
+            <li><i>"ផ្លាស់ប្តូរបុគ្គលិក សុខ ទៅនាយកដ្ឋាន Marketing"</i></li>
+            <li><i>"បង្កើតមុខតំណែងថ្មីឈ្មោះ Senior Developer"</i></li>
+          </ul>
+        </div>
+
+        <div class="box">
+          <div class="box-title">🛡️ សុវត្ថិភាព & កំណត់ត្រាសកម្មភាព</div>
+          <p class="box-desc" style="margin-top: 8px;">
+            AI នឹងពិនិត្យសិទ្ធិមុនធ្វើសកម្មភាព ការពារការលុបទិន្នន័យផ្តេសផ្តាស និងកត់ត្រារាល់សកម្មភាពទាំងអស់ទុកក្នុង 
+            <span class="code-badge">/dashboard/audit-log</span> ដើម្បីតម្លាភាព។
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 10 -->
+    <div class="slide card" id="slide-10">
+      <div class="slide-tag">🎓 ការប្រឡងអនុវត្តជាក់ស្តែង</div>
+      <h2>លំហាត់អនុវត្តស្ទាត់ជំនាញ ១០០%</h2>
+      <p class="subtitle">ឱ្យមិត្តភក្តិរបស់អ្នកអនុវត្តលំហាត់ ៥ ជំហាននេះនៅលើ Web Dashboard ដើម្បីធានាការយល់ដឹង ១០០%៖</p>
+
+      <div class="step-list">
+        <div class="step-item">
+          <div class="step-num">១</div>
+          <div class="step-content">
+            <h4>លំហាត់ទី ១: រចនាសម្ព័ន្ធ</h4>
+            <p>បង្កើតនាយកដ្ឋានថ្មីមួយឈ្មោះ <b>"Customer Success"</b> និងមុខតំណែង <b>"Support Lead"</b>។</p>
+          </div>
+        </div>
+        <div class="step-item">
+          <div class="step-num">២</div>
+          <div class="step-content">
+            <h4>លំហាត់ទី ២: បញ្ចូលបុគ្គលិក</h4>
+            <p>បញ្ចូលបុគ្គលិកសាកល្បងថ្មីម្នាក់ ចាត់តាំងចូល Customer Success និងកំណត់ Time Mode វេនធ្វើការ។</p>
+          </div>
+        </div>
+        <div class="step-item">
+          <div class="step-num">៣</div>
+          <div class="step-content">
+            <h4>លំហាត់ទី ៣: អនុម័តច្បាប់</h4>
+            <p>ចូលទៅកាន់ <b>/dashboard/leave</b> ហើយចុចអនុម័តសំណើច្បាប់ឈប់សម្រាកសាកល្បង។</p>
+          </div>
+        </div>
+        <div class="step-item">
+          <div class="step-num">៤</div>
+          <div class="step-content">
+            <h4>លំហាត់ទី ៤: ប្រើប្រាស់ AI</h4>
+            <p>ប្រាប់ HRChatbot ឱ្យផ្លាស់ប្តូរមុខតំណែងបុគ្គលិកសាកល្បងនោះ។</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    <button class="nav-btn" id="prevBtn" onclick="changeSlide(-1)">← ថយក្រោយ</button>
+    <div style="font-size: 13.5px; color: var(--text-sub);">ប្រើប្រាស់ <b>ព្រួញឆ្វេង / ព្រួញស្តាំ ⬅️ ➡️</b> លើក្តារចុច ឬ ប៊ូតុងដើម្បីផ្លាស់ប្តូរស្លាយ</div>
+    <button class="nav-btn" id="nextBtn" onclick="changeSlide(1)">បន្ទាប់ →</button>
+  </footer>
+
+  <script>
+    let currentSlide = 1;
+    const totalSlides = 10;
+
+    const khmerNumbers = ['០', '១', '២', '៣', '៤', '៥', '៦', '៧', '៨', '៩', '១០'];
+
+    function getKhmerNum(num) {
+      return khmerNumbers[num] || num;
+    }
+
+    function updateSlide() {
+      document.querySelectorAll('.slide').forEach((slide, index) => {
+        if (index + 1 === currentSlide) {
+          slide.classList.add('active');
+        } else {
+          slide.classList.remove('active');
+        }
+      });
+
+      document.getElementById('slideCounter').innerText = `ស្លាយទី ${getKhmerNum(currentSlide)} នៃ ${getKhmerNum(totalSlides)}`;
+      document.getElementById('prevBtn').disabled = currentSlide === 1;
+      document.getElementById('nextBtn').disabled = currentSlide === totalSlides;
+      
+      const progressPercent = (currentSlide / totalSlides) * 100;
+      document.getElementById('progressFill').style.width = `${progressPercent}%`;
+    }
+
+    function changeSlide(direction) {
+      currentSlide += direction;
+      if (currentSlide < 1) currentSlide = 1;
+      if (currentSlide > totalSlides) currentSlide = totalSlides;
+      updateSlide();
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ') {
+        changeSlide(1);
+      } else if (e.key === 'ArrowLeft') {
+        changeSlide(-1);
+      }
+    });
+
+    updateSlide();
+  </script>
+</body>
+</html>

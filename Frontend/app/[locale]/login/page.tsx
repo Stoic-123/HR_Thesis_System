@@ -70,11 +70,17 @@ const LoginPage = () => {
       return res.data;
     },
 
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       toast.success("Login successful");
-
-      router.push("/dashboard");
-      router.refresh();
+      if (data?.token) {
+        document.cookie = `auth_token=${data.token}; path=/; max-age=86400; SameSite=Lax`;
+        try {
+          localStorage.setItem("auth_token", data.token);
+        } catch (e) {
+          console.error("Failed to set localStorage token", e);
+        }
+      }
+      window.location.href = "/dashboard";
     },
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

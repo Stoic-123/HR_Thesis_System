@@ -10,8 +10,9 @@ import {
   InvalidateToken,
   changePassword,
   forgotPassword,
-  resetPasswordToDefault,
 } from "../service/Auth.js";
+import { validateFile } from "../utils/fileValidation.js";
+import { uploadToStorage } from "../service/Storage.js";
 dotenv.config();
 
 const generateToken = (id, username, company_id, token_version) => {
@@ -41,10 +42,19 @@ export const employeeLoginController = async (req, res) => {
     }
 
     if (!existingEmployee.employee_id) {
-      return res.status(400).json({
-        result: false,
-        message: "This user is not associated with an employee record..!",
+      const newEmp = await prisma.employee.create({
+        data: {
+          first_name: existingEmployee.username,
+          last_name: "",
+          company_id: 1,
+          is_active: "active",
+        },
       });
+      await prisma.user.update({
+        where: { id: existingEmployee.id },
+        data: { employee_id: newEmp.id },
+      });
+      existingEmployee.employee_id = newEmp.id;
     }
 
     const company_id = await getCompanyID(existingEmployee.employee_id);
@@ -238,5 +248,85 @@ export const resetPasswordController = async (req, res) => {
   } catch (error) {
     console.error(error.message);
     res.status(500).json({ result: false, message: error.message });
+  }
+};
+
+export const updateUserProfileController = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { first_name, last_name, username } = req.body;
+    let profile_path = null;
+
+    if (req.files && (req.files.profile_path || req.files.avatar || req.files.file)) {
+      const fileObj = req.files.profile_path || req.files.avatar || req.files.file;
+      const fileCheck = validateFile(fileObj, "image");
+      if (!fileCheck.isValid) {
+        return res.status(400).json({ result: false, message: fileCheck.message });
+      }
+      const profileName = Date.now() + "_" + fileObj.name;
+      profile_path = await uploadToStorage(fileObj.data, "profiles", profileName, fileObj.mimetype);
+    }
+
+    const currentUser = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { employee: true },
+    });
+
+    if (!currentUser) {
+      return res.status(404).json({ result: false, message: "User not found" });
+    }
+
+    // Handle username update if provided
+    if (username && username.trim() && username.trim() !== currentUser.username) {
+      const cleanUsername = username.trim();
+      const existingUser = await prisma.user.findUnique({ where: { username: cleanUsername } });
+      if (existingUser && existingUser.id !== userId) {
+        return res.status(400).json({ result: false, message: "Username is already taken" });
+      }
+      await prisma.user.update({
+        where: { id: userId },
+        data: { username: cleanUsername },
+      });
+    }
+
+    // Handle employee update or creation
+    if (currentUser.employee_id && currentUser.employee) {
+      const empUpdate = {};
+      if (first_name !== undefined) empUpdate.first_name = first_name.trim();
+      if (last_name !== undefined) empUpdate.last_name = last_name.trim();
+      if (profile_path) empUpdate.profile_path = profile_path;
+
+      if (Object.keys(empUpdate).length > 0) {
+        await prisma.employee.update({
+          where: { id: currentUser.employee_id },
+          data: empUpdate,
+        });
+      }
+    } else {
+      // Create employee record for admin user if missing
+      const companyId = req.user.company_id || currentUser.company_id || 1;
+      const newEmp = await prisma.employee.create({
+        data: {
+          first_name: first_name ? first_name.trim() : (currentUser.username || "Admin"),
+          last_name: last_name ? last_name.trim() : "",
+          company_id: parseInt(companyId),
+          profile_path: profile_path || null,
+          is_active: "active",
+        },
+      });
+
+      await prisma.user.update({
+        where: { id: userId },
+        data: { employee_id: newEmp.id },
+      });
+    }
+
+    return res.status(200).json({
+      result: true,
+      message: "Profile updated successfully",
+    });
+  } catch (error) {
+    console.error("Error updating user profile:", error);
+    return res.status(500).json({ result: false, message: error.message });
   }
 };

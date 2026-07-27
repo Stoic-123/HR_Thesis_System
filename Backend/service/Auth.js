@@ -222,31 +222,47 @@ export const getMe = async (user_id) => {
       id: getMeResult.id,
       username: getMeResult.username,
 
-      employee: {
-        id: getMeResult.employee.id,
-        company_id: getMeResult.employee.company_id,
-        first_name: getMeResult.employee.first_name,
-        last_name: getMeResult.employee.last_name,
-        email: getMeResult.employee.email,
-        age: getMeResult.employee.age,
-        gender: getMeResult.employee.gender,
-        role: getMeResult.employee.role?.name,
-        permissions: getMeResult.employee.role?.rolebaseaccess
-          ? getMeResult.employee.role.rolebaseaccess.map((p) => p.path)
-          : [],
-        department:
-          getMeResult.employee.department_employee_department_idTodepartment
-            ?.name,
-
-        position: getMeResult.employee.positions?.name,
-        profile_path: getMeResult.employee.profile_path,
-        company: getMeResult.employee.company,
-        location: getMeResult.employee.employeelocation.map(
-          (loc) => loc.location.name,
-        ),
-        is_manager: managedDepartments.length > 0,
-        managed_departments: managedDepartments,
-      },
+      employee: getMeResult.employee
+        ? {
+            id: getMeResult.employee.id,
+            company_id: getMeResult.employee.company_id,
+            first_name: getMeResult.employee.first_name,
+            last_name: getMeResult.employee.last_name,
+            email: getMeResult.employee.email,
+            age: getMeResult.employee.age,
+            gender: getMeResult.employee.gender,
+            role: getMeResult.employee.role?.name || "Admin",
+            permissions: getMeResult.employee.role?.rolebaseaccess
+              ? getMeResult.employee.role.rolebaseaccess.map((p) => p.path)
+              : [],
+            department:
+              getMeResult.employee.department_employee_department_idTodepartment
+                ?.name,
+            position: getMeResult.employee.positions?.name,
+            profile_path: getMeResult.employee.profile_path,
+            company: getMeResult.employee.company,
+            location: getMeResult.employee.employeelocation
+              ? getMeResult.employee.employeelocation.map((loc) => loc.location.name)
+              : [],
+            is_manager: managedDepartments.length > 0,
+            managed_departments: managedDepartments,
+          }
+        : {
+            id: 0,
+            company_id: 1,
+            first_name: getMeResult.username,
+            last_name: "",
+            email: "",
+            role: "Admin",
+            permissions: ["*"],
+            department: "Administration",
+            position: "Administrator",
+            profile_path: null,
+            company: null,
+            location: [],
+            is_manager: false,
+            managed_departments: [],
+          },
     };
     return formattedUser;
   } catch (error) {

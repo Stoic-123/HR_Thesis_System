@@ -214,7 +214,7 @@ export function HRChatbot() {
   return (
     <Card 
       className={cn(
-        "fixed right-6 bottom-6 shadow-2xl border-white/20 transition-all duration-300 z-50 overflow-hidden p-0 py-0 gap-0 flex flex-col",
+        "fixed right-6 bottom-6 bg-white opacity-100 shadow-2xl border border-gray-200 transition-all duration-300 z-50 overflow-hidden p-0 py-0 gap-0 flex flex-col",
         isMinimized ? "w-72 h-[68px] rounded-2xl" : "w-96 h-[500px] rounded-3xl"
       )}
     >
@@ -258,7 +258,7 @@ export function HRChatbot() {
         <>
           <CardContent 
             ref={scrollRef}
-            className="p-4 overflow-y-auto space-y-4 bg-zinc-50/50 flex-1"
+            className="p-4 overflow-y-auto space-y-4 bg-white flex-1"
           >
             {messages.map((msg, i) => (
               <div 
@@ -286,6 +286,27 @@ export function HRChatbot() {
               <div className="flex items-center gap-2 text-muted-foreground italic">
                 <Loader2 className="size-4 animate-spin" />
                 <span className="text-xs">AI is thinking...</span>
+              </div>
+            )}
+            {messages.length <= 2 && !isLoading && (
+              <div className="flex flex-wrap gap-1.5 pt-2">
+                {[
+                  "Who is absent today?",
+                  "Show department headcount",
+                  "Pending leave requests",
+                  "Available company assets"
+                ].map((chip, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => {
+                      setMessage(chip);
+                    }}
+                    className="text-[11px] bg-primary/10 hover:bg-primary/20 text-primary px-2.5 py-1 rounded-full border border-primary/20 transition-all font-medium"
+                  >
+                    ✨ {chip}
+                  </button>
+                ))}
               </div>
             )}
           </CardContent>

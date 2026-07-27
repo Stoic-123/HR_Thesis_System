@@ -374,7 +374,7 @@ export default function AnnouncementPage() {
               <Plus className="h-4.5 w-4.5" /> New Announcement
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl p-6 custom-scrollbar bg-white/95 backdrop-blur-md">
+          <DialogContent className="sm:max-w-3xl lg:max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl p-6 custom-scrollbar bg-white/95 backdrop-blur-md">
             <DialogHeader>
               <DialogTitle className="text-2xl font-bold flex items-center gap-2">
                 <Plus className="h-5 w-5 text-primary" /> Create Announcement
@@ -393,7 +393,7 @@ export default function AnnouncementPage() {
 
       {/* Edit Dialog */}
       <Dialog open={!!editAnn} onOpenChange={(open) => { if (!open) setEditAnn(null); }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl p-6 custom-scrollbar bg-white/95 backdrop-blur-md">
+        <DialogContent className="sm:max-w-3xl lg:max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl p-6 custom-scrollbar bg-white/95 backdrop-blur-md">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold flex items-center gap-2">
               <Pencil className="h-5 w-5 text-primary" /> Edit Announcement

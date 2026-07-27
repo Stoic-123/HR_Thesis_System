@@ -100,6 +100,17 @@
     "searchBtn": "ស្វែងរក",
     "navigating": "កំពុងទៅកាន់ទំព័រដែលសមស្រប...",
     "userProfile": "ប្រវត្តិអ្នកប្រើប្រាស់",
+    "editProfile": "កែប្រែប្រវត្តិរូប",
+    "editProfileDesc": "ធ្វើបច្ចុប្បន្នភាពឈ្មោះ និង រូបថតប្រវត្តិរូប",
+    "editProfileTitle": "កែប្រែប្រវត្តិរូប",
+    "editProfileHint": "សូមធ្វើបច្ចុប្បន្នភាពព័ត៌មានផ្ទាល់ខ្លួន និង រូបថតនៅខាងក្រោម។",
+    "firstName": "នាមខ្លួន (First Name)",
+    "lastName": "គោត្តនាម (Last Name)",
+    "username": "ឈ្មោះគណនី (Username)",
+    "profilePhoto": "រូបថតប្រវត្តិរូប",
+    "uploadPhoto": "ផ្ទុករូបថត",
+    "saveChanges": "រក្សាទុកការផ្លាស់ប្ដូរ",
+    "saving": "កំពុងរក្សាទុក...",
     "changePassword": "ផ្លាស់ប្ដូរពាក្យសម្ងាត់",
     "changePasswordDesc": "ផ្លាស់ប្ដូរពាក្យសម្ងាត់របស់អ្នក",
     "changePasswordTitle": "ផ្លាស់ប្ដូរពាក្យសម្ងាត់",
@@ -636,7 +647,8 @@
     "dateRange": "កាលបរិច្ឆេទ",
     "employee": "បុគ្គលិក",
     "department": "នាយកដ្ឋាន",
-    "all": "ទាំងអស់"
+    "all": "ទាំងអស់",
+    "missed": "មិនបានស្កេន"
   },
   "timesheet": {
     "title": "កាលវិភាគម៉ោង",

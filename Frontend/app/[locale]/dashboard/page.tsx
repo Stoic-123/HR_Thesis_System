@@ -10,7 +10,11 @@ import {
   ClipboardCheck,
   UserMinus,
   Users,
+  Download,
+  Printer,
 } from "lucide-react";
+import { exportToCSV } from "@/lib/exportUtils";
+import { exportReportToPDF } from "@/lib/pdf-export";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -332,14 +336,78 @@ const DashboardPage = () => {
         </div>
 
         <Card className="xl:col-span-12">
-          <CardHeader className="flex-row items-center justify-between">
-            <CardTitle>Recent Employees</CardTitle>
-            <Badge className="rounded-full bg-primary/10 text-primary">
-              Latest
-            </Badge>
+          <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
+            <div>
+              <CardTitle>Recent Employees</CardTitle>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const cols = [
+                    { header: "Name", key: "full_name" },
+                    { header: "Position", key: "position_name" },
+                    { header: "Email", key: "email" },
+                    { header: "Status", key: "status" },
+                  ];
+                  const rows = (employeesRes?.data || []).map((e: any) => ({
+                    full_name: e.full_name,
+                    position_name: e.position_name || "N/A",
+                    email: e.email || "N/A",
+                    status: e.is_active || "Active",
+                  }));
+                  exportToCSV("Employees_List", cols, rows);
+                }}
+                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 shadow-sm transition-all cursor-pointer"
+              >
+                <Download className="size-3.5 text-emerald-600" /> Export Excel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const apiBaseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+                  const companyLogo = user?.employee?.company?.logo_path
+                    ? (user.employee.company.logo_path.startsWith("http")
+                        ? user.employee.company.logo_path
+                        : `${apiBaseURL}${user.employee.company.logo_path}`)
+                    : "";
+                  const userFullName = user?.employee ? `${user.employee.first_name} ${user.employee.last_name}` : "";
+
+                  exportReportToPDF({
+                    titleKh: "របាយការណ៍បញ្ជីឈ្មោះបុគ្គលិក",
+                    titleEn: "Employee List Report",
+                    companyName: user?.employee?.company?.name || "ក្រុមហ៊ុន សារណៈ",
+                    companyLogo,
+                    orientation: "portrait",
+                    metadata: [
+                      { labelKh: "កាលបរិច្ឆេទ", labelEn: "Date", value: new Date().toLocaleDateString("km-KH", { year: "numeric", month: "long", day: "numeric" }) },
+                      { labelKh: "រៀបចំដោយ", labelEn: "Prepared By", value: userFullName || "រដ្ឋបាល / Admin" }
+                    ],
+                    tableHeaders: [
+                      { kh: "ឈ្មោះបុគ្គលិក", en: "Employee Name" },
+                      { kh: "តួនាទី / ផ្នែក", en: "Position / Department" },
+                      { kh: "អ៊ីមែល", en: "Email" },
+                      { kh: "ស្ថានភាព", en: "Status", align: "center" }
+                    ],
+                    tableRows: (employeesRes?.data || []).map((emp: any) => ({
+                      cells: [
+                        { text: `<b>${emp.full_name || (emp.first_name + ' ' + (emp.last_name || ''))}</b>` },
+                        { text: emp.position_name || "N/A" },
+                        { text: emp.email || "N/A" },
+                        { text: `<span class="text-emerald font-semibold">${emp.is_active || 'Active'}</span>`, align: "center" }
+                      ]
+                    }))
+                  });
+                }}
+                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 shadow-sm transition-all cursor-pointer"
+              >
+                <Printer className="size-3.5 text-blue-600" /> Print PDF
+              </button>
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="w-full overflow-x-auto">
+            {/* Desktop Table View */}
+            <div className="hidden md:block w-full overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-white/35">
@@ -391,7 +459,7 @@ const DashboardPage = () => {
                       </Badge>
                       </td>
                       <td className="px-4 py-3">
-                      <button className="rounded-xl bg-muted/60 px-3 py-1.5 text-xs font-semibold text-foreground/80 hover:bg-muted">
+                      <button className="rounded-xl bg-muted/60 px-3 py-1.5 text-xs font-semibold text-foreground/80 hover:bg-muted cursor-pointer">
                         {tc("view")}
                       </button>
                       </td>
@@ -406,6 +474,35 @@ const DashboardPage = () => {
                   )}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile Card Grid View */}
+            <div className="grid grid-cols-1 gap-3 md:hidden">
+              {employeesRes?.data?.slice(0, 5).map((row: any) => (
+                <div key={row.id || row.full_name} className="p-3.5 rounded-2xl border bg-card/60 space-y-2.5 shadow-sm">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-xs font-semibold overflow-hidden">
+                        {row.profile_path ? (
+                          <img src={`${process.env.NEXT_PUBLIC_API_URL}${row.profile_path}`} className="w-full h-full object-cover" alt="" />
+                        ) : (
+                          row.full_name?.split(" ").slice(0, 2).map((s: string) => s[0]).join("")
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-sm">{row.full_name}</p>
+                        <p className="text-xs text-muted-foreground">{row.position_name || "No Position"}</p>
+                      </div>
+                    </div>
+                    <Badge className="rounded-full bg-emerald-50 text-emerald-700 text-[10px]">
+                      Active
+                    </Badge>
+                  </div>
+                  <div className="text-xs text-muted-foreground truncate pt-1 border-t">
+                    ✉️ {row.email || "No email"}
+                  </div>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>

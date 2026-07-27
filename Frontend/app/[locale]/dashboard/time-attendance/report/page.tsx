@@ -253,8 +253,8 @@ const TimeAttendanceReportPage = () => {
         const scansCells = timeModes.length > 0
           ? timeModes.map(tm => {
               const scan = row.scans?.[tm.id];
-              let scanText = "--:--";
-              let colorClass = "text-gray";
+              let scanText = "Missed";
+              let colorClass = "text-rose";
               if (scan) {
                 if (scan.late_minutes && scan.late_minutes > 0) {
                   scanText = `${scan.time} <span style="font-size: 7.5pt; font-weight: normal; color: #ef4444;">(${formatLateMinutes(scan.late_minutes)})</span>`;
@@ -275,8 +275,18 @@ const TimeAttendanceReportPage = () => {
               };
             })
           : [
-              { text: `<span class="text-emerald font-mono">${row.checkIn || "--:--"}</span>`, align: "center" as const },
-              { text: `<span class="text-rose font-mono">${row.checkOut || "--:--"}</span>`, align: "center" as const }
+              {
+                text: (row.checkIn && row.checkIn !== "--:--" && row.checkIn !== "Missed")
+                  ? `<span class="text-emerald font-mono">${row.checkIn}</span>`
+                  : `<span class="text-rose font-mono">Missed</span>`,
+                align: "center" as const
+              },
+              {
+                text: (row.checkOut && row.checkOut !== "--:--" && row.checkOut !== "Missed")
+                  ? `<span class="text-rose font-mono">${row.checkOut}</span>`
+                  : `<span class="text-rose font-mono">Missed</span>`,
+                align: "center" as const
+              }
             ];
 
         const statusLabel = row.status === "present" ? "មកទាន់ពេល" : row.status === "late" ? "យឺតយ៉ាវ" : "ចេញមុន";
@@ -331,22 +341,32 @@ const TimeAttendanceReportPage = () => {
       title: t("todayRecords"),
       value: loading ? "…" : String(summary?.totalCheckIns ?? 0),
       icon: Fingerprint,
-      iconBg: "bg-blue-100 text-blue-600",
+      iconBg: "bg-blue-100 text-blue-600 dark:bg-blue-950 dark:text-blue-400",
       accent: "from-blue-500/10 to-transparent",
     },
     {
       title: t("onTimeRate"),
       value: loading ? "…" : `${summary?.onTimeRate ?? 0}%`,
       icon: UserCheck,
-      iconBg: "bg-emerald-100 text-emerald-600",
+      iconBg: "bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400",
       accent: "from-emerald-500/10 to-transparent",
     },
     {
       title: t("lateEmployees"),
       value: loading ? "…" : String(summary?.lateCount ?? 0),
       icon: Clock3,
-      iconBg: "bg-amber-100 text-amber-600",
+      iconBg: "bg-amber-100 text-amber-600 dark:bg-amber-950 dark:text-amber-400",
       accent: "from-amber-500/10 to-transparent",
+    },
+    {
+      title: "Missed Scans",
+      value: loading ? "…" : String(rows.reduce((acc, r) => {
+        if (!r.scans) return acc;
+        return acc + Object.values(r.scans).filter((s: any) => !s || !s.time || s.time === "--:--").length;
+      }, 0)),
+      icon: Clock3,
+      iconBg: "bg-rose-100 text-rose-600 dark:bg-rose-950 dark:text-rose-400",
+      accent: "from-rose-500/10 to-transparent",
     },
   ];
 
@@ -442,7 +462,7 @@ const TimeAttendanceReportPage = () => {
         </div>
       </div>
 
-      <div className="grid gap-5 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((s) => (
           <Card
             key={s.title}
@@ -451,7 +471,7 @@ const TimeAttendanceReportPage = () => {
             <div
               className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${s.accent}`}
             />
-            <CardContent className="relative flex items-center gap-4 py-6 pl-6">
+            <CardContent className="relative flex items-center gap-4 py-5 pl-5">
               <div className={`rounded-2xl p-3 ${s.iconBg}`}>
                 <s.icon className="size-5" />
               </div>
@@ -559,8 +579,8 @@ const TimeAttendanceReportPage = () => {
                         {timeModes.length > 0 ? (
                           timeModes.map((tm) => {
                             const scan = row.scans?.[tm.id];
-                            let scanText = "--:--";
-                            let textClass = "text-muted-foreground";
+                            let scanText = t("missed") || "Missed";
+                            let textClass = "text-red-500 font-semibold";
                             
                             if (scan) {
                               if (scan.late_minutes && scan.late_minutes > 0) {
@@ -593,17 +613,31 @@ const TimeAttendanceReportPage = () => {
                         ) : (
                           <>
                             <td className="py-3.5 px-4">
-                              <span className="inline-flex items-center gap-1.5 font-mono text-sm tabular-nums text-emerald-500">
-                                <Clock3 className="size-3.5 text-emerald-500" />
-                                {row.checkIn}
-                              </span>
+                              {(!row.checkIn || row.checkIn === "--:--" || row.checkIn === "Missed") ? (
+                                <span className="inline-flex items-center gap-1.5 font-mono text-sm tabular-nums text-red-500 font-semibold">
+                                  <Clock3 className="size-3.5 text-red-500" />
+                                  {t("missed") || "Missed"}
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1.5 font-mono text-sm tabular-nums text-emerald-500 font-medium">
+                                  <Clock3 className="size-3.5 text-emerald-500" />
+                                  {row.checkIn}
+                                </span>
+                              )}
                             </td>
 
                             <td className="py-3.5 px-4">
-                              <span className="inline-flex items-center gap-1.5 font-mono text-sm tabular-nums text-rose-400">
-                                <Clock3 className="size-3.5 text-rose-400" />
-                                {row.checkOut}
-                              </span>
+                              {(!row.checkOut || row.checkOut === "--:--" || row.checkOut === "Missed") ? (
+                                <span className="inline-flex items-center gap-1.5 font-mono text-sm tabular-nums text-red-500 font-semibold">
+                                  <Clock3 className="size-3.5 text-red-500" />
+                                  {t("missed") || "Missed"}
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1.5 font-mono text-sm tabular-nums text-rose-400 font-medium">
+                                  <Clock3 className="size-3.5 text-rose-400" />
+                                  {row.checkOut}
+                                </span>
+                              )}
                             </td>
                           </>
                         )}

@@ -6,7 +6,6 @@ import { Sidebar } from "@/components/Sidebar";
 import { NotificationCenter } from "@/components/NotificationCenter";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { useMutation } from "@tanstack/react-query";
 import { useRouter, usePathname } from "@/src/i18n/routing";
 import { api } from "@/lib/api";
 import { KeyRound } from "lucide-react";
@@ -30,7 +29,11 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
-import { changePassword as changePasswordApi } from "@/services/auth.services";
+import {
+  changePassword as changePasswordApi,
+  updateProfile as updateProfileApi,
+} from "@/services/auth.services";
+import { Label } from "@/components/ui/label";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,7 +46,8 @@ import {
   AvatarFallback,
   AvatarImage,
 } from "@/components/ui/avatar";
-import { Bell, Search, Loader2, PanelLeft, ShieldAlert } from "lucide-react";
+import { Bell, Search, Loader2, PanelLeft, ShieldAlert, Pencil, Camera, User } from "lucide-react";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { useMe } from "@/hooks/useMe";
 import { LoadingState } from "@/components/ui/loading-state";
 import { SplashScreen } from "@/components/ui/splash-screen";
@@ -91,6 +95,7 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const queryClient = useQueryClient();
   const [showSplash, setShowSplash] = useState(true);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -99,12 +104,74 @@ export default function DashboardLayout({
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
 
+  // Edit Profile States
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
+  const [editFirstName, setEditFirstName] = useState("");
+  const [editLastName, setEditLastName] = useState("");
+  const [editUsername, setEditUsername] = useState("");
+  const [profileFile, setProfileFile] = useState<File | null>(null);
+  const [profilePreview, setProfilePreview] = useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const t = useTranslations("layout");
   const tc = useTranslations("common");
   const apiBaseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
+  const { data: user, isLoading, isError } = useMe();
+
+  const getInitials = (userData: any) => {
+    if (userData?.employee?.first_name || userData?.employee?.last_name) {
+      const fn = userData.employee.first_name || "";
+      const ln = userData.employee.last_name || "";
+      return `${fn[0] || ""}${ln[0] || ""}`.toUpperCase() || "U";
+    }
+    if (userData?.username) {
+      return userData.username.slice(0, 2).toUpperCase();
+    }
+    return "U";
+  };
+
+  useEffect(() => {
+    if (isEditProfileOpen && user) {
+      setEditFirstName(user.employee?.first_name || "");
+      setEditLastName(user.employee?.last_name || "");
+      setEditUsername(user.username || "");
+      setProfileFile(null);
+      setProfilePreview(null);
+    }
+  }, [isEditProfileOpen, user]);
+
+  const updateProfileMutation = useMutation({
+    mutationFn: updateProfileApi,
+    onSuccess: (data) => {
+      if (data.result) {
+        toast.success(data.message || "Profile updated successfully!");
+        queryClient.invalidateQueries({ queryKey: ["me"] });
+        setIsEditProfileOpen(false);
+      } else {
+        toast.error(data.message || "Failed to update profile");
+      }
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || "Failed to update profile");
+    },
+  });
+
+  const handleProfileSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const formData = new FormData();
+    formData.append("first_name", editFirstName);
+    formData.append("last_name", editLastName);
+    formData.append("username", editUsername);
+    if (profileFile) {
+      formData.append("profile_path", profileFile);
+    }
+    updateProfileMutation.mutate(formData);
+  };
 
   const changePasswordMutation = useMutation({
     mutationFn: changePasswordApi,
@@ -113,6 +180,7 @@ export default function DashboardLayout({
       setCurrentPassword("");
       setNewPassword("");
       setConfirmNewPassword("");
+      setIsChangePasswordOpen(false);
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || "Failed to change password");
@@ -134,7 +202,6 @@ export default function DashboardLayout({
       window.location.href = "/login?logout=true";
     },
   });
-  const { data: user, isLoading, isError } = useMe();
 
   const matchingRoute = [...routePermissions]
     .sort((a, b) => b.path.length - a.path.length)
@@ -259,239 +326,314 @@ export default function DashboardLayout({
                 <DropdownMenuTrigger>
                   <Avatar className="h-11 w-11 cursor-pointer ring-2 ring-primary/20">
                     <AvatarImage
-                            src={user?.employee?.profile_path ? `${process.env.NEXT_PUBLIC_API_URL}${user.employee.profile_path}` : ""} 
-                      alt="@shadcn"
+                      src={user?.employee?.profile_path ? `${apiBaseURL}${user.employee.profile_path}` : ""} 
+                      alt={user?.username || "User"}
                     />
-                    <AvatarFallback>CN</AvatarFallback>
+                    <AvatarFallback className="bg-primary/10 text-xs font-bold text-primary">
+                      {getInitials(user)}
+                    </AvatarFallback>
                     <AvatarBadge className="bg-green-600 dark:bg-green-800" />
                   </Avatar>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-80 p-5">
+                <DropdownMenuContent align="end" className="w-84 p-5 rounded-2xl">
                   <div>
-                    <h1 className="text-2xl">{t("userProfile")}</h1>
-                    <div className="my-6 flex flex-row items-center ">
-                      <Avatar className="h-18 w-18 cursor-pointer ring-2 ring-primary/20">
-                        {user?.employee?.profile_path ? (
-                          <AvatarImage
-                            src={`${process.env.NEXT_PUBLIC_API_URL}${user.employee.profile_path}`}
-                            alt="User Profile"
-                          />
-                        ) : null}
-                        <AvatarFallback>CN</AvatarFallback>
+                    <h1 className="text-xl font-bold">{t("userProfile")}</h1>
+                    <div className="my-5 flex flex-row items-center">
+                      <Avatar className="h-16 w-16 cursor-pointer ring-2 ring-primary/20 shrink-0">
+                        <AvatarImage
+                          src={user?.employee?.profile_path ? `${apiBaseURL}${user.employee.profile_path}` : ""}
+                          alt="User Profile"
+                        />
+                        <AvatarFallback className="bg-primary/10 text-lg font-bold text-primary">
+                          {getInitials(user)}
+                        </AvatarFallback>
                         <AvatarBadge className="bg-green-600 dark:bg-green-800" />
                       </Avatar>
-                      <div className="ms-5">
-                        <h1 className="text-xl font-medium ">
-                          {user?.username || ""}
+                      <div className="ms-4 min-w-0">
+                        <h1 className="text-lg font-bold truncate">
+                          {user?.employee?.first_name ? `${user.employee.first_name} ${user.employee.last_name || ""}` : (user?.username || "")}
                         </h1>
-                        <h4>{user?.employee?.role || ""}</h4>
+                        <p className="text-xs text-muted-foreground font-medium">{user?.employee?.role || "Admin"}</p>
+                        <p className="text-[11px] text-muted-foreground/80 truncate">@{user?.username}</p>
                       </div>
                     </div>
-                    <hr />
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <DropdownMenuItem
-                          className="mt-4"
-                          onSelect={(e) => e.preventDefault()}
-                        >
-                          <button className="w-full  flex items-center justify-between">
-                            <span className="w-11 h-11 flex flex-row items-center justify-center  bg-[#fff5f5dd]">
-                              <KeyRound className="w-5 h-5" />
-                            </span>
-                            <div>
-                              <span className="text-[17px]">
-                                {t("changePassword")}
-                              </span>
-                              <p className="text-[11px]">
-                                {t("changePasswordDesc")}
-                              </p>
-                            </div>
-                          </button>
-                        </DropdownMenuItem>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle className="text-2xl">
-                            {t("changePasswordTitle")}
-                          </DialogTitle>
+                    <hr className="my-3 border-border/60" />
 
-                          <DialogDescription>
-                            {t("changePasswordHint")}
-                          </DialogDescription>
-                        </DialogHeader>
-                        <form
-                          onSubmit={(e) => {
-                            e.preventDefault();
-                            if (newPassword !== confirmNewPassword) {
-                              toast.error("New passwords do not match");
-                              return;
-                            }
-                            if (newPassword.length < 6) {
-                              toast.error("New password must be at least 6 characters");
-                              return;
-                            }
-                            changePasswordMutation.mutate({
-                              current_password: currentPassword,
-                              new_password: newPassword,
-                              confirm_password: confirmNewPassword,
-                            });
-                          }}
-                        >
-                          <FieldGroup>
-                            <FieldSet>
-                              <Field>
-                                <FieldLabel>{t("currentPassword")}</FieldLabel>
+                    {/* Edit Profile Menu Item */}
+                    <DropdownMenuItem
+                      className="mt-2 p-2.5 rounded-xl cursor-pointer hover:bg-muted/60 transition-colors"
+                      onSelect={() => setIsEditProfileOpen(true)}
+                    >
+                      <div className="w-full flex items-center gap-3">
+                        <span className="w-10 h-10 flex items-center justify-center rounded-xl bg-primary/10 text-primary shrink-0">
+                          <Pencil className="w-4 h-4" />
+                        </span>
+                        <div className="flex-1 text-left min-w-0">
+                          <span className="text-sm font-semibold block leading-tight">
+                            {t("editProfile")}
+                          </span>
+                          <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">
+                            {t("editProfileDesc")}
+                          </p>
+                        </div>
+                      </div>
+                    </DropdownMenuItem>
 
-                                <div className="relative">
-                                  <Input
-                                    type={
-                                      showCurrentPassword ? "text" : "password"
-                                    }
-                                    value={currentPassword}
-                                    required
-                                    placeholder={t("enterPassword")}
-                                    className="h-11 rounded-2xl border-border/70 bg-background px-4 pr-10 shadow-none focus:border-primary"
-                                    onChange={(e) =>
-                                      setCurrentPassword(e.target.value)
-                                    }
-                                  />
-
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      setShowCurrentPassword(
-                                        !showCurrentPassword,
-                                      )
-                                    }
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                                  >
-                                    {showCurrentPassword ? (
-                                      <EyeOff size={18} />
-                                    ) : (
-                                      <Eye size={18} />
-                                    )}
-                                  </button>
-                                </div>
-                              </Field>
-                              <Field>
-                                <FieldLabel>{t("newPassword")}</FieldLabel>
-
-                                <div className="relative">
-                                  <Input
-                                    type={showNewPassword ? "text" : "password"}
-                                    value={newPassword}
-                                    required
-                                    placeholder={t("enterPassword")}
-                                    className="h-11 rounded-2xl border-border/70 bg-background px-4 pr-10 shadow-none focus:border-primary"
-                                    onChange={(e) =>
-                                      setNewPassword(e.target.value)
-                                    }
-                                  />
-
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      setShowNewPassword(!showNewPassword)
-                                    }
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                                  >
-                                    {showNewPassword ? (
-                                      <EyeOff size={18} />
-                                    ) : (
-                                      <Eye size={18} />
-                                    )}
-                                  </button>
-                                </div>
-                              </Field>
-                              <Field>
-                                <FieldLabel>{t("confirmPassword")}</FieldLabel>
-
-                                <div className="relative">
-                                  <Input
-                                    type={
-                                      showConfirmNewPassword
-                                        ? "text"
-                                        : "password"
-                                    }
-                                    value={confirmNewPassword}
-                                    required
-                                    placeholder={t("enterPassword")}
-                                    className="h-11 rounded-2xl border-border/70 bg-background px-4 pr-10 shadow-none focus:border-primary"
-                                    onChange={(e) =>
-                                      setConfirmNewPassword(e.target.value)
-                                    }
-                                  />
-
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      setShowConfirmNewPassword(
-                                        !showConfirmNewPassword,
-                                      )
-                                    }
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                                  >
-                                    {showConfirmNewPassword ? (
-                                      <EyeOff size={18} />
-                                    ) : (
-                                      <Eye size={18} />
-                                    )}
-                                  </button>
-                                </div>
-                              </Field>
-                            </FieldSet>
-                          </FieldGroup>
-                        </form>
-                        <DialogFooter>
-                          <DialogClose asChild>
-                            <Button className="py-4" variant="outline">
-                              {tc("cancel")}
-                            </Button>
-                          </DialogClose>
-
-                          <Button
-                            className="px-8 py-4"
-                            onClick={() => {
-                              if (newPassword !== confirmNewPassword) {
-                                toast.error("New passwords do not match");
-                                return;
-                              }
-                              if (newPassword.length < 6) {
-                                toast.error("New password must be at least 6 characters");
-                                return;
-                              }
-                              changePasswordMutation.mutate({
-                                current_password: currentPassword,
-                                new_password: newPassword,
-                                confirm_password: confirmNewPassword,
-                              });
-                            }}
-                            disabled={changePasswordMutation.isPending}
-                          >
-                            {changePasswordMutation.isPending ? (
-                              tc("submitting")
-                            ) : (
-                              tc("save")
-                            )}
-                          </Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
+                    {/* Change Password Menu Item */}
+                    <DropdownMenuItem
+                      className="mt-2 p-2.5 rounded-xl cursor-pointer hover:bg-muted/60 transition-colors"
+                      onSelect={() => setIsChangePasswordOpen(true)}
+                    >
+                      <div className="w-full flex items-center gap-3">
+                        <span className="w-10 h-10 flex items-center justify-center rounded-xl bg-rose-500/10 text-rose-500 shrink-0">
+                          <KeyRound className="w-4 h-4" />
+                        </span>
+                        <div className="flex-1 text-left min-w-0">
+                          <span className="text-sm font-semibold block leading-tight">
+                            {t("changePassword")}
+                          </span>
+                          <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">
+                            {t("changePasswordDesc")}
+                          </p>
+                        </div>
+                      </div>
+                    </DropdownMenuItem>
                   </div>
 
-                  <DropdownMenuItem className="mt-6  bg-[#ff0202] ">
-                    <button
-                      className="text-white w-full py-2 "
-                      onClick={() => {
-                        logoutMutation.mutate();
-                      }}
-                      disabled={logoutMutation.isPending}
-                    >
+                  <DropdownMenuItem
+                    className="mt-5 rounded-xl bg-red-600 hover:bg-red-700 text-white cursor-pointer"
+                    onSelect={() => logoutMutation.mutate()}
+                    disabled={logoutMutation.isPending}
+                  >
+                    <button className="text-white w-full py-2 font-medium text-center">
                       {logoutMutation.isPending ? t("loggingOut") : t("logout")}
                     </button>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+
+              {/* ── Standalone Edit Profile Dialog (outside DropdownMenu to prevent autoclose on file upload) ── */}
+              <Dialog open={isEditProfileOpen} onOpenChange={setIsEditProfileOpen}>
+                <DialogContent className="sm:max-w-md rounded-2xl z-50">
+                  <DialogHeader>
+                    <DialogTitle className="text-xl font-bold">{t("editProfileTitle")}</DialogTitle>
+                    <DialogDescription>{t("editProfileHint")}</DialogDescription>
+                  </DialogHeader>
+
+                  <form onSubmit={handleProfileSubmit} className="space-y-4 pt-2">
+                    <div className="flex flex-col items-center justify-center gap-3">
+                      <div 
+                        className="relative group cursor-pointer"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        <Avatar className="h-24 w-24 ring-4 ring-primary/20 shadow-md">
+                          <AvatarImage
+                            src={profilePreview || (user?.employee?.profile_path ? `${apiBaseURL}${user.employee.profile_path}` : "")}
+                            alt="Profile Upload"
+                          />
+                          <AvatarFallback className="bg-primary/10 text-2xl font-bold text-primary">
+                            {getInitials(user)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Camera className="w-6 h-6 text-white" />
+                        </div>
+                      </div>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setProfileFile(file);
+                            setProfilePreview(URL.createObjectURL(file));
+                          }
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="rounded-xl text-xs"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        <Camera className="w-3.5 h-3.5 mr-1.5" />
+                        {t("uploadPhoto")}
+                      </Button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold">{t("firstName")}</Label>
+                        <Input
+                          value={editFirstName}
+                          onChange={(e) => setEditFirstName(e.target.value)}
+                          placeholder="First Name"
+                          className="rounded-xl"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold">{t("lastName")}</Label>
+                        <Input
+                          value={editLastName}
+                          onChange={(e) => setEditLastName(e.target.value)}
+                          placeholder="Last Name"
+                          className="rounded-xl"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold">{t("username")}</Label>
+                      <Input
+                        value={editUsername}
+                        onChange={(e) => setEditUsername(e.target.value)}
+                        placeholder="Username"
+                        className="rounded-xl"
+                      />
+                    </div>
+
+                    <DialogFooter className="pt-3 gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="rounded-xl"
+                        onClick={() => setIsEditProfileOpen(false)}
+                      >
+                        {tc("cancel")}
+                      </Button>
+                      <Button
+                        type="submit"
+                        className="rounded-xl"
+                        disabled={updateProfileMutation.isPending}
+                      >
+                        {updateProfileMutation.isPending ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            {t("saving")}
+                          </>
+                        ) : (
+                          t("saveChanges")
+                        )}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
+
+              {/* ── Standalone Change Password Dialog ── */}
+              <Dialog open={isChangePasswordOpen} onOpenChange={setIsChangePasswordOpen}>
+                <DialogContent className="sm:max-w-md rounded-2xl z-50">
+                  <DialogHeader>
+                    <DialogTitle className="text-xl font-bold">{t("changePasswordTitle")}</DialogTitle>
+                    <DialogDescription>{t("changePasswordHint")}</DialogDescription>
+                  </DialogHeader>
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      if (newPassword !== confirmNewPassword) {
+                        toast.error("New passwords do not match");
+                        return;
+                      }
+                      if (newPassword.length < 6) {
+                        toast.error("New password must be at least 6 characters");
+                        return;
+                      }
+                      changePasswordMutation.mutate({
+                        current_password: currentPassword,
+                        new_password: newPassword,
+                        confirm_password: confirmNewPassword,
+                      });
+                    }}
+                  >
+                    <FieldGroup>
+                      <FieldSet>
+                        <Field>
+                          <FieldLabel>{t("currentPassword")}</FieldLabel>
+
+                          <div className="relative">
+                            <Input
+                              type={showCurrentPassword ? "text" : "password"}
+                              value={currentPassword}
+                              required
+                              placeholder={t("enterPassword")}
+                              className="h-11 rounded-2xl border-border/70 bg-background px-4 pr-10 shadow-none focus:border-primary"
+                              onChange={(e) => setCurrentPassword(e.target.value)}
+                            />
+
+                            <button
+                              type="button"
+                              onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                            >
+                              {showCurrentPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
+                          </div>
+                        </Field>
+                        <Field>
+                          <FieldLabel>{t("newPassword")}</FieldLabel>
+
+                          <div className="relative">
+                            <Input
+                              type={showNewPassword ? "text" : "password"}
+                              value={newPassword}
+                              required
+                              placeholder={t("enterPassword")}
+                              className="h-11 rounded-2xl border-border/70 bg-background px-4 pr-10 shadow-none focus:border-primary"
+                              onChange={(e) => setNewPassword(e.target.value)}
+                            />
+
+                            <button
+                              type="button"
+                              onClick={() => setShowNewPassword(!showNewPassword)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                            >
+                              {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
+                          </div>
+                        </Field>
+                        <Field>
+                          <FieldLabel>{t("confirmPassword")}</FieldLabel>
+
+                          <div className="relative">
+                            <Input
+                              type={showConfirmNewPassword ? "text" : "password"}
+                              value={confirmNewPassword}
+                              required
+                              placeholder={t("enterPassword")}
+                              className="h-11 rounded-2xl border-border/70 bg-background px-4 pr-10 shadow-none focus:border-primary"
+                              onChange={(e) => setConfirmNewPassword(e.target.value)}
+                            />
+
+                            <button
+                              type="button"
+                              onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                            >
+                              {showConfirmNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
+                          </div>
+                        </Field>
+                      </FieldSet>
+                    </FieldGroup>
+
+                    <DialogFooter className="pt-4">
+                      <Button type="button" className="py-2.5 rounded-xl" variant="outline" onClick={() => setIsChangePasswordOpen(false)}>
+                        {tc("cancel")}
+                      </Button>
+                      <Button
+                        type="submit"
+                        className="px-6 py-2.5 rounded-xl"
+                        disabled={changePasswordMutation.isPending}
+                      >
+                        {changePasswordMutation.isPending ? tc("submitting") : tc("save")}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
         </header>

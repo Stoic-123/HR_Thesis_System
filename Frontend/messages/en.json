@@ -100,6 +100,17 @@
     "searchBtn": "Search",
     "navigating": "Navigating to the relevant page...",
     "userProfile": "User Profile",
+    "editProfile": "Edit Profile",
+    "editProfileDesc": "Update your name & profile picture",
+    "editProfileTitle": "Edit Profile",
+    "editProfileHint": "Update your personal details and profile photo below.",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "username": "Username",
+    "profilePhoto": "Profile Photo",
+    "uploadPhoto": "Upload Photo",
+    "saveChanges": "Save Changes",
+    "saving": "Saving...",
     "changePassword": "Change Password",
     "changePasswordDesc": "Update your password",
     "changePasswordTitle": "Change Password",
@@ -636,7 +647,8 @@
     "dateRange": "Date Range",
     "employee": "Employee",
     "department": "Department",
-    "all": "All"
+    "all": "All",
+    "missed": "Missed"
   },
   "timesheet": {
     "title": "Time Schedule",

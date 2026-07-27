@@ -1183,13 +1183,27 @@ export default function AssetDashboardPage() {
                     <SelectValue placeholder="Select available asset..." />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl">
-                    {availableAssets
-                      .filter((a) => a.category_id === approveOpen.request?.category_id)
-                      .map((a) => (
+                    {(() => {
+                      const reqCatId = approveOpen.request?.category_id;
+                      const catMatches = reqCatId
+                        ? availableAssets.filter((a) => Number(a.category_id) === Number(reqCatId))
+                        : [];
+                      const listToDisplay = catMatches.length > 0 ? catMatches : availableAssets;
+
+                      if (listToDisplay.length === 0) {
+                        return (
+                          <div className="p-3 text-center text-xs text-muted-foreground">
+                            No available assets in inventory
+                          </div>
+                        );
+                      }
+
+                      return listToDisplay.map((a) => (
                         <SelectItem key={a.id} value={a.id.toString()}>
                           {a.name} (SN: {a.serial_number || "N/A"})
                         </SelectItem>
-                      ))}
+                      ));
+                    })()}
                   </SelectContent>
                 </Select>
               </div>

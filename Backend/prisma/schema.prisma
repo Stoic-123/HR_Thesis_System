@@ -21,6 +21,7 @@ model announcement {
   company             company   @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "announcement_ibfk_1")
 
   @@index([company_id], map: "idx_announcement_company")
+  @@index([company_id, created_at], map: "idx_announcement_company_created")
 }
 
 model attendancerecord {
@@ -38,6 +39,8 @@ model attendancerecord {
   timemode     timemode                @relation(fields: [time_mode_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "attendancerecord_ibfk_2")
 
   @@index([employee_id], map: "idx_attendance_employee")
+  @@index([employee_id, work_at], map: "idx_attendance_employee_date")
+  @@index([employee_id, status], map: "idx_attendance_employee_status")
   @@index([status], map: "idx_attendance_status")
   @@index([time_mode_id], map: "idx_attendance_timemode")
   @@index([work_at], map: "idx_attendance_work_at")
@@ -64,7 +67,9 @@ model onlineattendancepending {
 
   @@index([status], map: "idx_pending_status")
   @@index([company_id], map: "idx_pending_company")
+  @@index([company_id, status], map: "idx_pending_company_status")
   @@index([employee_id], map: "idx_pending_employee")
+  @@index([employee_id, status], map: "idx_pending_employee_status")
 }
 
 model onlineattendance {
@@ -80,6 +85,7 @@ model onlineattendance {
   employee        employee  @relation(fields: [employee_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "onlineattendance_ibfk_1")
 
   @@index([employee_id], map: "idx_onlineattendance_employee")
+  @@index([employee_id, created_at], map: "idx_online_employee_created")
   @@index([created_at], map: "idx_onlineattendance_created")
 }
 
@@ -333,6 +339,8 @@ model employee {
   assetrequest_manager_id      assetrequest[] @relation("assetrequest_manager_id")
   @@index([is_active], map: "idx_employee_active")
   @@index([company_id], map: "idx_employee_company")
+  @@index([company_id, is_active], map: "idx_employee_company_active")
+  @@index([company_id, department_id], map: "idx_employee_company_dept")
   @@index([department_id], map: "idx_employee_department")
   @@index([location_id], map: "idx_employee_location")
   @@index([first_name, last_name], map: "idx_employee_name")
@@ -408,6 +416,8 @@ model leaverecord {
   @@index([approved_by], map: "approved_by")
   @@index([start_date, end_date], map: "idx_leaverecord_dates")
   @@index([employee_id], map: "idx_leaverecord_employee")
+  @@index([employee_id, status], map: "idx_leaverecord_emp_status")
+  @@index([status, start_date], map: "idx_leaverecord_status_date")
   @@index([status], map: "idx_leaverecord_status")
   @@index([leave_type_id], map: "leave_type_id")
 }
@@ -457,7 +467,9 @@ model notification {
   user         user?     @relation(fields: [to_user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "notification_ibfk_2")
 
   @@index([company_id], map: "idx_notification_company")
+  @@index([company_id, is_read], map: "idx_notif_company_read")
   @@index([to_user_id], map: "idx_notification_user")
+  @@index([to_user_id, is_read], map: "idx_notif_user_read")
 }
 
 model overtime {
@@ -478,6 +490,7 @@ model overtime {
   @@index([approved_by], map: "approved_by")
   @@index([start_date, end_date], map: "idx_overtime_dates")
   @@index([employee_id], map: "idx_overtime_employee")
+  @@index([employee_id, status], map: "idx_overtime_emp_status")
   @@index([status], map: "idx_overtime_status")
 }
 
@@ -573,6 +586,7 @@ model payrollperiod {
   payroll    payroll[]
 
   @@index([company_id], map: "idx_payrollperiod_company")
+  @@index([company_id, status], map: "idx_pp_company_status")
   @@index([pay_date], map: "idx_payrollperiod_pay_date")
   @@index([status], map: "idx_payrollperiod_status")
 }
@@ -598,11 +612,16 @@ model payroll {
   payrollperiod     payrollperiod   @relation(fields: [payroll_period_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "payroll_ibfk_2")
   employee          employee        @relation(fields: [employee_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "payroll_ibfk_3")
   payrollitem       payrollitem[]
+
+  @@index([company_id], map: "idx_payroll_company")
+  @@index([company_id, status], map: "idx_payroll_company_status")
+  @@index([payroll_period_id, employee_id], map: "idx_payroll_period_emp")
+  @@index([employee_id], map: "idx_payroll_employee")
+  @@index([payroll_period_id], map: "idx_payroll_period")
   payrolladjustment payrolladjustment[]
 
   @@unique([payroll_period_id, employee_id], map: "unique_payroll_period_employee")
   @@index([company_id, payroll_period_id], map: "idx_payroll_company_period")
-  @@index([employee_id], map: "idx_payroll_employee")
   @@index([status], map: "idx_payroll_status")
 }
 
@@ -869,6 +888,8 @@ model asset {
   assetrequest    assetrequest[]
 
   @@index([company_id], map: "idx_asset_company")
+  @@index([company_id, status], map: "idx_asset_company_status")
+  @@index([category_id, status], map: "idx_asset_cat_status")
   @@index([category_id], map: "idx_asset_category")
   @@index([assigned_to], map: "idx_asset_employee")
 }
@@ -919,5 +940,7 @@ model assetrequest {
   asset           asset?            @relation(fields: [asset_id], references: [id], onUpdate: NoAction)
 
   @@index([company_id], map: "idx_assetrequest_company")
+  @@index([company_id, status], map: "idx_assetreq_company_status")
+  @@index([requested_by, status], map: "idx_assetreq_emp_status")
   @@index([requested_by], map: "idx_assetrequest_employee")
 }
