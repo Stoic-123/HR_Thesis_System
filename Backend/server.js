@@ -108,15 +108,34 @@ app.use(globalRateLimiter);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-// Serve uploaded files — redirect to Cloudflare R2 public URL.
-// DB paths are stored as /uploads/folder/file.ext; the R2 key is folder/file.ext
-app.get("/uploads/*path", (req, res) => {
-  const r2Base = (process.env.R2_PUBLIC_URL || "").replace(/\/$/, "");
-  const key = req.path.replace(/^\/uploads\//, ""); // e.g. "profiles/xxx.jpg"
-  if (!r2Base) {
-    return res.status(503).json({ error: "R2_PUBLIC_URL is not configured" });
+// Serve uploaded files — proxy from Cloudflare R2 with full CORS headers
+app.get("/uploads/*path", async (req, res) => {
+  try {
+    const r2Base = (process.env.R2_PUBLIC_URL || "").replace(/\/$/, "");
+    const key = req.path.replace(/^\/uploads\//, ""); // e.g. "profiles/xxx.jpg"
+    if (!r2Base) {
+      return res.status(503).json({ error: "R2_PUBLIC_URL is not configured" });
+    }
+    const r2Url = `${r2Base}/${key}`;
+    const r2Res = await fetch(r2Url);
+
+    if (!r2Res.ok) {
+      return res.status(r2Res.status).send("File not found on R2");
+    }
+
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    const contentType = r2Res.headers.get("content-type");
+    if (contentType) {
+      res.setHeader("Content-Type", contentType);
+    }
+
+    const arrayBuffer = await r2Res.arrayBuffer();
+    return res.send(Buffer.from(arrayBuffer));
+  } catch (err) {
+    console.error("[Uploads Proxy Error]:", err.message);
+    return res.status(500).json({ error: "Failed to fetch file from storage" });
   }
-  return res.redirect(302, `${r2Base}/${key}`);
 });
 
 // Public routes

@@ -20,8 +20,12 @@ WORKDIR /app
 # Copy package.json first for layer caching
 COPY package.json ./
 
-# Install dependencies and skip massive CUDA GPU binaries for CPU-only environments
-RUN npm install --onnxruntime-node-install=skip && npm cache clean --force
+# Install dependencies with retry configuration for large packages
+RUN npm config set fetch-retry-maxtimeout 120000 \
+ && npm config set fetch-retry-mintimeout 20000 \
+ && npm config set fetch-retries 5 \
+ && npm install --onnxruntime-node-install=skip \
+ && npm cache clean --force
 
 # Copy prisma schema and generate client
 COPY prisma ./prisma/

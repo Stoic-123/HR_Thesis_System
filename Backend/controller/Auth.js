@@ -88,8 +88,9 @@ export const employeeLoginController = async (req, res) => {
     const roleName = employeeWithRole?.role?.name || "";
 
     // Fallback: If no permissions are set yet, default to standard role behavior
-    const hasMobileAccess = userPermissions.some(p => p.path === "app:mobile_login") || roleName === "Employee" || roleName === "Manager";
-    const hasWebAccess = userPermissions.some(p => p.path === "app:web_login") || roleName === "Admin" || roleName === "Manager" || roleName === "HR";
+    const roleLower = roleName.toLowerCase();
+    const hasMobileAccess = userPermissions.some(p => p.path === "app:mobile_login") || roleLower.includes("employee") || roleLower.includes("manager");
+    const hasWebAccess = userPermissions.some(p => p.path === "app:web_login") || roleLower.includes("admin") || roleLower.includes("manager") || roleLower.includes("hr");
 
     if (client === "mobile") {
       if (!hasMobileAccess) {

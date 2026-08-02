@@ -39,7 +39,7 @@ interface EmployeeCardProps {
 function getFullImageUrl(path?: string | null): string | null {
   if (!path) return null;
   if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("data:")) return path;
-  const baseUrl = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "");
+  const baseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080").replace(/\/$/, "");
   const cleanPath = path.startsWith("/") ? path : `/${path}`;
   return `${baseUrl}${cleanPath}`;
 }
@@ -57,6 +57,14 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
 
   const [profileImgError, setProfileImgError] = useState(false);
   const [logoImgError, setLogoImgError] = useState(false);
+
+  React.useEffect(() => {
+    setProfileImgError(false);
+  }, [employee.profile_path, employee.id]);
+
+  React.useEffect(() => {
+    setLogoImgError(false);
+  }, [companyData.logo_path]);
 
   const primaryColor = companyData.primary_color || "#F58220";
   const secondaryColor = companyData.secondary_color || "#2575FC";
@@ -86,40 +94,38 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
       {(side === "front" || side === "both") && (
         <div
           id={`employee-card-front-${employee.id}`}
-          className="relative w-[340px] h-[540px] bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col border border-gray-200"
+          className="relative w-[340px] h-[540px] bg-[#FFFFFF] shadow-2xl overflow-hidden flex flex-col border border-[#E5E7EB]"
           style={{ width: "340px", height: "540px", minWidth: "340px", minHeight: "540px" }}
         >
           {/* Top Primary & Secondary Color Wave Header SVG */}
           <div className="relative w-full h-[220px] shrink-0">
             <svg
-              className="absolute top-0 left-0 w-full h-full"
+              className="absolute top-0 left-0 w-full h-[220px]"
               viewBox="0 0 340 220"
               preserveAspectRatio="none"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
             >
-              {/* Primary Color Base Header */}
-              <path d="M0 0H340V160C340 160 270 140 170 140C70 140 0 170 0 170V0Z" fill={primaryColor} />
-              
-              {/* Secondary Color Wave Layer */}
+              {/* Secondary Color Wave (Background Layer - Blue) */}
               <path
-                d="M0 160C80 135 190 140 340 110V185C260 215 130 195 0 230V160Z"
+                d="M 0 0 H 340 V 115 C 220 115 120 175 0 175 Z"
                 fill={secondaryColor}
               />
-              {/* White Curve Mask for bottom */}
-              <path
-                d="M0 195C100 160 240 190 340 155V220H0V195Z"
-                fill="#FFFFFF"
+              
+              {/* Primary Color Wave (Foreground Layer - Red) */}
+              <path 
+                d="M 0 0 H 340 V 90 C 220 90 120 150 0 150 Z" 
+                fill={primaryColor} 
               />
             </svg>
 
             {/* Profile Avatar Frame */}
             <div className="absolute top-[35px] left-1/2 -translate-x-1/2 z-10 flex flex-col items-center">
               <div
-                className="relative w-[160px] h-[160px] rounded-full bg-white p-[5px] shadow-md flex items-center justify-center border-[4px]"
+                className="relative w-[160px] h-[160px] rounded-full bg-[#FFFFFF] p-[5px] shadow-md flex items-center justify-center border-[4px]"
                 style={{ borderColor: primaryColor }}
               >
-                <div className="w-full h-full rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
+                <div className="w-full h-full rounded-full overflow-hidden bg-[#F3F4F6] flex items-center justify-center">
                   {profileImageUrl && !profileImgError ? (
                     <img
                       src={profileImageUrl}
@@ -129,7 +135,7 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
                     />
                   ) : (
                     <div
-                      className="w-full h-full flex items-center justify-center text-white font-extrabold text-3xl"
+                      className="w-full h-full flex items-center justify-center text-[#FFFFFF] font-extrabold text-3xl"
                       style={{ background: `linear-gradient(to top right, ${secondaryColor}, ${primaryColor})` }}
                     >
                       {firstNameStr[0]}
@@ -142,7 +148,7 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
           </div>
 
           {/* Employee Details Content */}
-          <div className="flex-1 flex flex-col items-center text-center px-4 pt-3 pb-6 space-y-2 z-10 bg-white">
+          <div className="flex-1 flex flex-col items-center text-center px-4 pt-3 pb-6 space-y-2 z-10 bg-[#FFFFFF]">
             {/* Two-tone Employee Name using Company Primary & Secondary Colors */}
             <div className="mt-1">
               <h2 className="text-2xl font-extrabold tracking-tight uppercase leading-tight flex items-center justify-center gap-2 flex-wrap">
@@ -152,7 +158,7 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
             </div>
 
             {/* Job Position */}
-            <p className="text-base font-semibold text-gray-600 mt-1">
+            <p className="text-base font-semibold text-[#4B5563] mt-1">
               {employee.position_name || t("companyStaff")}
             </p>
 
@@ -160,15 +166,15 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
             <div className="space-y-1.5 pt-3 text-[#4B5563] text-base font-medium">
               <div className="flex items-center justify-center gap-1.5">
                 <span>{t("idNo")}</span>
-                <span className="font-semibold text-gray-800">{formattedId}</span>
+                <span className="font-semibold text-[#1F2937]">{formattedId}</span>
               </div>
               <div className="flex items-center justify-center gap-1.5">
                 <span>{t("issueDate")}</span>
-                <span className="font-semibold text-gray-800">{formattedIssueDate}</span>
+                <span className="font-semibold text-[#1F2937]">{formattedIssueDate}</span>
               </div>
               <div className="flex items-center justify-center gap-1.5">
                 <span>{t("expireDate")}</span>
-                <span className="font-semibold text-gray-800">{formattedExpireDate}</span>
+                <span className="font-semibold text-[#1F2937]">{formattedExpireDate}</span>
               </div>
             </div>
           </div>
@@ -179,34 +185,34 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
       {(side === "back" || side === "both") && (
         <div
           id={`employee-card-back-${employee.id}`}
-          className="relative w-[340px] h-[540px] bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col justify-between p-6 border border-gray-200"
+          className="relative w-[340px] h-[540px] bg-[#FFFFFF] shadow-2xl overflow-hidden flex flex-col justify-between p-6 pb-8 border border-[#E5E7EB]"
           style={{ width: "340px", height: "540px", minWidth: "340px", minHeight: "540px" }}
         >
           {/* Top-Left Primary Color Corner Curve Accent */}
           <svg
-            className="absolute top-0 left-0 w-[140px] h-[140px] pointer-events-none"
-            viewBox="0 0 140 140"
+            className="absolute top-0 left-0 w-[160px] h-[160px] pointer-events-none z-0"
+            viewBox="0 0 160 160"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
           >
-            <path d="M0 0H140C60 0 0 60 0 140V0Z" fill={primaryColor} />
+            <path d="M0 0H160C80 0 0 60 0 160V0Z" fill={primaryColor} />
           </svg>
 
           {/* Bottom-Right Secondary Color Corner Wave Accent */}
           <svg
-            className="absolute bottom-0 right-0 w-[180px] h-[220px] pointer-events-none"
-            viewBox="0 0 180 220"
+            className="absolute bottom-0 right-0 w-[200px] h-[300px] pointer-events-none z-0"
+            viewBox="0 0 200 300"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
           >
             <path
-              d="M180 220V70C120 140 60 170 0 220H180Z"
+              d="M200 300V60C200 170 90 240 0 300H200Z"
               fill={secondaryColor}
             />
           </svg>
 
           {/* Unified Center Content: Logo + Info with tight, clean spacing */}
-          <div className="relative z-10 flex-1 flex flex-col items-center justify-center space-y-6 pt-4 px-2">
+          <div className="relative z-10 flex-1 flex flex-col items-center justify-center space-y-5 pt-4 px-2">
             {/* Company Logo / Brand Header */}
             <div className="flex flex-col items-center justify-center">
               {companyLogoUrl && !logoImgError ? (
@@ -274,23 +280,16 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
             <div className="space-y-4 text-center text-[#374151] w-full">
               {/* Email */}
               <div className="space-y-1">
-                <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Email</p>
-                <p className="font-bold text-gray-900 text-base">{companyEmail}</p>
+                <p className="text-xs text-[#6B7280] uppercase tracking-wider font-semibold">Email</p>
+                <p className="font-bold text-[#111827] text-base">{companyEmail}</p>
               </div>
 
               {/* Phone */}
               <div className="space-y-1">
-                <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Phone</p>
-                <p className="font-bold text-gray-900 text-base">{companyPhone}</p>
+                <p className="text-xs text-[#6B7280] uppercase tracking-wider font-semibold">Phone</p>
+                <p className="font-bold text-[#111827] text-base">{companyPhone}</p>
               </div>
             </div>
-          </div>
-
-          {/* Bottom Tagline */}
-          <div className="relative z-10 pb-4 text-center shrink-0">
-            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">
-              {t("officialIdCard")}
-            </p>
           </div>
         </div>
       )}

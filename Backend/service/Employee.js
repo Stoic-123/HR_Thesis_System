@@ -84,20 +84,7 @@ export const getAllEmployee = async (company_id, page = 1, limit = 10, status = 
 
     let where = {
       company_id: parseInt(company_id),
-      AND: [
-        {
-          OR: [
-            { role_id: null },
-            {
-              role: {
-                name: {
-                  not: "Admin"
-                }
-              }
-            }
-          ]
-        }
-      ]
+      AND: []
     };
     if (status) {
       where.AND.push({ is_active: status });
@@ -118,6 +105,8 @@ export const getAllEmployee = async (company_id, page = 1, limit = 10, status = 
         ]
       });
     }
+    
+    console.log("DEBUG WHERE CLAUSE:", JSON.stringify(where));
 
     const [employees, total, total_active] = await Promise.all([
       prisma.employee.findMany({
@@ -142,20 +131,6 @@ export const getAllEmployee = async (company_id, page = 1, limit = 10, status = 
         where: {
           company_id: parseInt(company_id),
           is_active: "active",
-          AND: [
-            {
-              OR: [
-                { role_id: null },
-                {
-                  role: {
-                    name: {
-                      not: "Admin"
-                    }
-                  }
-                }
-              ]
-            }
-          ]
         },
       }),
     ]);

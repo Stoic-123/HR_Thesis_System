@@ -25,6 +25,7 @@ interface EmployeeCardModalProps {
 async function fetchImageDataUrl(url: string): Promise<string | null> {
   try {
     const res = await fetch(url, { mode: "cors" });
+    if (!res.ok) return null;
     const blob = await res.blob();
     return new Promise((resolve) => {
       const reader = new FileReader();
@@ -42,10 +43,30 @@ async function convertImagesToDataUrls(element: HTMLElement) {
   for (const img of Array.from(images)) {
     const src = img.src;
     if (src && !src.startsWith("data:")) {
-      const dataUrl = await fetchImageDataUrl(src);
-      if (dataUrl) {
-        img.src = dataUrl;
-      }
+      try {
+        const dataUrl = await fetchImageDataUrl(src);
+        if (dataUrl) {
+          img.src = dataUrl;
+          continue;
+        }
+      } catch {}
+
+      // Fallback: draw loaded image on in-memory canvas if fetch was blocked
+      try {
+        if (img.complete && img.naturalWidth > 0) {
+          const canvas = document.createElement("canvas");
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.drawImage(img, 0, 0);
+            const dUrl = canvas.toDataURL("image/png");
+            if (dUrl && dUrl.startsWith("data:image")) {
+              img.src = dUrl;
+            }
+          }
+        }
+      } catch {}
     }
   }
 }
@@ -65,7 +86,7 @@ export const EmployeeCardModal: React.FC<EmployeeCardModalProps> = ({
     setIsExporting(true);
     try {
       const pdf = new jsPDF({
-        orientation: "portrait",
+        orientation: "p",
         unit: "mm",
         format: [54, 85.6], // Standard CR80 ID Card dimensions (54mm x 85.6mm)
       });
@@ -73,27 +94,30 @@ export const EmployeeCardModal: React.FC<EmployeeCardModalProps> = ({
       const frontElement = document.getElementById(`employee-card-front-${employee.id}`);
       const backElement = document.getElementById(`employee-card-back-${employee.id}`);
 
+      let hasFront = false;
+
       if (frontElement) {
         await convertImagesToDataUrls(frontElement);
         const canvasFront = await html2canvas(frontElement, {
-          scale: 3, // High DPI capture
+          scale: 2,
           useCORS: true,
-          allowTaint: true,
+          allowTaint: false,
           backgroundColor: "#FFFFFF",
           logging: false,
           imageTimeout: 15000,
         });
         const imgFront = canvasFront.toDataURL("image/png");
         pdf.addImage(imgFront, "PNG", 0, 0, 54, 85.6);
+        hasFront = true;
       }
 
       if (backElement) {
         await convertImagesToDataUrls(backElement);
-        if (frontElement) pdf.addPage([54, 85.6], "portrait");
+        if (hasFront) pdf.addPage([54, 85.6], "p");
         const canvasBack = await html2canvas(backElement, {
-          scale: 3,
+          scale: 2,
           useCORS: true,
-          allowTaint: true,
+          allowTaint: false,
           backgroundColor: "#FFFFFF",
           logging: false,
           imageTimeout: 15000,
@@ -102,12 +126,12 @@ export const EmployeeCardModal: React.FC<EmployeeCardModalProps> = ({
         pdf.addImage(imgBack, "PNG", 0, 0, 54, 85.6);
       }
 
-      const fileName = `${employee.first_name}_${employee.last_name}_Card.pdf`.replace(/\s+/g, "_");
+      const fileName = `${employee.first_name || "Employee"}_${employee.last_name || "Card"}_ID.pdf`.replace(/\s+/g, "_");
       pdf.save(fileName);
       toast.success(t("downloadSuccess"));
-    } catch (err) {
+    } catch (err: any) {
       console.error("PDF Export error:", err);
-      toast.error(t("downloadError"));
+      toast.error(err?.message || t("downloadError"));
     } finally {
       setIsExporting(false);
     }
@@ -150,8 +174,8 @@ export const EmployeeCardModal: React.FC<EmployeeCardModalProps> = ({
         </DialogHeader>
 
         {/* Card Display Container */}
-        <div className="flex-1 py-4 flex justify-center items-center overflow-y-auto overflow-x-auto min-h-0">
-          <div className="scale-90 sm:scale-100 transition-transform origin-center">
+        <div className="flex-1 p-6 flex justify-center items-start overflow-y-auto overflow-x-auto min-h-0">
+          <div className="m-auto transition-transform">
             <EmployeeCard employee={employee} side={activeSide} />
           </div>
         </div>
