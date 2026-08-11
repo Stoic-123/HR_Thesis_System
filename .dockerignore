@@ -1,9 +1,15 @@
 .git
 .gitignore
 node_modules
+.next
 dist
 build
 *.pdf
 *.rar
 *.txt
 *.sql
+*.png
+*.html
+*.ttf
+.env
+.env.prod.bak

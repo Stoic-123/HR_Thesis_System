@@ -195,7 +195,13 @@ export const employeeLogoutController = async (req, res) => {
   if (isProduction && process.env.COOKIE_DOMAIN) {
     clearCookieOptions.domain = process.env.COOKIE_DOMAIN;
   }
-  res.clearCookie("auth_token", clearCookieOptions);
+  res.clearCookie("auth_token", {
+	path: "/", httpOnly: true,
+	sameSite: "lax"
+});
+	res.clearCookie("auth_token", {
+	path: "/" });
+	res.clearCookie("auth_token");
 
   res.json({
     result: true,
@@ -244,7 +250,7 @@ export const resetPasswordController = async (req, res) => {
       });
     }
 
-    const resetPasswordResult = await resetPasswordToDefault(user_id);
+    const resetPasswordResult = await resetPassword(user_id);
     res.status(200).json(resetPasswordResult);
   } catch (error) {
     console.error(error.message);

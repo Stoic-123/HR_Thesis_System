@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -195,11 +196,11 @@ export default function DashboardLayout({
     },
     onSuccess: () => {
       toast.success(t("logoutSuccess"));
-      window.location.href = "/login?logout=true";
+      window.location.href = "/km/login?logout=true";
     },
     onError: () => {
       toast.error(t("logoutError"));
-      window.location.href = "/login?logout=true";
+      window.location.href = "/km/login?logout=true";
     },
   });
 
