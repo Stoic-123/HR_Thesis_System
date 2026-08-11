@@ -10,6 +10,7 @@ import {
 } from "../service/Overtime.js";
 import { addAuditLog } from "../service/AuditLog.js";
 import { formatICTDate } from "../utils/timezone.js";
+import { getIO } from "../utils/socket.js";
 
 export const createOvertimeController = async (req, res) => {
   try {
@@ -38,6 +39,14 @@ export const createOvertimeController = async (req, res) => {
       req.ip,
       req.headers["user-agent"]
     );
+
+    // Socket real-time broadcast
+    try {
+      const io = getIO();
+      if (io) {
+        io.emit("overtime:updated", { action: "create", employee_id, company_id });
+      }
+    } catch (sErr) {}
 
     res.status(200).json(result);
   } catch (error) {
@@ -272,6 +281,14 @@ export const approveOvertimeController = async (req, res) => {
       req.headers["user-agent"]
     );
 
+    // Socket real-time broadcast
+    try {
+      const io = getIO();
+      if (io) {
+        io.emit("overtime:updated", { action: "approve", id, company_id });
+      }
+    } catch (sErr) {}
+
     res.status(200).json(result);
   } catch (error) {
     console.error(error.message);
@@ -307,6 +324,14 @@ export const rejectOvertimeController = async (req, res) => {
       req.headers["user-agent"]
     );
 
+    // Socket real-time broadcast
+    try {
+      const io = getIO();
+      if (io) {
+        io.emit("overtime:updated", { action: "reject", id, company_id });
+      }
+    } catch (sErr) {}
+
     res.status(200).json(result);
   } catch (error) {
     console.error(error.message);
@@ -341,6 +366,14 @@ export const cancelOvertimeController = async (req, res) => {
       req.ip,
       req.headers["user-agent"]
     );
+
+    // Socket real-time broadcast
+    try {
+      const io = getIO();
+      if (io) {
+        io.emit("overtime:updated", { action: "cancel", id, company_id });
+      }
+    } catch (sErr) {}
 
     res.status(200).json(result);
   } catch (error) {

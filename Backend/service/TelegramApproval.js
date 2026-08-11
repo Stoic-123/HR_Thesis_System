@@ -198,7 +198,25 @@ export const sendApprovalRequest = async (botToken, chatId, {
 
 // ─── Cron: poll getUpdates, validate manager, process callbacks ───────────────
 
+let isPolling = false;
+const processedUpdateIds = new Set();
+const MAX_PROCESSED_UPDATES = 2000;
+
+const isUpdateProcessed = (updateId) => {
+  if (processedUpdateIds.has(updateId)) {
+    return true;
+  }
+  processedUpdateIds.add(updateId);
+  if (processedUpdateIds.size > MAX_PROCESSED_UPDATES) {
+    const oldest = processedUpdateIds.values().next().value;
+    processedUpdateIds.delete(oldest);
+  }
+  return false;
+};
+
 export const processTelegramCallbacks = async () => {
+  if (isPolling) return;
+  isPolling = true;
   try {
     const companies = await prisma.company.findMany({
       where: {
@@ -214,23 +232,33 @@ export const processTelegramCallbacks = async () => {
         telegram_announcement_group_id: true,
       },
     });
-    console.log(`[TgApproval] Processing ${companies.length} companies for Telegram callbacks`);
+
+    const botMap = new Map();
     for (const c of companies) {
-      await processCompanyCallbacks(c);
+      if (!c.telegram_bot_token) continue;
+      if (!botMap.has(c.telegram_bot_token)) {
+        botMap.set(c.telegram_bot_token, []);
+      }
+      botMap.get(c.telegram_bot_token).push(c);
+    }
+
+    for (const [token, companyList] of botMap.entries()) {
+      await processBotCallbacks(token, companyList);
     }
   } catch (e) {
     console.error('[TgApproval] processTelegramCallbacks error:', e.message);
+  } finally {
+    isPolling = false;
   }
 };
 
-const processCompanyCallbacks = async (company) => {
-  const token = company.telegram_bot_token;
-  const groupId = company.telegram_group_id;
-  const companyId = company.id;
+const processBotCallbacks = async (token, companyList) => {
+  const primaryCompany = companyList[0];
+  const companyId = primaryCompany.id;
+  const groupId = primaryCompany.telegram_group_id;
   const offset = getOffset(token);
 
   try {
-    console.log(`[TgApproval] Checking updates for company ${companyId} at offset ${offset}`);
     const url = `${TELEGRAM_API}/bot${token}/getUpdates?offset=${offset + 1}&timeout=0&allowed_updates=%5B%22callback_query%22,%22message%22%5D`;
     const res = await fetch(url);
     if (!res.ok) { console.error(`[TgApproval] getUpdates HTTP ${res.status}`); return; }
@@ -238,13 +266,17 @@ const processCompanyCallbacks = async (company) => {
     const data = await res.json();
     if (!data.ok) { console.error('[TgApproval] getUpdates not ok:', data.description); return; }
     if (!data.result?.length) {
-      console.log(`[TgApproval] No new updates for company ${companyId}`);
       return;
     }
-    console.log(`[TgApproval] Found ${data.result.length} updates for company ${companyId}`);
+    console.log(`[TgApproval] Found ${data.result.length} updates for bot token ...${token.slice(-8)}`);
 
     for (const update of data.result) {
       if (update.update_id >= getOffset(token)) saveOffset(token, update.update_id);
+
+      if (isUpdateProcessed(update.update_id)) {
+        console.log(`[TgApproval] Skipping already processed update_id ${update.update_id}`);
+        continue;
+      }
 
       // Handle callback queries (approval/reject/resetpassword)
       const cb = update.callback_query;
@@ -253,9 +285,11 @@ const processCompanyCallbacks = async (company) => {
         console.log(`[TgApproval] Received callback from @${from?.username} (ID: ${from?.id})`);
         if (!cbData) continue;
 
-        // Store chat ID from callback query
+        // Store chat ID from callback query for associated companies
         if (from?.username) {
-          await storeTelegramChatId(from.username.toLowerCase(), from.id.toString(), companyId);
+          for (const c of companyList) {
+            await storeTelegramChatId(from.username.toLowerCase(), from.id.toString(), c.id);
+          }
         }
 
         const approvalMatch = cbData.match(/^(approve|reject)_(\d+)$/);
@@ -268,7 +302,7 @@ const processCompanyCallbacks = async (company) => {
           const pendingId = parseInt(approvalMatch[2]);
           const messageId = message?.message_id;
           const fromUsername = (from?.username || '').toLowerCase();
-          const attendanceGroupId = company.telegram_attendance_group_id || company.telegram_group_id;
+          const attendanceGroupId = primaryCompany.telegram_attendance_group_id || primaryCompany.telegram_group_id;
 
           await handleApprovalAction(token, attendanceGroupId, pendingId, action, cbId, messageId, fromUsername);
         } else if (resetMatch) {
@@ -297,7 +331,9 @@ const processCompanyCallbacks = async (company) => {
         console.log(`[TgApproval] Received message from @${from?.username} (ID: ${from?.id}): "${msg.text}"`);
         // Store chat ID when user sends message
         if (from?.username) {
-          await storeTelegramChatId(from.username.toLowerCase(), from.id.toString(), companyId);
+          for (const c of companyList) {
+            await storeTelegramChatId(from.username.toLowerCase(), from.id.toString(), c.id);
+          }
         }
 
         if (msg.text) {
@@ -315,7 +351,7 @@ const processCompanyCallbacks = async (company) => {
       }
     }
   } catch (e) {
-    console.error(`[TgApproval] processCompanyCallbacks error (company ${companyId}):`, e.message);
+    console.error(`[TgApproval] processBotCallbacks error (token ...${token.slice(-8)}):`, e.message);
   }
 };
 

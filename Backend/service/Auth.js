@@ -453,70 +453,87 @@ export const forgotPassword = async (username) => {
   }
 };
 
+const activeResetLocks = new Map();
+
 export const resetPasswordToDefault = async (userId) => {
-  try {
-    const user = await prisma.user.findUnique({
-      where: { id: parseInt(userId) },
-      include: {
-        employee: {
-          include: {
-            company: true,
+  const numUserId = parseInt(userId);
+  if (activeResetLocks.has(numUserId)) {
+    console.log(`[Reset Password] Coalescing duplicate request for userId: ${numUserId}`);
+    return activeResetLocks.get(numUserId);
+  }
+
+  const resetPromise = (async () => {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: numUserId },
+        include: {
+          employee: {
+            include: {
+              company: true,
+            },
           },
         },
-      },
-    });
+      });
 
-    if (!user) {
-      return {
-        result: false,
-        message: "User not found.",
-      };
-    }
-
-    const defaultPassword = user.employee?.company?.default_password || "Hr12345";
-    const hashedPassword = await bcrypt.hash(defaultPassword, 10);
-
-    await prisma.user.update({
-      where: { id: parseInt(userId) },
-      data: {
-        password: hashedPassword,
-        is_default_password: true,
-        token_version: {
-          increment: 1,
-        },
-      },
-    });
-
-    // Send confirmation message to Telegram
-    const company = user.employee.company;
-    const botToken = company.telegram_bot_token;
-
-    // Build message
-    const employeeName = `${user.employee.first_name} ${user.employee.last_name}`;
-    let employeeMsg = "✅ <b>Your Password Has Been Reset</b>\n";
-    employeeMsg += "━━━━━━━━━━━━━━━━━\n";
-    employeeMsg += `👤 <b>Employee:</b> ${employeeName}\n`;
-    employeeMsg += `📋 <b>Username:</b> ${user.username}\n`;
-    employeeMsg += `🔑 <b>New Default Password:</b> ${defaultPassword}\n`;
-    employeeMsg += "━━━━━━━━━━━━━━━━━\n";
-    employeeMsg += "⚠️ Please change your password after logging in!";
-
-    // Send direct message to employee if chat ID exists
-    if (botToken && user.employee.telegram_chat_id) {
-      try {
-        await sendTelegramMessage(botToken, user.employee.telegram_chat_id, employeeMsg);
-        console.log(`[Reset Password] Sent direct message to employee ${userId}`);
-      } catch (e) {
-        console.error(`[Reset Password] Error sending to employee:`, e.message);
+      if (!user) {
+        return {
+          result: false,
+          message: "User not found.",
+        };
       }
-    }
 
-    return {
-      result: true,
-      message: "Password reset to default successfully.",
-    };
-  } catch (error) {
-    console.error(error.message);
-    throw error;
-  }
+      const defaultPassword = user.employee?.company?.default_password || "Hr12345";
+      const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+
+      await prisma.user.update({
+        where: { id: numUserId },
+        data: {
+          password: hashedPassword,
+          is_default_password: true,
+          token_version: {
+            increment: 1,
+          },
+        },
+      });
+
+      // Send confirmation message to Telegram
+      const company = user.employee.company;
+      const botToken = company?.telegram_bot_token;
+
+      // Build message
+      const employeeName = `${user.employee.first_name} ${user.employee.last_name}`;
+      let employeeMsg = "✅ <b>Your Password Has Been Reset</b>\n";
+      employeeMsg += "━━━━━━━━━━━━━━━━━\n";
+      employeeMsg += `👤 <b>Employee:</b> ${employeeName}\n`;
+      employeeMsg += `📋 <b>Username:</b> ${user.username}\n`;
+      employeeMsg += `🔑 <b>New Default Password:</b> ${defaultPassword}\n`;
+      employeeMsg += "━━━━━━━━━━━━━━━━━\n";
+      employeeMsg += "⚠️ Please change your password after logging in!";
+
+      // Send direct message to employee if chat ID exists
+      if (botToken && user.employee.telegram_chat_id) {
+        try {
+          await sendTelegramMessage(botToken, user.employee.telegram_chat_id, employeeMsg);
+          console.log(`[Reset Password] Sent direct message to employee ${userId}`);
+        } catch (e) {
+          console.error(`[Reset Password] Error sending to employee:`, e.message);
+        }
+      }
+
+      return {
+        result: true,
+        message: "Password reset to default successfully.",
+      };
+    } catch (error) {
+      console.error(error.message);
+      throw error;
+    } finally {
+      setTimeout(() => {
+        activeResetLocks.delete(numUserId);
+      }, 4000);
+    }
+  })();
+
+  activeResetLocks.set(numUserId, resetPromise);
+  return resetPromise;
 };

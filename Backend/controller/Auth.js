@@ -292,9 +292,28 @@ export const updateUserProfileController = async (req, res) => {
 
     // Handle employee update or creation
     if (currentUser.employee_id && currentUser.employee) {
+      const { 
+        telegram_username, 
+        phone_number, 
+        phone_number2, 
+        address, 
+        partner_name 
+      } = req.body;
+
       const empUpdate = {};
-      if (first_name !== undefined) empUpdate.first_name = first_name.trim();
-      if (last_name !== undefined) empUpdate.last_name = last_name.trim();
+      if (first_name !== undefined && first_name !== null && first_name.trim() !== "") {
+        empUpdate.first_name = first_name.trim();
+      }
+      if (last_name !== undefined && last_name !== null) {
+        empUpdate.last_name = last_name.trim();
+      }
+      if (telegram_username !== undefined) {
+        empUpdate.telegram_username = telegram_username ? telegram_username.trim().replace(/^@+/, '') : null;
+      }
+      if (phone_number !== undefined) empUpdate.phone_number = phone_number.trim();
+      if (phone_number2 !== undefined) empUpdate.phone_number2 = phone_number2.trim();
+      if (address !== undefined) empUpdate.address = address.trim();
+      if (partner_name !== undefined) empUpdate.partner_name = partner_name.trim();
       if (profile_path) empUpdate.profile_path = profile_path;
 
       if (Object.keys(empUpdate).length > 0) {

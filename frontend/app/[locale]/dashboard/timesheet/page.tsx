@@ -4,6 +4,7 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogClose,
@@ -303,60 +304,68 @@ export const TimeSheetPage = () => {
         </Dialog>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("scheduleList")}</CardTitle>
+      <Card className="overflow-hidden rounded-3xl border border-border/50 shadow-sm">
+        <CardHeader className="flex-row items-center justify-between gap-3 pb-2">
+          <CardTitle className="text-base font-semibold">{t("scheduleList")}</CardTitle>
+          <Badge variant="outline" className="rounded-full text-xs bg-muted/50 border-border/60">
+            {timeSheets?.data?.length ?? 0} {tc("total")}
+          </Badge>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {isLoading ? (
-            <div className="py-8 text-center text-muted-foreground">{tc("loading")}</div>
+            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+              <div className="size-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              <p className="mt-3 text-sm">{tc("loading")}</p>
+            </div>
           ) : timeSheets?.data?.length === 0 ? (
-            <div className="py-8 text-center text-muted-foreground">{t("noSchedules")}</div>
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <p className="font-medium text-muted-foreground">{t("noSchedules")}</p>
+            </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[1000px] text-sm">
+              <table className="w-full min-w-[1100px] text-sm">
                 <thead>
-                  <tr className="border-b border-white/35 text-left text-muted-foreground">
-                    <th className="py-3 px-2">{t("nameLabel")}</th>
-                    <th className="py-3 px-2">{t("codeLabel")}</th>
-                    <th className="py-3 px-2">{t("timeIn")}</th>
-                    <th className="py-3 px-2">{t("lunchOut")}</th>
-                    <th className="py-3 px-2">{t("lunchIn")}</th>
-                    <th className="py-3 px-2">{t("timeOut")}</th>
-                    <th className="py-3 px-2">{t("required")}</th>
-                    <th className="py-3 px-2 text-right">{tc("actions")}</th>
+                  <tr className="border-b border-border/60 bg-muted/30 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    <th className="py-3.5 pl-6 pr-3 min-w-[180px]">{t("nameLabel")}</th>
+                    <th className="py-3.5 px-3 min-w-[120px]">{t("codeLabel")}</th>
+                    <th className="py-3.5 px-3 min-w-[100px]">{t("timeIn")}</th>
+                    <th className="py-3.5 px-3 min-w-[100px]">{t("lunchOut")}</th>
+                    <th className="py-3.5 px-3 min-w-[100px]">{t("lunchIn")}</th>
+                    <th className="py-3.5 px-3 min-w-[100px]">{t("timeOut")}</th>
+                    <th className="py-3.5 px-3 min-w-[200px]">{t("required")}</th>
+                    <th className="py-3.5 pl-3 pr-6 text-right min-w-[90px]">{tc("actions")}</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-border/30">
                   {timeSheets?.data?.map((ts: TimeSheet) => (
-                    <tr key={ts.id} className="border-b border-white/30">
-                      <td className="py-3 px-2 font-semibold">{ts.name}</td>
-                      <td className="py-3 px-2 text-muted-foreground">{ts.code}</td>
-                      <td className="py-3 px-2">{ts.time_in || "-"}</td>
-                      <td className="py-3 px-2">{ts.lunch_out || "-"}</td>
-                      <td className="py-3 px-2">{ts.lunch_in || "-"}</td>
-                      <td className="py-3 px-2">{ts.time_out || "-"}</td>
-                      <td className="py-3 px-2">
+                    <tr key={ts.id} className="group transition-colors hover:bg-muted/25">
+                      <td className="py-3.5 pl-6 pr-3 font-semibold">{ts.name}</td>
+                      <td className="py-3.5 px-3 text-muted-foreground font-mono text-xs">{ts.code}</td>
+                      <td className="py-3.5 px-3 tabular-nums">{ts.time_in || "-"}</td>
+                      <td className="py-3.5 px-3 tabular-nums">{ts.lunch_out || "-"}</td>
+                      <td className="py-3.5 px-3 tabular-nums">{ts.lunch_in || "-"}</td>
+                      <td className="py-3.5 px-3 tabular-nums">{ts.time_out || "-"}</td>
+                      <td className="py-3.5 px-3">
                         <div className="flex flex-wrap gap-1">
-                          {ts.require_time_in && <span className="text-xs px-1.5 py-0.5 bg-primary/10 text-primary rounded-full">{t("timeIn")}</span>}
-                          {ts.require_lunch_out && <span className="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-full">{t("lunchOut")}</span>}
-                          {ts.require_lunch_in && <span className="text-xs px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded-full">{t("lunchIn")}</span>}
-                          {ts.require_time_out && <span className="text-xs px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-full">{t("timeOut")}</span>}
+                          {ts.require_time_in && <span className="text-[11px] px-2 py-0.5 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/40 rounded-full font-medium">{t("timeIn")}</span>}
+                          {ts.require_lunch_out && <span className="text-[11px] px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-full font-medium">{t("lunchOut")}</span>}
+                          {ts.require_lunch_in && <span className="text-[11px] px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-full font-medium">{t("lunchIn")}</span>}
+                          {ts.require_time_out && <span className="text-[11px] px-2 py-0.5 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/40 rounded-full font-medium">{t("timeOut")}</span>}
                         </div>
                       </td>
-                      <td className="py-3 px-2 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="icon" onClick={() => handleEdit(ts)} className="h-8 w-8">
-                            <Edit className="h-4 w-4" />
+                      <td className="py-3.5 pl-3 pr-6 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => handleEdit(ts)} className="size-8 rounded-lg text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary">
+                            <Edit className="size-3.5" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => deleteMutation.mutate(ts.id.toString())}
-                            className="h-8 w-8 text-red-500"
+                            className="size-8 rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                             disabled={deleteMutation.isPending}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="size-3.5" />
                           </Button>
                         </div>
                       </td>

@@ -60,8 +60,16 @@ export default function PayrollReportsPage() {
       if (format === "excel") {
         const res = await exportPayrollExcel(body);
         if (res.result && res.data?.downloadUrl) {
-          window.open(`${API_BASE}${res.data.downloadUrl}`, "_blank");
+          const downloadUrl = `${API_BASE}${res.data.downloadUrl}`;
+          const link = document.createElement("a");
+          link.href = downloadUrl;
+          link.setAttribute("download", res.data.fileName || "payroll_report.xlsx");
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
           toast.success(t("exportSuccess"));
+        } else {
+          toast.error(res.message || t("exportError"));
         }
       } else {
         // PDF Export on Frontend to follow exact attendance / overtime theme

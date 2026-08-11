@@ -61,7 +61,7 @@ export const initSocket = (httpServer) => {
       socket.user = {
         id: user.id,
         employee_id: user.employee?.id,
-        company_id: user.employee?.company_id
+        company_id: user.employee?.company_id || 1
       };
       
       next();
@@ -73,6 +73,7 @@ export const initSocket = (httpServer) => {
 
   io.on("connection", (socket) => {
     const userId = socket.user.id;
+    const companyId = socket.user.company_id || 1;
     
     if (!userSockets.has(userId)) {
       userSockets.set(userId, new Set());
@@ -85,9 +86,8 @@ export const initSocket = (httpServer) => {
     socket.join(`user:${userId}`);
     
     // Join company room
-    if (socket.user.company_id) {
-      socket.join(`company:${socket.user.company_id}`);
-    }
+    socket.join(`company:${companyId}`);
+    console.log(`[Socket] Socket ${socket.id} joined rooms: user:${userId}, company:${companyId}`);
 
     socket.on("disconnect", () => {
       console.log(`[Socket] User ${userId} (Socket: ${socket.id}) disconnected`);

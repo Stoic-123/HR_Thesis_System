@@ -222,7 +222,7 @@ export const EmployeeWorkingProfilePage = () => {
       <Card className="overflow-hidden rounded-3xl border border-border/50 shadow-sm">
         <CardHeader className="flex-row items-center justify-between gap-3 pb-2">
           <CardTitle className="text-base font-semibold">{t("profileList")}</CardTitle>
-          <Badge variant="secondary" className="rounded-full text-xs">
+          <Badge variant="outline" className="rounded-full text-xs bg-muted/50 border-border/60">
             {profiles?.data?.length ?? 0} {t("employees")}
           </Badge>
         </CardHeader>
@@ -243,16 +243,16 @@ export const EmployeeWorkingProfilePage = () => {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[1100px] text-sm">
+              <table className="w-full min-w-[1320px] text-sm">
                 <thead>
                   <tr className="border-b border-border/60 bg-muted/30 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    <th className="py-3.5 pl-6 pr-3">{t("employeeLabel")}</th>
-                    <th className="py-3.5 px-3">{t("weekLabel")}</th>
+                    <th className="py-3.5 pl-6 pr-3 min-w-[220px]">{t("employeeLabel")}</th>
+                    <th className="py-3.5 px-3 min-w-[160px]">{t("weekLabel")}</th>
                     {days.map((day) => (
                       <th
                         key={day.key}
-                        className={`py-3.5 px-3 text-center ${
-                          isWeekend(day.key) ? "text-rose-400/80" : ""
+                        className={`py-3.5 px-3 text-center min-w-[115px] whitespace-nowrap ${
+                          isWeekend(day.key) ? "text-amber-600/90 dark:text-amber-400/90" : ""
                         }`}
                       >
                         <span className="block">{day.label}</span>
@@ -261,8 +261,8 @@ export const EmployeeWorkingProfilePage = () => {
                         </span>
                       </th>
                     ))}
-                    <th className="py-3.5 px-3 text-center">{t("onlineAttendance")}</th>
-                    <th className="py-3.5 pl-3 pr-6 text-right">{tc("actions")}</th>
+                    <th className="py-3.5 px-3 text-center min-w-[170px] whitespace-nowrap">{t("onlineAttendance")}</th>
+                    <th className="py-3.5 pl-3 pr-6 text-right min-w-[90px]">{tc("actions")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/30">
@@ -274,7 +274,7 @@ export const EmployeeWorkingProfilePage = () => {
                       {/* ── Employee ── */}
                       <td className="py-3.5 pl-6 pr-3">
                         <div className="flex items-center gap-3">
-                          <Avatar className="h-9 w-9 ring-2 ring-background shadow-sm">
+                          <Avatar className="h-9 w-9 ring-2 ring-background shadow-sm shrink-0">
                             <AvatarImage
                               src={
                                 profile.employee?.profile_path
@@ -283,7 +283,7 @@ export const EmployeeWorkingProfilePage = () => {
                               }
                               alt={`${profile.employee?.first_name} ${profile.employee?.last_name}`}
                             />
-                            <AvatarFallback className="bg-primary/10 text-xs font-bold text-primary">
+                            <AvatarFallback className="bg-slate-100 dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
                               {profile.employee
                                 ? getEmployeeInitials(
                                     profile.employee.first_name,
@@ -307,8 +307,8 @@ export const EmployeeWorkingProfilePage = () => {
                       {/* ── Schedule Name ── */}
                       <td className="py-3.5 px-3">
                         <Badge
-                          variant="secondary"
-                          className="rounded-lg bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary"
+                          variant="outline"
+                          className="rounded-lg bg-indigo-50/80 dark:bg-indigo-950/40 px-2.5 py-1 text-xs font-medium text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/40 whitespace-nowrap"
                         >
                           {profile.dayofweek?.name ?? "—"}
                         </Badge>
@@ -327,12 +327,12 @@ export const EmployeeWorkingProfilePage = () => {
                           <td key={key} className="py-3.5 px-3 text-center">
                             {hasSchedule ? (
                               <div className="inline-flex flex-col items-center gap-0.5">
-                                <span className="text-xs font-medium leading-tight">
+                                <span className="text-xs font-medium leading-tight whitespace-nowrap">
                                   {timeSheet!.name}
                                 </span>
                                 {timeIn && timeOut && (
-                                  <span className="inline-flex items-center gap-1 text-[11px] tabular-nums text-muted-foreground">
-                                    <Clock className="size-3 text-emerald-500" />
+                                  <span className="inline-flex items-center gap-1 text-[11px] tabular-nums text-muted-foreground whitespace-nowrap">
+                                    <Clock className="size-3 text-slate-400 dark:text-slate-500 shrink-0" />
                                     {timeIn}–{timeOut}
                                   </span>
                                 )}
@@ -349,13 +349,13 @@ export const EmployeeWorkingProfilePage = () => {
                       {/* ── Online Attendance ── */}
                       <td className="py-3.5 px-3 text-center">
                         {profile.allow_online_bypass_location ? (
-                          <Badge className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
-                            <MapPinOff className="mr-1 size-3" />
+                          <Badge className="rounded-full bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/40 shadow-none whitespace-nowrap">
+                            <MapPinOff className="mr-1 size-3 text-emerald-500 shrink-0" />
                             {t("noLocation")}
                           </Badge>
                         ) : (
-                          <Badge className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground ring-1 ring-border/50">
-                            <MapPin className="mr-1 size-3" />
+                          <Badge className="rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 text-xs font-medium text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 shadow-none whitespace-nowrap">
+                            <MapPin className="mr-1 size-3 text-slate-400 shrink-0" />
                             {t("locationRequired")}
                           </Badge>
                         )}

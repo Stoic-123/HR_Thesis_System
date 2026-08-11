@@ -147,10 +147,10 @@ export default function DashboardLayout({
 
   const updateProfileMutation = useMutation({
     mutationFn: updateProfileApi,
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       if (data.result) {
         toast.success(data.message || "Profile updated successfully!");
-        queryClient.invalidateQueries({ queryKey: ["me"] });
+        await queryClient.invalidateQueries();
         setIsEditProfileOpen(false);
       } else {
         toast.error(data.message || "Failed to update profile");

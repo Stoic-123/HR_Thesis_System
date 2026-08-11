@@ -18,6 +18,7 @@ import {
   CalendarCheck2,
   Timer,
   Settings,
+  Smartphone,
   ChevronDown,
   ChevronRight,
   FileText,
@@ -284,6 +285,13 @@ const menuItems: MenuItem[] = [
         href: "/dashboard/setting",
         permission: "role:manage",
       },
+      {
+        title: "App Config",
+        labelKey: "appConfig",
+        icon: Smartphone,
+        href: "/dashboard/app-config",
+        permission: "role:manage",
+      },
     ],
   },
  
@@ -362,10 +370,10 @@ export function Sidebar({ collapsed = false }: { collapsed?: boolean }) {
   const isExpanded = !collapsed;
 
   return (
-    <aside
-      className={`h-screen border-r border-gray-200 bg-white flex flex-col transition-all duration-300 ${
-        isExpanded ? "w-64" : "w-16"
-      }`}
+    <motion.aside
+      animate={{ width: isExpanded ? 256 : 64 }}
+      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      className="h-screen border-r border-gray-200 bg-white flex flex-col overflow-hidden"
     >
       <div
         className={`relative p-4 border-b border-gray-100 flex items-center ${
@@ -400,7 +408,7 @@ export function Sidebar({ collapsed = false }: { collapsed?: boolean }) {
           const isOpen = openMenus[item.title] && isExpanded;
 
           return (
-            <div key={item.title} className="relative">
+            <motion.div layout key={item.title} className="relative" initial={false}>
               {item.submenu ? (
                 <div>
                   {isExpanded ? (
@@ -486,7 +494,7 @@ export function Sidebar({ collapsed = false }: { collapsed?: boolean }) {
                   {isExpanded && t(item.labelKey)}
                 </Link>
               )}
-            </div>
+            </motion.div>
           );
         })}
       </div>
@@ -529,6 +537,6 @@ export function Sidebar({ collapsed = false }: { collapsed?: boolean }) {
           )}
         </div>
       </div>
-    </aside>
+    </motion.aside>
   );
 }

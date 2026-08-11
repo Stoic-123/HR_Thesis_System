@@ -114,11 +114,11 @@ export default function UserPage() {
   };
 
   const handleConfirmReset = async () => {
-    if (!editingUser) return;
-    setIsConfirmOpen(false);
+    if (!editingUser || isResettingPassword) return;
     try {
       setIsResettingPassword(true);
       const response = await resetPassword(editingUser.id);
+      setIsConfirmOpen(false);
       if (response.result) {
         toast.success(response.message || "Password reset to default successfully.");
       } else {
@@ -291,7 +291,9 @@ export default function UserPage() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
+      <AlertDialog open={isConfirmOpen} onOpenChange={(open) => {
+        if (!isResettingPassword) setIsConfirmOpen(open);
+      }}>
         <AlertDialogContent className="border-white/60 bg-white/95 shadow-2xl backdrop-blur-xl rounded-3xl dark:bg-zinc-900/95 dark:border-zinc-800">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-lg font-semibold">{t("resetPassword") || "Reset Password"}</AlertDialogTitle>
@@ -300,11 +302,16 @@ export default function UserPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-xl">{tc("cancel")}</AlertDialogCancel>
+            <AlertDialogCancel disabled={isResettingPassword} className="rounded-xl">{tc("cancel")}</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleConfirmReset}
-              className="bg-red-600 hover:bg-red-700 text-white rounded-xl cursor-pointer"
+              onClick={(e) => {
+                e.preventDefault();
+                handleConfirmReset();
+              }}
+              disabled={isResettingPassword}
+              className="bg-red-600 hover:bg-red-700 text-white rounded-xl cursor-pointer disabled:opacity-50 gap-2"
             >
+              {isResettingPassword && <Loader2 className="h-4 w-4 animate-spin" />}
               {t("resetPassword") || "Reset Password"}
             </AlertDialogAction>
           </AlertDialogFooter>

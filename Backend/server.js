@@ -54,6 +54,7 @@ import calendarRoutes from "./routes/Calendar.js";
 import assetRoutes from "./routes/asset.routes.js";
 import notificationRoutes from "./routes/Notification.js";
 import announcementRoutes from "./routes/Announcement.js";
+import appMenuRoutes from "./routes/AppMenu.js";
 import http from "http";
 import { initSocket } from "./utils/socket.js";
 
@@ -106,21 +107,32 @@ app.use(
 
 app.use(globalRateLimiter);
 app.use(express.json());
+import fs from "fs";
+import path from "path";
+
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-// Serve uploaded files — proxy from Cloudflare R2 with full CORS headers
+// Serve uploaded files — serve local disk files first, then proxy from Cloudflare R2
 app.get("/uploads/*path", async (req, res) => {
   try {
+    const key = req.path.replace(/^\/uploads\//, ""); // e.g. "exports/payroll_summary_xxx.xlsx"
+    const localPath = path.join(process.cwd(), "public", "uploads", key);
+
+    // 1. First check if file exists locally on disk (e.g. exports, payslips, local uploads)
+    if (fs.existsSync(localPath)) {
+      return res.sendFile(localPath);
+    }
+
+    // 2. Fallback to Cloudflare R2 if configured
     const r2Base = (process.env.R2_PUBLIC_URL || "").replace(/\/$/, "");
-    const key = req.path.replace(/^\/uploads\//, ""); // e.g. "profiles/xxx.jpg"
     if (!r2Base) {
-      return res.status(503).json({ error: "R2_PUBLIC_URL is not configured" });
+      return res.status(404).json({ error: "File not found" });
     }
     const r2Url = `${r2Base}/${key}`;
     const r2Res = await fetch(r2Url);
 
     if (!r2Res.ok) {
-      return res.status(r2Res.status).send("File not found on R2");
+      return res.status(r2Res.status).send("File not found on R2 or disk");
     }
 
     res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
@@ -173,6 +185,7 @@ app.use("/api/calendar", calendarRoutes);
 app.use("/api/asset", assetRoutes);
 app.use("/api/notification", notificationRoutes);
 app.use("/api/announcement", announcementRoutes);
+app.use("/api/app-menu", appMenuRoutes);
 
 app.get("/", (req, res) => {
   res.send("HR System API is running");

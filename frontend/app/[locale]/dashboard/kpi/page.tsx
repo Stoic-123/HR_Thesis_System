@@ -36,9 +36,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import dayjs from "dayjs";
+import { useTranslations } from "next-intl";
 
 export default function KpiDashboardPage() {
   const queryClient = useQueryClient();
+  const tk = useTranslations("kpi");
 
   // Queries
   const { data: cycles, isLoading: loadingCycles } = useKpiCycles();
@@ -221,29 +223,29 @@ export default function KpiDashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">KPI Management</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{tk("title")}</h1>
         <p className="text-sm text-muted-foreground">
-          Overview of Performance Tracking, Goals, and Appraisals
+          {tk("subtitle")}
         </p>
       </div>
 
       <Tabs defaultValue="cycles" className="w-full space-y-6">
-        <TabsList className="bg-muted p-1 rounded-xl">
-          <TabsTrigger value="cycles" className="rounded-lg gap-2">
+        <TabsList className="bg-muted p-1 rounded-xl flex-wrap h-auto">
+          <TabsTrigger value="cycles" className="rounded-lg gap-2 py-2.5 px-3.5">
             <Target className="size-4" />
-            KPI Cycles
+            {tk("tab1")}
           </TabsTrigger>
-          <TabsTrigger value="templates" className="rounded-lg gap-2">
+          <TabsTrigger value="templates" className="rounded-lg gap-2 py-2.5 px-3.5">
             <FileText className="size-4" />
-            Templates
+            {tk("tab2")}
           </TabsTrigger>
-          <TabsTrigger value="assign" className="rounded-lg gap-2">
+          <TabsTrigger value="assign" className="rounded-lg gap-2 py-2.5 px-3.5">
             <UsersRound className="size-4" />
-            Assign
+            {tk("tab3")}
           </TabsTrigger>
-          <TabsTrigger value="evaluate" className="rounded-lg gap-2">
+          <TabsTrigger value="evaluate" className="rounded-lg gap-2 py-2.5 px-3.5">
             <CheckCircle2 className="size-4" />
-            HR Evaluation
+            {tk("tab4")}
           </TabsTrigger>
         </TabsList>
 
@@ -253,15 +255,15 @@ export default function KpiDashboardPage() {
         <TabsContent value="cycles" className="space-y-4 outline-none">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-bold">KPI Cycles</h2>
-              <p className="text-xs text-muted-foreground">Manage your annual or quarterly performance cycles.</p>
+              <h2 className="text-lg font-bold">{tk("step1Title")}</h2>
+              <p className="text-xs text-muted-foreground">{tk("step1Desc")}</p>
             </div>
 
             <Dialog open={isCycleOpen} onOpenChange={setIsCycleOpen}>
               <DialogTrigger asChild>
                 <Button className="rounded-xl gap-2 shadow-md">
                   <Plus className="size-4" />
-                  Create Cycle
+                  {tk("step1Btn")}
                 </Button>
               </DialogTrigger>
               <DialogContent className="rounded-2xl">
@@ -371,15 +373,15 @@ export default function KpiDashboardPage() {
         <TabsContent value="templates" className="space-y-4 outline-none">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-bold">KPI Templates</h2>
-              <p className="text-xs text-muted-foreground">Create standard goals to assign to departments.</p>
+              <h2 className="text-lg font-bold">{tk("step2Title")}</h2>
+              <p className="text-xs text-muted-foreground">{tk("step2Desc")}</p>
             </div>
 
             <Dialog open={isTemplateOpen} onOpenChange={setIsTemplateOpen}>
               <DialogTrigger asChild>
                 <Button className="rounded-xl gap-2 shadow-md">
                   <Plus className="size-4" />
-                  Create Template
+                  {tk("step2Btn")}
                 </Button>
               </DialogTrigger>
               <DialogContent className="rounded-2xl">
@@ -610,9 +612,9 @@ export default function KpiDashboardPage() {
         {/* ============================================================ */}
         <TabsContent value="assign" className="space-y-6 outline-none">
           <div>
-            <h2 className="text-lg font-bold">Assign KPI Templates</h2>
+            <h2 className="text-lg font-bold">{tk("step3Title")}</h2>
             <p className="text-xs text-muted-foreground">
-              Deploy templates to departments or the whole company for the active cycle.
+              {tk("step3Desc")}
             </p>
           </div>
 
@@ -760,9 +762,9 @@ export default function KpiDashboardPage() {
         {/* ============================================================ */}
         <TabsContent value="evaluate" className="space-y-4 outline-none">
           <div>
-            <h2 className="text-lg font-bold">HR KPI Evaluation Queue</h2>
+            <h2 className="text-lg font-bold">{tk("step4Title")}</h2>
             <p className="text-xs text-muted-foreground">
-              Review manager scores and input final HR scores for employee KPIs.
+              {tk("step4Desc")}
             </p>
           </div>
 

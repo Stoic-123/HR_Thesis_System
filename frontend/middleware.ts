@@ -77,8 +77,12 @@ export default function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Already logged in and trying to access login -> redirect to dashboard
-  if (token && pathnameWithoutLocale === "/login") {
+  const isLogoutOrExpired =
+    request.nextUrl.searchParams.get("logout") === "true" ||
+    request.nextUrl.searchParams.get("expired") === "true";
+
+  // Already logged in and trying to access login -> redirect to dashboard (UNLESS logging out or token expired)
+  if (token && pathnameWithoutLocale === "/login" && !isLogoutOrExpired) {
     const url = request.nextUrl.clone();
     url.pathname = `/${currentLocale}/dashboard`;
     return NextResponse.redirect(url);

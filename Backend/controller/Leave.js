@@ -5,6 +5,7 @@ import { addAuditLog } from "../service/AuditLog.js";
 import { toICTDate } from "../utils/timezone.js";
 import { validateFile } from "../utils/fileValidation.js";
 import { uploadToStorage } from "../service/Storage.js";
+import { getIO } from "../utils/socket.js";
 
 export const createNewLeaveController = async (req, res) => {
   try {
@@ -86,6 +87,15 @@ export const createNewLeaveController = async (req, res) => {
       req.ip,
       req.headers["user-agent"]
     );
+
+    // Socket real-time broadcast
+    try {
+      const io = getIO();
+      if (io) {
+        io.emit("leave:updated", { action: "create", employeeId, companyId });
+        console.log(`[Socket] Broadcasted leave:updated (create) for employeeId: ${employeeId}`);
+      }
+    } catch (sErr) {}
 
     res.status(200).json(leaveResult);
   } catch (error) {
@@ -418,6 +428,14 @@ export const approveLeaveController = async (req, res) => {
       req.headers["user-agent"]
     );
 
+    // Socket real-time broadcast
+    try {
+      const io = getIO();
+      if (io) {
+        io.emit("leave:updated", { action: "approve", leaveId: id, companyId });
+      }
+    } catch (sErr) {}
+
     res.status(200).json(result);
   } catch (error) {
     console.error(error.message);
@@ -450,6 +468,14 @@ export const rejectLeaveController = async (req, res) => {
       req.headers["user-agent"]
     );
 
+    // Socket real-time broadcast
+    try {
+      const io = getIO();
+      if (io) {
+        io.emit("leave:updated", { action: "reject", leaveId: id, companyId });
+      }
+    } catch (sErr) {}
+
     res.status(200).json(result);
   } catch (error) {
     console.error(error.message);
@@ -481,6 +507,14 @@ export const cancelLeaveController = async (req, res) => {
       req.ip,
       req.headers["user-agent"]
     );
+
+    // Socket real-time broadcast
+    try {
+      const io = getIO();
+      if (io) {
+        io.emit("leave:updated", { action: "cancel", leaveId: id, companyId });
+      }
+    } catch (sErr) {}
 
     res.status(200).json(result);
   } catch (error) {

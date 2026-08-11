@@ -222,6 +222,7 @@ model company {
   asset              asset[]
   assethistory       assethistory[]
   assetrequest       assetrequest[]
+  appmenu            appmenu[]
   @@index([name], map: "idx_company_name")
 }
 
@@ -943,4 +944,22 @@ model assetrequest {
   @@index([company_id, status], map: "idx_assetreq_company_status")
   @@index([requested_by, status], map: "idx_assetreq_emp_status")
   @@index([requested_by], map: "idx_assetrequest_employee")
+}
+
+model appmenu {
+  id          Int       @id @default(autoincrement())
+  company_id  Int
+  menu_key    String    @db.VarChar(100)
+  label       String    @db.VarChar(255)
+  icon_url    String?   @db.VarChar(500)
+  color       String?   @db.VarChar(50)  @default("blue")
+  is_active   Boolean   @default(true)
+  order       Int       @default(0)
+  created_at  DateTime? @default(now()) @db.DateTime(0)
+  updated_at  DateTime? @default(now()) @db.DateTime(0)
+
+  company     company   @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([company_id, menu_key], map: "idx_appmenu_company_key")
+  @@index([company_id], map: "idx_appmenu_company")
 }

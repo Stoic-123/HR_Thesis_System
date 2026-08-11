@@ -22,20 +22,20 @@ const TimeAttendanceSetupPage = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="w-full grid grid-cols-4 max-w-3xl">
-          <TabsTrigger value="timesheet" className="gap-2">
+        <TabsList className="w-full grid grid-cols-4 max-w-3xl h-11 p-1 bg-muted/50 rounded-2xl border border-border/40">
+          <TabsTrigger value="timesheet" className="gap-2 rounded-xl text-xs font-semibold data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <Clock className="size-4" />
             {t("tabTimesheet")}
           </TabsTrigger>
-          <TabsTrigger value="dayofweek" className="gap-2">
+          <TabsTrigger value="dayofweek" className="gap-2 rounded-xl text-xs font-semibold data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <Calendar className="size-4" />
             {t("tabDayOfWeek")}
           </TabsTrigger>
-          <TabsTrigger value="employeeworkingprofile" className="gap-2">
+          <TabsTrigger value="employeeworkingprofile" className="gap-2 rounded-xl text-xs font-semibold data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <Users className="size-4" />
             {t("tabEmployee")}
           </TabsTrigger>
-          <TabsTrigger value="location" className="gap-2">
+          <TabsTrigger value="location" className="gap-2 rounded-xl text-xs font-semibold data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <MapPin className="size-4" />
             {t("tabLocation")}
           </TabsTrigger>

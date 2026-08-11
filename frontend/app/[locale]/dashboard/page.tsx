@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo } from "react";
+import { motion } from "framer-motion";
 import {
   Building2,
   BriefcaseBusiness,
@@ -13,6 +14,7 @@ import {
   Download,
   Printer,
 } from "lucide-react";
+import { Link } from "@/src/i18n/routing";
 import { exportToCSV } from "@/lib/exportUtils";
 import { exportReportToPDF } from "@/lib/pdf-export";
 import { Badge } from "@/components/ui/badge";
@@ -172,18 +174,36 @@ const DashboardPage = () => {
       </div>
     );
   }
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.1 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" as const } }
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-1">
+    <motion.div 
+      className="space-y-6"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+    >
+      <motion.div variants={itemVariants} className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold tracking-tight">
           {t("welcome")} <span className="text-primary">{user?.username || ""}</span>
         </h1>
         <p className="text-sm text-muted-foreground">
           {t("subtitle")}
         </p>
-      </div>
+      </motion.div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <motion.div variants={itemVariants} className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         {kpis.map((item) => {
           const isNegative = item.delta.startsWith("-");
           return (
@@ -219,9 +239,9 @@ const DashboardPage = () => {
             </Card>
           );
         })}
-      </div>
+      </motion.div>
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+      <motion.div variants={itemVariants} className="grid grid-cols-1 gap-6 xl:grid-cols-12">
         <Card className="xl:col-span-8">
           <CardHeader className="flex-row items-center justify-between">
             <CardTitle>Headcount Growth</CardTitle>
@@ -459,9 +479,12 @@ const DashboardPage = () => {
                       </Badge>
                       </td>
                       <td className="px-4 py-3">
-                      <button className="rounded-xl bg-muted/60 px-3 py-1.5 text-xs font-semibold text-foreground/80 hover:bg-muted cursor-pointer">
-                        {tc("view")}
-                      </button>
+                        <Link
+                          href={`/dashboard/employee/${row.id}`}
+                          className="rounded-xl bg-muted/60 px-3.5 py-1.5 text-xs font-semibold text-foreground/80 hover:bg-primary hover:text-white transition-colors cursor-pointer inline-flex items-center"
+                        >
+                          {tc("view")}
+                        </Link>
                       </td>
                     </tr>
                   ))}
@@ -498,16 +521,22 @@ const DashboardPage = () => {
                       Active
                     </Badge>
                   </div>
-                  <div className="text-xs text-muted-foreground truncate pt-1 border-t">
-                    ✉️ {row.email || "No email"}
+                  <div className="text-xs text-muted-foreground truncate pt-2 border-t flex items-center justify-between">
+                    <span>✉️ {row.email || "No email"}</span>
+                    <Link
+                      href={`/dashboard/employee/${row.id}`}
+                      className="rounded-lg bg-muted/60 px-2.5 py-1 text-[11px] font-semibold text-foreground/80 hover:bg-primary hover:text-white transition-colors"
+                    >
+                      {tc("view")}
+                    </Link>
                   </div>
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };
 

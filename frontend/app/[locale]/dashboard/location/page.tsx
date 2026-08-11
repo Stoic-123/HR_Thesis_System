@@ -153,11 +153,11 @@ export const LocationPage = () => {
         </div>
       </div>
 
-      <Card className="border border-white/60 bg-white/70 shadow-sm backdrop-blur-xl rounded-3xl">
-        <CardHeader className="pb-3 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <Card className="overflow-hidden rounded-3xl border border-border/50 shadow-sm">
+        <CardHeader className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2">
           <div>
-            <CardTitle className="text-lg font-bold text-gray-800">{t("employeeLocationList")}</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-base font-semibold">{t("employeeLocationList")}</CardTitle>
+            <CardDescription className="text-xs text-muted-foreground mt-0.5">
               {t("employeeLocationDesc")}
             </CardDescription>
           </div>
@@ -167,28 +167,28 @@ export const LocationPage = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t("searchPlaceholder")}
-              className="pl-9 pr-4 h-10 rounded-2xl border-white/80 bg-white/60 focus:bg-white text-sm"
+              className="pl-9 pr-4 h-10 rounded-2xl border-border/60 bg-muted/30 focus:bg-background text-sm"
             />
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto rounded-2xl border border-gray-100 bg-white">
-            <table className="w-full text-sm min-w-[1000px]">
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[1100px]">
               <thead>
-                <tr className="border-b border-gray-100 bg-gray-50/75 text-left text-gray-600 font-semibold">
-                  <th className="px-6 py-4">{t("employee")}</th>
-                  <th className="px-6 py-4">{t("deptAndPosition")}</th>
-                  <th className="px-6 py-4">{t("primaryLocation")}</th>
-                  <th className="px-6 py-4">{t("secondaryLocations")}</th>
-                  <th className="px-6 py-4 text-right">{tc("actions")}</th>
+                <tr className="border-b border-border/60 bg-muted/30 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <th className="py-3.5 pl-6 pr-3 min-w-[220px]">{t("employee")}</th>
+                  <th className="py-3.5 px-3 min-w-[180px]">{t("deptAndPosition")}</th>
+                  <th className="py-3.5 px-3 min-w-[180px]">{t("primaryLocation")}</th>
+                  <th className="py-3.5 px-3 min-w-[220px]">{t("secondaryLocations")}</th>
+                  <th className="py-3.5 pl-3 pr-6 text-right min-w-[120px]">{tc("actions")}</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-border/30">
                 {filteredEmployees.map((emp: EmployeeLocationData) => (
-                  <tr key={emp.id} className="border-b border-gray-50 hover:bg-gray-50/50 last:border-0 transition-colors">
-                    <td className="px-6 py-4">
+                  <tr key={emp.id} className="group transition-colors hover:bg-muted/25">
+                    <td className="py-3.5 pl-6 pr-3">
                       <div className="flex items-center gap-3">
-                        <Avatar className="h-9 w-9 rounded-2xl border border-gray-100 shadow-sm">
+                        <Avatar className="h-9 w-9 ring-2 ring-background shadow-sm shrink-0">
                           <AvatarImage
                             src={
                               emp.profile_path
@@ -197,37 +197,37 @@ export const LocationPage = () => {
                             }
                             alt={emp.full_name}
                           />
-                          <AvatarFallback className="font-bold text-xs bg-gradient-to-br from-primary/10 to-indigo-500/10 text-primary">
+                          <AvatarFallback className="bg-slate-100 dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
                             {getEmployeeInitials(emp.first_name, emp.last_name)}
                           </AvatarFallback>
                         </Avatar>
-                        <div>
-                          <div className="font-bold text-gray-900">{emp.full_name}</div>
-                          <div className="text-xs text-muted-foreground">{emp.email || tc("noEmail")}</div>
+                        <div className="min-w-0">
+                          <div className="font-semibold leading-tight truncate">{emp.full_name}</div>
+                          <div className="text-xs text-muted-foreground truncate">{emp.email || tc("noEmail")}</div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="font-medium text-gray-800">{emp.department_name || <span className="text-gray-300">-</span>}</div>
-                      <div className="text-xs text-muted-foreground">{emp.position_name || <span className="text-gray-300">-</span>}</div>
+                    <td className="py-3.5 px-3">
+                      <div className="font-medium">{emp.department_name || <span className="text-muted-foreground/40">-</span>}</div>
+                      <div className="text-xs text-muted-foreground">{emp.position_name || <span className="text-muted-foreground/40">-</span>}</div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="py-3.5 px-3">
                       {emp.primary_location ? (
-                        <Badge className="bg-primary text-white hover:bg-primary gap-1 font-bold border border-primary/20 rounded-full px-3 py-1 shadow-sm shadow-primary/10">
-                          <MapPin size={12} />
+                        <Badge className="bg-indigo-50/80 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/40 gap-1 font-medium rounded-full px-3 py-1 shadow-none whitespace-nowrap">
+                          <MapPin size={12} className="text-indigo-500 shrink-0" />
                           {emp.primary_location.name}
                         </Badge>
                       ) : (
                         <span className="text-muted-foreground/40 italic text-xs">{tc("notSet")}</span>
                       )}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="py-3.5 px-3">
                       <div className="flex flex-wrap gap-1.5 max-w-sm">
                         {emp.secondary_locations.map((loc) => (
                           <Badge
                             key={loc.id}
-                            variant="secondary"
-                            className="bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200 rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                            variant="outline"
+                            className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap"
                           >
                             {loc.name}
                           </Badge>
@@ -237,12 +237,12 @@ export const LocationPage = () => {
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="py-3.5 pl-3 pr-6 text-right">
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => handleEditClick(emp)}
-                        className="rounded-xl hover:bg-primary/5 text-primary hover:text-primary gap-1.5 h-9 px-3 border border-transparent hover:border-primary/20 transition-all font-bold"
+                        className="rounded-xl hover:bg-primary/10 text-primary hover:text-primary gap-1.5 h-8 px-3 transition-all font-semibold text-xs"
                       >
                         <Edit2 size={13} />
                         {t("setLocation")}
