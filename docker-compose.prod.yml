@@ -57,7 +57,7 @@ services:
   # ── Frontend (Next.js Standalone) ─────────────────────────────────────────────
   frontend:
     build:
-      context: ./Frontend
+      context: ./frontend
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: https://api.bayonhr.shop
