@@ -31,8 +31,11 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import dayjs from "dayjs";
 import { useMe } from "@/hooks/useMe";
 import { exportReportToPDF } from "@/lib/pdf-export";
+import { useTranslations } from "next-intl";
 
 export default function AssetDashboardPage() {
+  const t = useTranslations("asset");
+  const tCommon = useTranslations("common");
   const queryClient = useQueryClient();
 
   // Queries
@@ -435,9 +438,9 @@ export default function AssetDashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Asset Management</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
         <p className="text-sm text-muted-foreground">
-          Manage company assets, inventory, categories, and review employee requests.
+          {t("subtitle")}
         </p>
       </div>
 
@@ -446,7 +449,7 @@ export default function AssetDashboardPage() {
           <TabsList className="bg-muted p-1 rounded-xl flex flex-wrap gap-1">
             <TabsTrigger value="inventory" className="rounded-lg gap-2">
               <PackageSearch className="size-4" />
-              Inventory
+              {t("inventory")}
             </TabsTrigger>
             <TabsTrigger value="repair" className="rounded-lg gap-2">
               <RefreshCcw className="size-4" />
@@ -458,11 +461,11 @@ export default function AssetDashboardPage() {
             </TabsTrigger>
             <TabsTrigger value="categories" className="rounded-lg gap-2">
               <ListTree className="size-4" />
-              Categories
+              {t("categories")}
             </TabsTrigger>
             <TabsTrigger value="requests" className="rounded-lg gap-2">
               <CheckCircle2 className="size-4" />
-              Requests
+              {t("requests")}
             </TabsTrigger>
           </TabsList>
 

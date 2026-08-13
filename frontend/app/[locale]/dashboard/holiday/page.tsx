@@ -30,6 +30,7 @@ import { LoadingState } from "@/components/ui/loading-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useTranslations, useLocale } from "next-intl";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 
 import {
   getHolidays,
@@ -192,31 +193,17 @@ export default function HolidayPage() {
                   placeholder={t("namePlaceholder")}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="font-semibold text-sm">{t("fromDate")}</Label>
-                  <Input
-                    className="rounded-xl"
-                    type="date"
-                    value={newStart}
-                    onChange={(e) => {
-                      setNewStart(e.target.value);
-                      if (!newEnd || e.target.value > newEnd)
-                        setNewEnd(e.target.value);
-                    }}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="font-semibold text-sm">{t("toDate")}</Label>
-                  <Input
-                    className="rounded-xl"
-                    type="date"
-                    value={newEnd}
-                    onChange={(e) => setNewEnd(e.target.value)}
-                    min={newStart || undefined}
-                  />
-                </div>
-              </div>
+              <DateRangePicker
+                startDate={newStart}
+                endDate={newEnd}
+                onStartDateChange={(val) => {
+                  setNewStart(val);
+                  if (!newEnd || val > newEnd) setNewEnd(val);
+                }}
+                onEndDateChange={(val) => setNewEnd(val)}
+                fromLabel={t("fromDate")}
+                toLabel={t("toDate")}
+              />
               <DialogFooter className="pt-2 gap-2 sm:gap-0">
                 <DialogClose asChild>
                   <Button variant="outline" className="rounded-xl">{tc("cancel")}</Button>

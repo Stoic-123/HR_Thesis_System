@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { scanDocument } from "@/services/scanner.services";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 interface ScannerDialogProps {
   open: boolean;
@@ -34,6 +35,7 @@ interface ScannerDialogProps {
 }
 
 export function ScannerDialog({ open, onOpenChange, onCaptured }: ScannerDialogProps) {
+  const t = useTranslations("scanner");
   const webcamRef = useRef<Webcam>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
@@ -143,7 +145,7 @@ export function ScannerDialog({ open, onOpenChange, onCaptured }: ScannerDialogP
         <div className="bg-white p-6">
           <div className="flex items-center justify-between">
             <DialogHeader className="text-left">
-              <DialogTitle className="text-lg font-bold">AI Document Scanner</DialogTitle>
+              <DialogTitle className="text-lg font-bold">{t("title")}</DialogTitle>
               <DialogDescription>
                 {mode === "camera" ? "Align document within the frame" : "Review the scanned document"}
               </DialogDescription>

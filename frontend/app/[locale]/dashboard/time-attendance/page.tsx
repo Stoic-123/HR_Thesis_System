@@ -1,9 +1,13 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "@/src/i18n/routing";
+
 export default function TimeAttendancePage() {
-  return (
-    <div>
-      <h1>Time Attendance Home</h1>
-    </div>
-  );
+  const router = useRouter();
+  useEffect(() => {
+    router.replace("/dashboard/time-attendance/report");
+  }, [router]);
+
+  return null;
 }

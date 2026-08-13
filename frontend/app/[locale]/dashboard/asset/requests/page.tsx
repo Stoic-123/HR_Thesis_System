@@ -16,8 +16,11 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { CheckCircle2, UserCircle } from "lucide-react";
 import dayjs from "dayjs";
+import { useTranslations } from "next-intl";
 
 export default function AssetRequestsPage() {
+  const t = useTranslations("asset");
+  const tCommon = useTranslations("common");
   const queryClient = useQueryClient();
   const { data: requestsResponse, isLoading: loadingRequests } = useAssetRequests();
   const { data: assetsResponse } = useAssets();
@@ -59,14 +62,14 @@ export default function AssetRequestsPage() {
     'pending_manager': 'bg-yellow-100 text-yellow-700',
     'pending_hr': 'bg-orange-100 text-orange-700',
     'assigned': 'bg-emerald-100 text-emerald-700',
-    'available': 'bg-emerald-100 text-emerald-700', // returned
+    'available': 'bg-emerald-100 text-emerald-700',
   };
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Asset Requests</h1>
-        <p className="text-sm text-muted-foreground">Manage incoming asset requests and returns from employees.</p>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("requests")}</h1>
+        <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
       </div>
 
       <Card>
@@ -74,7 +77,7 @@ export default function AssetRequestsPage() {
           {loadingRequests ? (
             <LoadingState variant="table" count={1} />
           ) : requests.length === 0 ? (
-            <div className="text-center py-10 text-muted-foreground">No requests found.</div>
+            <div className="text-center py-10 text-muted-foreground">{tCommon("noData")}</div>
           ) : (
             <div className="rounded-md border">
               <Table>
@@ -82,11 +85,11 @@ export default function AssetRequestsPage() {
                   <TableRow>
                     <TableHead>Requested By</TableHead>
                     <TableHead>Type</TableHead>
-                    <TableHead>Category / Asset</TableHead>
+                    <TableHead>{t("category")}</TableHead>
                     <TableHead>Reason</TableHead>
                     <TableHead>Date</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead>{t("status")}</TableHead>
+                    <TableHead className="text-right">{tCommon("actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -181,8 +184,8 @@ export default function AssetRequestsPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setApproveOpen({open: false, request: null})}>Cancel</Button>
-            <Button onClick={handleApprove} disabled={isSubmitting}>Confirm & Save</Button>
+            <Button variant="outline" onClick={() => setApproveOpen({open: false, request: null})}>{tCommon("cancel")}</Button>
+            <Button onClick={handleApprove} disabled={isSubmitting}>{tCommon("save")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

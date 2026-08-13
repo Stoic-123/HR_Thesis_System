@@ -249,7 +249,7 @@ export default function RolePage() {
             </div>
 
             <div className="space-y-3 pt-4 border-t border-border">
-              <Label className="text-base font-semibold">Permissions</Label>
+              <Label className="text-base font-semibold">{t("permissions")}</Label>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[300px] overflow-y-auto pr-2">
                 {AVAILABLE_PERMISSIONS.map((perm) => (
                   <label

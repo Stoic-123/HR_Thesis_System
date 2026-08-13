@@ -32,7 +32,7 @@ interface DatePickerProps {
 export function DatePicker({
   value,
   onChange,
-  placeholder = "Pick a date",
+  placeholder = "dd-MMM-yyyy",
   disabled,
   className,
   id,
@@ -49,13 +49,13 @@ export function DatePicker({
           variant="outline"
           disabled={disabled}
           className={cn(
-            "h-9 w-full justify-start gap-2 rounded-lg px-3 font-normal shadow-none",
-            !selected && "text-muted-foreground",
+            "h-10 w-full justify-between gap-2 rounded-xl px-3.5 font-normal shadow-xs bg-background border-gray-200/80 hover:bg-accent hover:text-accent-foreground text-sm cursor-pointer",
+            !selected && "text-muted-foreground/70",
             className,
           )}
         >
-          <CalendarIcon className="size-4 shrink-0 opacity-60" />
-          {selected ? format(selected, "PPP") : placeholder}
+          <span className="truncate">{selected ? format(selected, "dd-MMM-yyyy") : placeholder}</span>
+          <CalendarIcon className="size-4 shrink-0 opacity-60 text-muted-foreground" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">

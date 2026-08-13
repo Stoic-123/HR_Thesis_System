@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { getDepartments } from "@/services/department.services";
 import { getAllEmployees } from "@/services/employee.services";
 import { api } from "@/lib/api";
@@ -70,6 +71,9 @@ function AnnouncementForm({
   isPending: boolean;
   mode: "create" | "edit";
 }) {
+  const t = useTranslations("announcement");
+  const tCommon = useTranslations("common");
+
   const [title, setTitle] = useState(initial?.title ?? "");
   const [content, setContent] = useState(initial?.announcement ?? "");
   const [selectedDates, setSelectedDates] = useState<Date[]>(() => {
@@ -93,7 +97,6 @@ function AnnouncementForm({
       const numericEmpIds = empIds.map(Number);
       if (numericEmpIds.length === 0) return [];
       
-      // Select the department if all active employees of that department are targeted
       const activeDepts = departments.filter((dept: any) => {
         const deptEmpIds = employees
           .filter((emp: any) => emp.department_id === dept.id && emp.is_active === "active")
@@ -131,7 +134,7 @@ function AnnouncementForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !content.trim()) {
-      toast.error("Please fill in both title and announcement content.");
+      toast.error(t("fillBothTitleAndContent"));
       return;
     }
     const dateStrings = selectedDates.map((d) => format(d, "yyyy-MM-dd"));
@@ -147,17 +150,17 @@ function AnnouncementForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-5 mt-4">
       <div className="space-y-2">
-        <label className="text-sm font-semibold text-gray-700">Title</label>
-        <Input required placeholder="E.g. Company Retreat / Holiday Notice" value={title} onChange={(e) => setTitle(e.target.value)} className="h-11 rounded-2xl border-white/60 bg-white/70 shadow-sm" />
+        <label className="text-sm font-semibold text-gray-700">{t("formTitle")}</label>
+        <Input required placeholder={t("formTitlePlaceholder")} value={title} onChange={(e) => setTitle(e.target.value)} className="h-11 rounded-2xl border-white/60 bg-white/70 shadow-sm" />
       </div>
 
       <div className="space-y-2">
-        <label className="text-sm font-semibold text-gray-700">Content</label>
-        <Textarea required placeholder="Enter announcement details here..." rows={4} value={content} onChange={(e) => setContent(e.target.value)} className="rounded-2xl border-white/60 bg-white/70 shadow-sm" />
+        <label className="text-sm font-semibold text-gray-700">{t("formContent")}</label>
+        <Textarea required placeholder={t("formContentPlaceholder")} rows={4} value={content} onChange={(e) => setContent(e.target.value)} className="rounded-2xl border-white/60 bg-white/70 shadow-sm" />
       </div>
 
       <div className="space-y-2">
-        <label className="text-sm font-semibold text-gray-700">Image {mode === "edit" ? "(leave empty to keep existing)" : "(Optional)"}</label>
+        <label className="text-sm font-semibold text-gray-700">{t("formImage")} {mode === "edit" ? t("leaveEmptyKeep") : t("optional")}</label>
         <Input
           type="file"
           accept="image/*"
@@ -173,14 +176,14 @@ function AnnouncementForm({
 
       <div className="space-y-3">
         <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-          <CalendarIcon className="h-4 w-4 text-primary" /> Target Dates (Optional)
+          <CalendarIcon className="h-4 w-4 text-primary" /> {t("targetDates")}
         </label>
         <div className="flex flex-wrap gap-2 items-center">
           <Popover>
             <PopoverTrigger asChild>
               <Button type="button" variant="outline" className={cn("h-10 justify-start text-left font-normal rounded-xl border-gray-200 bg-white/70 w-full md:w-[260px] flex items-center gap-2", selectedDates.length === 0 && "text-muted-foreground")}>
                 <CalendarIcon className="h-4 w-4 shrink-0 text-gray-400" />
-                {selectedDates.length > 0 ? <span>{selectedDates.length} date(s) selected</span> : <span>Select dates</span>}
+                {selectedDates.length > 0 ? <span>{t("datesSelected", { count: selectedDates.length })}</span> : <span>{t("selectDates")}</span>}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0 rounded-3xl bg-white shadow-xl border border-gray-100" align="start">
@@ -189,7 +192,7 @@ function AnnouncementForm({
           </Popover>
           {selectedDates.length > 0 && (
             <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedDates([])} className="h-8 rounded-full text-xs text-muted-foreground hover:text-red-500 flex items-center gap-1 cursor-pointer">
-              <X className="h-3 w-3" /> Clear
+              <X className="h-3 w-3" /> {t("clear")}
             </Button>
           )}
         </div>
@@ -207,7 +210,7 @@ function AnnouncementForm({
 
       <div className="space-y-3">
         <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-          <Users className="h-4 w-4 text-primary" /> Target Departments
+          <Users className="h-4 w-4 text-primary" /> {t("targetDepartments")}
         </label>
         <div className="flex flex-wrap gap-2 bg-gray-50/50 p-3 rounded-xl border border-gray-100">
           {departments.map((dept: any) => {
@@ -224,24 +227,24 @@ function AnnouncementForm({
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-            <Users className="h-4 w-4 text-primary" /> Target Members
+            <Users className="h-4 w-4 text-primary" /> {t("targetMembers")}
           </label>
           <span className="text-xs text-muted-foreground font-medium">
-            {selectedEmpIds.length === 0 ? "All employees" : `${selectedEmpIds.length} selected`}
+            {selectedEmpIds.length === 0 ? t("allEmployees") : t("membersSelected", { count: selectedEmpIds.length })}
           </span>
         </div>
         <div className="relative">
           <Search className="absolute left-3.5 top-2.5 h-4 w-4 text-gray-400 pointer-events-none" />
-          <Input placeholder="Search employees..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10 h-9 rounded-xl border-gray-200/80 bg-white/70 text-sm" />
+          <Input placeholder={t("searchEmployees")} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10 h-9 rounded-xl border-gray-200/80 bg-white/70 text-sm" />
           {searchQuery && <button type="button" onClick={() => setSearchQuery("")} className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"><X className="h-4 w-4" /></button>}
         </div>
         <div className="flex gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={() => { setSelectedEmpIds(employees.map((e: any) => e.id)); setSelectedDeptIds(departments.map((d: any) => d.id)); }} className="h-8 text-[11px] rounded-lg cursor-pointer">Select All</Button>
-          <Button type="button" variant="outline" size="sm" onClick={() => { setSelectedEmpIds([]); setSelectedDeptIds([]); }} className="h-8 text-[11px] rounded-lg cursor-pointer hover:text-red-500">Clear All</Button>
+          <Button type="button" variant="outline" size="sm" onClick={() => { setSelectedEmpIds(employees.map((e: any) => e.id)); setSelectedDeptIds(departments.map((d: any) => d.id)); }} className="h-8 text-[11px] rounded-lg cursor-pointer">{t("selectAll")}</Button>
+          <Button type="button" variant="outline" size="sm" onClick={() => { setSelectedEmpIds([]); setSelectedDeptIds([]); }} className="h-8 text-[11px] rounded-lg cursor-pointer hover:text-red-500">{t("clearAll")}</Button>
         </div>
         <div className="max-h-48 overflow-y-auto p-2 border border-gray-100 bg-gray-50/30 rounded-xl custom-scrollbar space-y-1">
           {filteredEmployees.length === 0 ? (
-            <div className="p-6 text-center text-xs text-muted-foreground">No employees found</div>
+            <div className="p-6 text-center text-xs text-muted-foreground">{t("noEmployeesFound")}</div>
           ) : filteredEmployees.map((emp: any) => {
             const isChecked = selectedEmpIds.includes(emp.id);
             const dept = departments.find((d: any) => d.id === emp.department_id);
@@ -266,7 +269,7 @@ function AnnouncementForm({
       </div>
 
       <Button type="submit" disabled={isPending} className="w-full h-12 rounded-2xl bg-primary text-primary-foreground hover:bg-primary/95 flex items-center justify-center gap-2 text-sm font-semibold cursor-pointer shadow-md">
-        {isPending ? (<><Loader2 className="h-4 w-4 animate-spin" />{mode === "create" ? "Creating..." : "Saving..."}</>) : (<><Megaphone className="h-4 w-4" />{mode === "create" ? "Create & Push Announcement" : "Save Changes"}</>)}
+        {isPending ? (<><Loader2 className="h-4 w-4 animate-spin" />{mode === "create" ? t("creating") : t("saving")}</>) : (<><Megaphone className="h-4 w-4" />{mode === "create" ? t("createAndPush") : t("saveChanges")}</>)}
       </Button>
     </form>
   );
@@ -274,6 +277,8 @@ function AnnouncementForm({
 
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 export default function AnnouncementPage() {
+  const t = useTranslations("announcement");
+  const tCommon = useTranslations("common");
   const queryClient = useQueryClient();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editAnn, setEditAnn] = useState<any | null>(null);
@@ -307,11 +312,11 @@ export default function AnnouncementPage() {
       return res.data;
     },
     onSuccess: () => {
-      toast.success("Announcement created and pushed!");
+      toast.success(t("toastCreated"));
       setIsCreateOpen(false);
       queryClient.invalidateQueries({ queryKey: ["announcements-list"] });
     },
-    onError: (err: any) => toast.error(err.response?.data?.message || "Failed to create."),
+    onError: (err: any) => toast.error(err.response?.data?.message || t("toastCreateFailed")),
   });
 
   const updateMutation = useMutation({
@@ -320,11 +325,11 @@ export default function AnnouncementPage() {
       return res.data;
     },
     onSuccess: () => {
-      toast.success("Announcement updated successfully!");
+      toast.success(t("toastUpdated"));
       setEditAnn(null);
       queryClient.invalidateQueries({ queryKey: ["announcements-list"] });
     },
-    onError: (err: any) => toast.error(err.response?.data?.message || "Failed to update."),
+    onError: (err: any) => toast.error(err.response?.data?.message || t("toastUpdateFailed")),
   });
 
   const deleteMutation = useMutation({
@@ -333,10 +338,10 @@ export default function AnnouncementPage() {
       return res.data;
     },
     onSuccess: () => {
-      toast.success("Announcement deleted.");
+      toast.success(t("toastDeleted"));
       queryClient.invalidateQueries({ queryKey: ["announcements-list"] });
     },
-    onError: (err: any) => toast.error(err.response?.data?.message || "Failed to delete."),
+    onError: (err: any) => toast.error(err.response?.data?.message || t("toastDeleteFailed")),
   });
 
   const isLoading = isLoadingDepts || isLoadingEmps || isLoadingAnns;
@@ -360,10 +365,10 @@ export default function AnnouncementPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-gray-900 flex items-center gap-3">
             <Megaphone className="h-8 w-8 text-primary animate-bounce" />
-            Announcements
+            {t("title")}
           </h1>
           <p className="text-muted-foreground mt-1">
-            Broadcast updates, company newsletters, and targeted notifications in real-time.
+            {t("subtitle")}
           </p>
         </div>
 
@@ -371,13 +376,13 @@ export default function AnnouncementPage() {
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
             <Button className="h-11 rounded-2xl bg-primary px-5 text-primary-foreground hover:bg-primary/95 flex items-center gap-2 cursor-pointer shadow-lg transition-transform hover:scale-[1.02]">
-              <Plus className="h-4.5 w-4.5" /> New Announcement
+              <Plus className="h-4.5 w-4.5" /> {t("newAnnouncement")}
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-3xl lg:max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl p-6 custom-scrollbar bg-white/95 backdrop-blur-md">
             <DialogHeader>
               <DialogTitle className="text-2xl font-bold flex items-center gap-2">
-                <Plus className="h-5 w-5 text-primary" /> Create Announcement
+                <Plus className="h-5 w-5 text-primary" /> {t("createAnnouncement")}
               </DialogTitle>
             </DialogHeader>
             <AnnouncementForm
@@ -396,7 +401,7 @@ export default function AnnouncementPage() {
         <DialogContent className="sm:max-w-3xl lg:max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl p-6 custom-scrollbar bg-white/95 backdrop-blur-md">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold flex items-center gap-2">
-              <Pencil className="h-5 w-5 text-primary" /> Edit Announcement
+              <Pencil className="h-5 w-5 text-primary" /> {t("editAnnouncement")}
             </DialogTitle>
           </DialogHeader>
           {editAnn && (
@@ -417,12 +422,12 @@ export default function AnnouncementPage() {
       <div className="space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <Bell className="h-6 w-6 text-primary" /> Announcement Logs
+            <Bell className="h-6 w-6 text-primary" /> {t("announcementLogs")}
           </h2>
           <div className="relative w-64">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400 pointer-events-none" />
             <Input
-              placeholder="Search announcements..."
+              placeholder={t("searchPlaceholder")}
               value={tableSearch}
               onChange={(e) => setTableSearch(e.target.value)}
               className="pl-9 h-9 rounded-xl text-sm border-gray-200 bg-white/70"
@@ -438,8 +443,8 @@ export default function AnnouncementPage() {
         {filteredAnnouncements.length === 0 ? (
           <Card className="border-dashed border-gray-200 bg-white/40 p-12 text-center rounded-3xl shadow-sm">
             <Megaphone className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-base text-gray-500 font-medium">No announcements found</p>
-            <p className="text-xs text-gray-400 mt-1">Announcements created by Admins/HR will appear here.</p>
+            <p className="text-base text-gray-500 font-medium">{t("noAnnouncementsFound")}</p>
+            <p className="text-xs text-gray-400 mt-1">{t("noAnnouncementsDesc")}</p>
           </Card>
         ) : (
           <div className="rounded-2xl border border-gray-100 overflow-hidden shadow-sm bg-white">
@@ -447,11 +452,11 @@ export default function AnnouncementPage() {
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100">
                   <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide w-10">#</th>
-                  <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Title</th>
-                  <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide hidden md:table-cell">Preview</th>
-                  <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide hidden lg:table-cell">Target</th>
-                  <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide hidden lg:table-cell">Created</th>
-                  <th className="text-right px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Actions</th>
+                  <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">{t("formTitle")}</th>
+                  <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide hidden md:table-cell">{t("view")}</th>
+                  <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide hidden lg:table-cell">{t("targetMembers")}</th>
+                  <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide hidden lg:table-cell">{t("createdOn", { date: "" }).trim()}</th>
+                  <th className="text-right px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">{tCommon("actions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -492,9 +497,9 @@ export default function AnnouncementPage() {
                       </td>
                       <td className="px-4 py-3.5 hidden lg:table-cell">
                         {isPublic ? (
-                          <Badge variant="outline" className="text-[10px] font-bold text-green-600 border-green-200 bg-green-50 rounded-full">Public</Badge>
+                          <Badge variant="outline" className="text-[10px] font-bold text-green-600 border-green-200 bg-green-50 rounded-full">{t("public")}</Badge>
                         ) : (
-                          <span className="text-xs text-gray-500">{parsedEmpIds.length} member{parsedEmpIds.length !== 1 ? "s" : ""}</span>
+                          <span className="text-xs text-gray-500">{t("membersCount", { count: parsedEmpIds.length })}</span>
                         )}
                       </td>
                       <td className="px-4 py-3.5 text-xs text-gray-400 hidden lg:table-cell whitespace-nowrap">
@@ -505,14 +510,14 @@ export default function AnnouncementPage() {
                           <button
                             onClick={() => setViewAnn({ ...ann, parsedDates, parsedEmpIds })}
                             className="p-1.5 rounded-lg text-gray-400 hover:text-primary hover:bg-primary/5 transition-colors cursor-pointer"
-                            title="View"
+                            title={t("view")}
                           >
                             <Eye className="h-4 w-4" />
                           </button>
                           <button
                             onClick={() => setEditAnn(ann)}
                             className="p-1.5 rounded-lg text-gray-400 hover:text-amber-500 hover:bg-amber-50 transition-colors cursor-pointer"
-                            title="Edit"
+                            title={t("edit")}
                           >
                             <Pencil className="h-4 w-4" />
                           </button>
@@ -521,26 +526,26 @@ export default function AnnouncementPage() {
                               <button
                                 disabled={deleteMutation.isPending}
                                 className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
-                                title="Delete"
+                                title={t("delete")}
                               >
                                 <Trash2 className="h-4 w-4" />
                               </button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                               <AlertDialogHeader>
-                                <AlertDialogTitle>Delete Announcement</AlertDialogTitle>
+                                <AlertDialogTitle>{t("deleteConfirmTitle")}</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  Are you sure you want to delete this announcement? This action cannot be undone.
+                                  {t("deleteConfirmDesc")}
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
-                                <AlertDialogCancel className="rounded-xl font-medium">Cancel</AlertDialogCancel>
+                                <AlertDialogCancel className="rounded-xl font-medium">{t("cancel")}</AlertDialogCancel>
                                 <AlertDialogAction
                                   onClick={() => deleteMutation.mutate(ann.id)}
                                   variant="destructive"
                                   className="rounded-xl font-semibold bg-red-600 hover:bg-red-700 text-white"
                                 >
-                                  Delete
+                                  {t("delete")}
                                 </AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
@@ -561,7 +566,6 @@ export default function AnnouncementPage() {
         <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto rounded-3xl custom-scrollbar bg-white p-6">
           {viewAnn && (
             <div className="space-y-5">
-              {/* Image — inside the padded container, not a banner overlapping controls */}
               {viewAnn.image_path && (
                 <div className="w-full rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
                   <img
@@ -589,7 +593,7 @@ export default function AnnouncementPage() {
                 {Array.isArray(viewAnn.parsedDates) && viewAnn.parsedDates.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 items-center">
                     <span className="text-xs font-bold text-gray-400 flex items-center gap-1 mr-1">
-                      <CalendarIcon className="h-3 w-3" /> Dates:
+                      <CalendarIcon className="h-3 w-3" /> {t("targetDates")}:
                     </span>
                     {viewAnn.parsedDates.map((d: string, i: number) => (
                       <Badge key={i} variant="outline" className="text-[10px] rounded-full border-gray-200">{d}</Badge>
@@ -599,24 +603,23 @@ export default function AnnouncementPage() {
                 <div className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-1.5 font-medium text-gray-500">
                     <Users className="h-3.5 w-3.5 text-primary" />
-                    <span>{Array.isArray(viewAnn.parsedEmpIds) && viewAnn.parsedEmpIds.length > 0 ? `Sent to ${viewAnn.parsedEmpIds.length} member(s)` : "Company wide broadcast"}</span>
+                    <span>{Array.isArray(viewAnn.parsedEmpIds) && viewAnn.parsedEmpIds.length > 0 ? t("sentToMembers", { count: viewAnn.parsedEmpIds.length }) : t("companyWideBroadcast")}</span>
                   </div>
                   {!(Array.isArray(viewAnn.parsedEmpIds) && viewAnn.parsedEmpIds.length > 0) && (
-                    <Badge variant="outline" className="text-[9px] font-bold text-green-600 border-green-200 bg-green-50 rounded-full">Public</Badge>
+                    <Badge variant="outline" className="text-[9px] font-bold text-green-600 border-green-200 bg-green-50 rounded-full">{t("public")}</Badge>
                   )}
                 </div>
                 <div className="text-[11px] text-gray-400">
-                  Created {viewAnn.created_at ? format(new Date(viewAnn.created_at), "PPP 'at' p") : "—"}
+                  {t("createdOn", { date: viewAnn.created_at ? format(new Date(viewAnn.created_at), "PPP 'at' p") : "—" })}
                 </div>
 
-                {/* Quick edit button inside view modal */}
                 <Button
                   variant="outline"
                   size="sm"
                   className="w-full rounded-xl mt-1 flex items-center gap-2"
                   onClick={() => { setEditAnn(viewAnn); setViewAnn(null); }}
                 >
-                  <Pencil className="h-3.5 w-3.5" /> Edit This Announcement
+                  <Pencil className="h-3.5 w-3.5" /> {t("editThisAnnouncement")}
                 </Button>
               </div>
             </div>

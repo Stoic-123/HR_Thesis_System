@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { useSocket } from "@/hooks/useSocket";
 import { formatDistanceToNow } from "date-fns";
+import { useTranslations } from "next-intl";
 
 type Notification = {
   id: number;
@@ -46,6 +47,7 @@ function TruncatedNotificationText({ text, limit = 80, isRead }: { text: string;
 }
 
 export function NotificationCenter() {
+  const t = useTranslations("notification");
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [shouldShake, setShouldShake] = useState(false);
@@ -158,8 +160,8 @@ export function NotificationCenter() {
             {/* Header */}
             <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-2">
               <div>
-                <h3 className="font-semibold text-gray-900 text-base">Notifications</h3>
-                <p className="text-[11px] text-gray-500">{unreadCount} unread messages</p>
+                <h3 className="font-semibold text-gray-900 text-base">{t("title")}</h3>
+                <p className="text-[11px] text-gray-500">{unreadCount} unread</p>
               </div>
               
               {unreadCount > 0 && (
@@ -169,7 +171,7 @@ export function NotificationCenter() {
                   type="button"
                 >
                   <CheckCheck className="size-3.5" />
-                  Mark all as read
+                  {t("markAllRead")}
                 </button>
               )}
             </div>
@@ -181,8 +183,8 @@ export function NotificationCenter() {
                   <div className="rounded-full bg-gray-50 p-3 mb-3">
                     <Inbox className="size-6 text-gray-400" />
                   </div>
-                  <p className="text-sm font-medium text-gray-900">No notifications yet</p>
-                  <p className="text-xs text-gray-400 max-w-[200px] mt-1">We will notify you when things require your attention.</p>
+                  <p className="text-sm font-medium text-gray-900">{t("emptyTitle")}</p>
+                  <p className="text-xs text-gray-400 max-w-[200px] mt-1">{t("emptyDesc")}</p>
                 </div>
               ) : (
                 visibleNotifications.map((notif) => (

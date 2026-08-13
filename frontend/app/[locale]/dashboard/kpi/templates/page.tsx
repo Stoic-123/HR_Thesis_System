@@ -23,8 +23,11 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LoadingState } from "@/components/ui/loading-state";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslations } from "next-intl";
 
 export default function KpiTemplatesPage() {
+  const t = useTranslations("kpi");
+  const tCommon = useTranslations("common");
   const queryClient = useQueryClient();
   const { data: templates, isLoading } = useKpiTemplates();
   
@@ -47,12 +50,12 @@ export default function KpiTemplatesPage() {
     mutationFn: createTemplate,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["kpi-templates"] });
-      toast.success("Template created successfully!");
+      toast.success(tCommon("success"));
       setIsDialogOpen(false);
       setFormData({ name: "", description: "" });
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.error || "Error creating template");
+      toast.error(error?.response?.data?.error || tCommon("error"));
     }
   });
 
@@ -60,12 +63,12 @@ export default function KpiTemplatesPage() {
     mutationFn: ({ templateId, data }: { templateId: number, data: any }) => addTemplateGoal(templateId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["kpi-templates"] });
-      toast.success("Goal added to template!");
+      toast.success(tCommon("success"));
       setIsGoalDialogOpen(false);
       setGoalData({ category: "Performance", title: "", target_value: "", target_unit: "%", weight: "" });
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.error || "Error adding goal");
+      toast.error(error?.response?.data?.error || tCommon("error"));
     }
   });
 
@@ -127,9 +130,9 @@ export default function KpiTemplatesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">KPI Templates</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{t("step2Title")}</h1>
           <p className="text-sm text-muted-foreground">
-            Create standard goals to assign to whole departments.
+            {t("step2Desc")}
           </p>
         </div>
 
@@ -137,18 +140,18 @@ export default function KpiTemplatesPage() {
           <DialogTrigger asChild>
             <Button className="rounded-xl gap-2">
               <Plus className="size-4" />
-              Create Template
+              {t("step2Btn")}
             </Button>
           </DialogTrigger>
           <DialogContent>
             <form onSubmit={handleTemplateSubmit}>
               <DialogHeader>
-                <DialogTitle>New KPI Template</DialogTitle>
-                <DialogDescription>Create a preset of goals (e.g. IT Department KPI)</DialogDescription>
+                <DialogTitle>{t("step2Title")}</DialogTitle>
+                <DialogDescription>{t("step2Desc")}</DialogDescription>
               </DialogHeader>
               <div className="py-4 space-y-4">
                 <div className="space-y-2">
-                  <Label>Template Name</Label>
+                  <Label>{tCommon("name")}</Label>
                   <Input 
                     placeholder="e.g. Software Engineer KPI" 
                     value={formData.name} 
@@ -157,7 +160,7 @@ export default function KpiTemplatesPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Description</Label>
+                  <Label>{tCommon("description")}</Label>
                   <Input 
                     placeholder="Standard evaluation for developers" 
                     value={formData.description} 
@@ -167,10 +170,10 @@ export default function KpiTemplatesPage() {
               </div>
               <DialogFooter>
                 <DialogClose asChild>
-                  <Button type="button" variant="outline">Cancel</Button>
+                  <Button type="button" variant="outline">{tCommon("cancel")}</Button>
                 </DialogClose>
                 <Button type="submit" disabled={templateMutation.isPending}>
-                  {templateMutation.isPending ? "Saving..." : "Save Template"}
+                  {templateMutation.isPending ? tCommon("saving") : tCommon("save")}
                 </Button>
               </DialogFooter>
             </form>
@@ -179,24 +182,24 @@ export default function KpiTemplatesPage() {
       </div>
 
       <div className="space-y-4">
-        {templates?.map((t: any) => {
-          const isExpanded = expandedTemplates[t.id];
-          const totalWeight = t.kpitemplategoal?.reduce((sum: number, g: any) => sum + g.weight, 0) || 0;
+        {templates?.map((tItem: any) => {
+          const isExpanded = expandedTemplates[tItem.id];
+          const totalWeight = tItem.kpitemplategoal?.reduce((sum: number, g: any) => sum + g.weight, 0) || 0;
 
           return (
-            <Card key={t.id} className="overflow-hidden">
+            <Card key={tItem.id} className="overflow-hidden">
               <CardHeader className="p-0">
                 <div 
                   className="flex items-center justify-between p-6 cursor-pointer hover:bg-gray-50 transition-colors"
-                  onClick={() => toggleExpand(t.id)}
+                  onClick={() => toggleExpand(tItem.id)}
                 >
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 bg-primary/10 rounded-xl flex items-center justify-center">
                       <FileText className="size-5 text-primary" />
                     </div>
                     <div>
-                      <CardTitle className="text-lg">{t.name}</CardTitle>
-                      <CardDescription>{t.description || "No description"} • Total Weight: {totalWeight}%</CardDescription>
+                      <CardTitle className="text-lg">{tItem.name}</CardTitle>
+                      <CardDescription>{tItem.description || "No description"} • Total Weight: {totalWeight}%</CardDescription>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
@@ -205,11 +208,11 @@ export default function KpiTemplatesPage() {
                       size="sm" 
                       onClick={(e) => {
                         e.stopPropagation();
-                        setSelectedTemplate(t);
+                        setSelectedTemplate(tItem);
                         setIsGoalDialogOpen(true);
                       }}
                     >
-                      <Plus className="size-4 mr-1" /> Add Goal
+                      <Plus className="size-4 mr-1" /> {tCommon("add")}
                     </Button>
                     {isExpanded ? <ChevronDown className="size-5 text-muted-foreground" /> : <ChevronRight className="size-5 text-muted-foreground" />}
                   </div>
@@ -217,7 +220,7 @@ export default function KpiTemplatesPage() {
               </CardHeader>
               {isExpanded && (
                 <CardContent className="bg-gray-50/50 border-t p-6">
-                  {t.kpitemplategoal?.length > 0 ? (
+                  {tItem.kpitemplategoal?.length > 0 ? (
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b">
@@ -228,7 +231,7 @@ export default function KpiTemplatesPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {t.kpitemplategoal.map((g: any) => (
+                        {tItem.kpitemplategoal.map((g: any) => (
                           <tr key={g.id} className="border-b last:border-0">
                             <td className="py-3 font-medium">{g.category}</td>
                             <td className="py-3">{g.title}</td>
@@ -239,7 +242,7 @@ export default function KpiTemplatesPage() {
                       </tbody>
                     </table>
                   ) : (
-                    <div className="text-center text-muted-foreground py-4">No goals added yet.</div>
+                    <div className="text-center text-muted-foreground py-4">{tCommon("noData")}</div>
                   )}
                 </CardContent>
               )}
@@ -249,7 +252,7 @@ export default function KpiTemplatesPage() {
         {(!templates || templates.length === 0) && (
           <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed">
             <FileText className="size-8 text-gray-300 mx-auto mb-3" />
-            <p className="text-muted-foreground">No templates created yet.</p>
+            <p className="text-muted-foreground">{tCommon("noData")}</p>
           </div>
         )}
       </div>
@@ -299,10 +302,10 @@ export default function KpiTemplatesPage() {
             </div>
             <DialogFooter>
               <DialogClose asChild>
-                <Button type="button" variant="outline">Cancel</Button>
+                <Button type="button" variant="outline">{tCommon("cancel")}</Button>
               </DialogClose>
               <Button type="submit" disabled={goalMutation.isPending}>
-                {goalMutation.isPending ? "Adding..." : "Add Goal"}
+                {goalMutation.isPending ? tCommon("saving") : tCommon("add")}
               </Button>
             </DialogFooter>
           </form>

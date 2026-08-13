@@ -16,8 +16,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Plus, UserPlus, Undo2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 export default function AssetInventoryPage() {
+  const t = useTranslations("asset");
+  const tCommon = useTranslations("common");
   const queryClient = useQueryClient();
   const { data: assetsResponse, isLoading: loadingAssets } = useAssets();
   const { data: categoriesResponse } = useAssetCategories();
@@ -101,34 +104,34 @@ export default function AssetInventoryPage() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Inventory</h1>
-          <p className="text-sm text-muted-foreground">Manage individual company assets.</p>
+          <h1 className="text-2xl font-semibold tracking-tight">{t("inventory")}</h1>
+          <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
         </div>
         
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
-            <Button><Plus className="size-4 mr-2" /> Add Asset</Button>
+            <Button><Plus className="size-4 mr-2" /> {t("newAsset")}</Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Add New Asset</DialogTitle>
+              <DialogTitle>{t("newAsset")}</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label>Name / Model</Label>
+                <Label>{t("assetName")}</Label>
                 <Input value={newAsset.name} onChange={e => setNewAsset({...newAsset, name: e.target.value})} placeholder="e.g. MacBook Pro M2" />
               </div>
               <div className="grid gap-2">
-                <Label>Category</Label>
+                <Label>{t("category")}</Label>
                 <Select value={newAsset.category_id} onValueChange={v => setNewAsset({...newAsset, category_id: v})}>
-                  <SelectTrigger><SelectValue placeholder="Select Category" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={t("category")} /></SelectTrigger>
                   <SelectContent>
                     {categories.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label>Serial / Tag Number</Label>
+                <Label>{t("serialNumber")}</Label>
                 <Input value={newAsset.serial_number} onChange={e => setNewAsset({...newAsset, serial_number: e.target.value})} placeholder="Optional" />
               </div>
               <div className="grid gap-2">
@@ -144,8 +147,8 @@ export default function AssetInventoryPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
-              <Button onClick={handleCreateAsset} disabled={isSubmitting}>{isSubmitting ? "Saving..." : "Save"}</Button>
+              <Button variant="outline" onClick={() => setIsCreateOpen(false)}>{tCommon("cancel")}</Button>
+              <Button onClick={handleCreateAsset} disabled={isSubmitting}>{isSubmitting ? tCommon("saving") : tCommon("save")}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -156,18 +159,18 @@ export default function AssetInventoryPage() {
           {loadingAssets ? (
             <LoadingState variant="table" count={1} />
           ) : assets.length === 0 ? (
-            <div className="text-center py-10 text-muted-foreground">No assets found in inventory.</div>
+            <div className="text-center py-10 text-muted-foreground">{t("noData")}</div>
           ) : (
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Asset</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>{t("assetName")}</TableHead>
+                    <TableHead>{t("category")}</TableHead>
+                    <TableHead>{t("status")}</TableHead>
                     <TableHead>Condition</TableHead>
-                    <TableHead>Assigned To</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead>{t("assignedTo")}</TableHead>
+                    <TableHead className="text-right">{tCommon("actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -240,7 +243,7 @@ export default function AssetInventoryPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAssignOpen({open: false, asset: null})}>Cancel</Button>
+            <Button variant="outline" onClick={() => setAssignOpen({open: false, asset: null})}>{tCommon("cancel")}</Button>
             <Button onClick={handleAssign} disabled={isSubmitting}>Confirm Assignment</Button>
           </DialogFooter>
         </DialogContent>
@@ -278,7 +281,7 @@ export default function AssetInventoryPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setReturnOpen({open: false, asset: null})}>Cancel</Button>
+            <Button variant="outline" onClick={() => setReturnOpen({open: false, asset: null})}>{tCommon("cancel")}</Button>
             <Button onClick={handleReturn} disabled={isSubmitting}>Confirm Return</Button>
           </DialogFooter>
         </DialogContent>

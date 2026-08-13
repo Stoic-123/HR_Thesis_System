@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { chatWithAI, smartSearchEmployees } from "@/services/ai.services";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 function sanitizeBotContent(content: string): string {
   if (!content) return content;
@@ -118,6 +119,7 @@ function renderFormattedContent(content: string) {
 
 
 export function HRChatbot() {
+  const t = useTranslations("chatbot");
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [isOnline, setIsOnline] = useState<boolean | null>(null);
@@ -285,7 +287,7 @@ export function HRChatbot() {
             {isLoading && (
               <div className="flex items-center gap-2 text-muted-foreground italic">
                 <Loader2 className="size-4 animate-spin" />
-                <span className="text-xs">AI is thinking...</span>
+                <span className="text-xs">{t("thinking")}</span>
               </div>
             )}
             {messages.length <= 2 && !isLoading && (
@@ -316,7 +318,7 @@ export function HRChatbot() {
               <Input
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="Ask me anything..."
+                placeholder={t("placeholder")}
                 className="flex-1 h-10 rounded-xl"
                 disabled={isLoading}
               />

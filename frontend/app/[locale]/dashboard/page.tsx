@@ -244,7 +244,7 @@ const DashboardPage = () => {
       <motion.div variants={itemVariants} className="grid grid-cols-1 gap-6 xl:grid-cols-12">
         <Card className="xl:col-span-8">
           <CardHeader className="flex-row items-center justify-between">
-            <CardTitle>Headcount Growth</CardTitle>
+            <CardTitle>{t("headcountGrowth")}</CardTitle>
             <Badge className="rounded-full bg-primary/10 text-primary">
               All Time
             </Badge>
@@ -293,7 +293,7 @@ const DashboardPage = () => {
         <div className="xl:col-span-4 space-y-6">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle>Employment Status</CardTitle>
+              <CardTitle>{t("employmentStatus")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex h-9 items-center gap-1 rounded-2xl bg-muted/60 p-2 overflow-hidden">
@@ -325,7 +325,7 @@ const DashboardPage = () => {
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle>Gender Distribution</CardTitle>
+              <CardTitle>{t("genderDistribution")}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-12 items-center gap-3">
@@ -347,7 +347,7 @@ const DashboardPage = () => {
                     </div>
                   ))}
                   {pieData.length === 0 && (
-                    <div className="text-center italic mt-4">No data</div>
+                    <div className="text-center italic mt-4">{tc("noData")}</div>
                   )}
                 </div>
               </div>
@@ -358,7 +358,7 @@ const DashboardPage = () => {
         <Card className="xl:col-span-12">
           <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
             <div>
-              <CardTitle>Recent Employees</CardTitle>
+              <CardTitle>{t("recentEmployees")}</CardTitle>
             </div>
             <div className="flex items-center gap-2">
               <button

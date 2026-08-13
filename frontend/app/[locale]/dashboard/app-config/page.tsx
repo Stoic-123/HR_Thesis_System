@@ -12,6 +12,7 @@ import {
   RefreshCw,
   Palette
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +32,9 @@ interface AppMenuItem {
 }
 
 export default function AppConfigPage() {
+  const t = useTranslations("appConfig");
+  const tCommon = useTranslations("common");
+
   const [menus, setMenus] = useState<AppMenuItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [savingId, setSavingId] = useState<number | null>(null);
@@ -43,7 +47,7 @@ export default function AppConfigPage() {
         setMenus(res.data.data);
       }
     } catch (err: any) {
-      toast.error(err.response?.data?.message || "Failed to load app menu configuration.");
+      toast.error(err.response?.data?.message || t("saveError"));
     } finally {
       setIsLoading(false);
     }
@@ -74,13 +78,13 @@ export default function AppConfigPage() {
       }
 
       if (res.data?.success) {
-        toast.success(res.data.message || "App menu updated successfully!");
+        toast.success(t("saveSuccess"));
         setMenus((prev) =>
           prev.map((item) => (item.id === id ? res.data.data : item))
         );
       }
     } catch (err: any) {
-      toast.error(err.response?.data?.message || "Failed to update menu item.");
+      toast.error(err.response?.data?.message || t("saveError"));
     } finally {
       setSavingId(null);
     }
@@ -103,10 +107,10 @@ export default function AppConfigPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2.5">
             <Smartphone className="size-7 text-primary" />
-            App Configuration
+            {t("title")}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Customize mobile app quick access menus, titles, colors, and upload custom icons to Cloudflare R2.
+            {t("subtitle")}
           </p>
         </div>
         <Button 
@@ -116,7 +120,7 @@ export default function AppConfigPage() {
           className="rounded-xl gap-2 border-border/60 hover:bg-muted/50"
         >
           <RefreshCw className={`size-4 ${isLoading ? "animate-spin" : ""}`} />
-          Refresh
+          {tCommon("sync")}
         </Button>
       </div>
 
@@ -190,11 +194,11 @@ export default function AppConfigPage() {
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-semibold text-muted-foreground mb-1 flex items-center gap-1">
                       <CloudUpload className="size-3 text-primary" />
-                      Cloudflare R2 Storage
+                      Cloudflare R2
                     </p>
                     <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary text-xs font-semibold cursor-pointer transition-colors">
                       <Upload className="size-3.5" />
-                      {savingId === item.id ? "Uploading..." : "Change Icon"}
+                      {savingId === item.id ? tCommon("saving") : tCommon("edit")}
                       <input 
                         type="file" 
                         accept="image/*" 
@@ -208,7 +212,7 @@ export default function AppConfigPage() {
 
                 {/* Edit Label Input */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Menu Title (Mobile App)</label>
+                  <label className="text-xs font-medium text-muted-foreground">{tCommon("name")}</label>
                   <Input
                     defaultValue={item.label}
                     onBlur={(e) => {
@@ -217,7 +221,7 @@ export default function AppConfigPage() {
                       }
                     }}
                     className="rounded-xl bg-background/50 text-sm font-medium"
-                    placeholder="Enter menu title"
+                    placeholder={tCommon("name")}
                   />
                 </div>
 
@@ -225,7 +229,7 @@ export default function AppConfigPage() {
                 <div className="flex items-center justify-between pt-1">
                   <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                     <Palette className="size-3.5" />
-                    Card Color
+                    Color
                   </span>
                   <div className="flex items-center gap-2">
                     <button

@@ -61,4 +61,5 @@ APPENDIX_C_PROGRAM_INSTALLATION.md
 # Ignore installation images
 Installation_Image/
 
-
+# Database dumps
+*.sql

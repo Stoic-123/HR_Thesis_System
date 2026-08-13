@@ -13,8 +13,11 @@ import { toast } from "sonner";
 import { UsersRound, CheckCircle2 } from "lucide-react";
 import { LoadingState } from "@/components/ui/loading-state";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslations } from "next-intl";
 
 export default function KpiAssignPage() {
+  const t = useTranslations("kpi");
+  const tCommon = useTranslations("common");
   const queryClient = useQueryClient();
   const { data: cycles, isLoading: loadingCycles } = useKpiCycles();
   const { data: templates, isLoading: loadingTemplates } = useKpiTemplates();
@@ -34,11 +37,11 @@ export default function KpiAssignPage() {
   const mutation = useMutation({
     mutationFn: assignTemplate,
     onSuccess: (data) => {
-      toast.success(data.message || "Assigned successfully!");
-      setFormData({ ...formData, department_id: "" }); // Reset dept
+      toast.success(data.message || tCommon("success"));
+      setFormData({ ...formData, department_id: "" });
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.error || "Error assigning template");
+      toast.error(error?.response?.data?.error || tCommon("error"));
     }
   });
 
@@ -94,9 +97,9 @@ export default function KpiAssignPage() {
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Assign KPI Templates</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("step3Title")}</h1>
         <p className="text-sm text-muted-foreground">
-          Deploy predefined KPI templates to entire departments or the whole company for an active cycle.
+          {t("step3Desc")}
         </p>
       </div>
 
@@ -104,16 +107,16 @@ export default function KpiAssignPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <UsersRound className="size-5 text-primary" />
-            Batch Assignment
+            {t("step3Title")}
           </CardTitle>
-          <CardDescription>This action will automatically generate KPI tracking records for all active employees in the selected group.</CardDescription>
+          <CardDescription>{t("step3Desc")}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               
               <div className="space-y-2">
-                <Label>Active Performance Cycle</Label>
+                <Label>{t("tab1")}</Label>
                 <Select value={formData.cycle_id} onValueChange={(val) => setFormData({ ...formData, cycle_id: val })}>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select a cycle..." />
@@ -124,33 +127,30 @@ export default function KpiAssignPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                {activeCycles.length === 0 && (
-                  <p className="text-xs text-red-500">No active cycles found. Please create one first.</p>
-                )}
               </div>
 
               <div className="space-y-2">
-                <Label>KPI Template</Label>
+                <Label>{t("tab2")}</Label>
                 <Select value={formData.template_id} onValueChange={(val) => setFormData({ ...formData, template_id: val })}>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select a template..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {templates?.map((t: any) => (
-                      <SelectItem key={t.id} value={t.id.toString()}>{t.name} ({t.kpitemplategoal?.length || 0} goals)</SelectItem>
+                    {templates?.map((tItem: any) => (
+                      <SelectItem key={tItem.id} value={tItem.id.toString()}>{tItem.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2 md:col-span-2">
-                <Label>Target Department</Label>
+                <Label>{tCommon("department")}</Label>
                 <Select value={formData.department_id} onValueChange={(val) => setFormData({ ...formData, department_id: val })}>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select a department..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all" className="font-semibold text-primary">All Departments (Company Wide)</SelectItem>
+                    <SelectItem value="all" className="font-semibold text-primary">{tCommon("all")}</SelectItem>
                     {departments?.map((d: any) => (
                       <SelectItem key={d.id} value={d.id.toString()}>{d.name}</SelectItem>
                     ))}
@@ -165,10 +165,10 @@ export default function KpiAssignPage() {
               size="lg"
               disabled={mutation.isPending || activeCycles.length === 0}
             >
-              {mutation.isPending ? "Assigning..." : (
+              {mutation.isPending ? tCommon("submitting") : (
                 <>
                   <CheckCircle2 className="size-4 mr-2" />
-                  Deploy KPIs to Department
+                  {t("step3Btn")}
                 </>
               )}
             </Button>

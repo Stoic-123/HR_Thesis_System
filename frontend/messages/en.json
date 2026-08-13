@@ -165,7 +165,11 @@
     "topCandidates": "Top Scoring Candidates",
     "candidate": "Candidate",
     "matchScore": "Match Score",
-    "errorLoading": "Unable to load dashboard data"
+    "errorLoading": "Unable to load dashboard data",
+    "headcountGrowth": "Headcount Growth",
+    "employmentStatus": "Employment Status",
+    "genderDistribution": "Gender Distribution",
+    "recentEmployees": "Recent Employees"
   },
   "company": {
     "title": "Company",
@@ -646,9 +650,9 @@
     "subtitle": "View and manage employee working profiles."
   },
   "chatbot": {
-    "title": "HR Assistant",
-    "placeholder": "Ask something...",
-    "send": "Send"
+    "title": "HR AI Assistant",
+    "thinking": "AI is thinking...",
+    "placeholder": "Ask me anything..."
   },
   "timeAttendanceSetup": {
     "title": "Time Attendance Setup",
@@ -993,5 +997,104 @@
     "step3Btn": "Deploy Goals to Staff",
     "step4Title": "Step 4: Grade & Score Staff",
     "step4Desc": "Review employee goal achievements and input final performance scores."
+  },
+  "announcement": {
+    "title": "Announcements",
+    "subtitle": "Broadcast updates, company newsletters, and targeted notifications in real-time.",
+    "newAnnouncement": "New Announcement",
+    "createAnnouncement": "Create Announcement",
+    "editAnnouncement": "Edit Announcement",
+    "deleteAnnouncement": "Delete Announcement",
+    "announcementLogs": "Announcement Logs",
+    "searchPlaceholder": "Search announcements...",
+    "noAnnouncementsFound": "No announcements found",
+    "noAnnouncementsDesc": "Announcements created by Admins/HR will appear here.",
+    "formTitle": "Title",
+    "formTitlePlaceholder": "E.g. Company Retreat / Holiday Notice",
+    "formContent": "Content",
+    "formContentPlaceholder": "Enter announcement details here...",
+    "formImage": "Image",
+    "leaveEmptyKeep": "(leave empty to keep existing)",
+    "optional": "(Optional)",
+    "targetDates": "Target Dates (Optional)",
+    "selectDates": "Select dates",
+    "datesSelected": "{count} date(s) selected",
+    "clear": "Clear",
+    "targetDepartments": "Target Departments",
+    "targetMembers": "Target Members",
+    "allEmployees": "All employees",
+    "membersSelected": "{count} selected",
+    "searchEmployees": "Search employees...",
+    "selectAll": "Select All",
+    "clearAll": "Clear All",
+    "noEmployeesFound": "No employees found",
+    "creating": "Creating...",
+    "saving": "Saving...",
+    "createAndPush": "Create & Push Announcement",
+    "saveChanges": "Save Changes",
+    "public": "Public",
+    "membersCount": "{count} member(s)",
+    "deleteConfirmTitle": "Delete Announcement",
+    "deleteConfirmDesc": "Are you sure you want to delete this announcement? This action cannot be undone.",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "view": "View",
+    "edit": "Edit",
+    "editThisAnnouncement": "Edit This Announcement",
+    "sentToMembers": "Sent to {count} member(s)",
+    "companyWideBroadcast": "Company wide broadcast",
+    "createdOn": "Created {date}",
+    "toastCreated": "Announcement created and pushed!",
+    "toastUpdated": "Announcement updated successfully!",
+    "toastDeleted": "Announcement deleted.",
+    "toastCreateFailed": "Failed to create.",
+    "toastUpdateFailed": "Failed to update.",
+    "toastDeleteFailed": "Failed to delete.",
+    "fillBothTitleAndContent": "Please fill in both title and announcement content."
+  },
+  "appConfig": {
+    "title": "App Configuration",
+    "subtitle": "Manage application preferences, feature flags, and system integrations",
+    "saveSuccess": "App configuration saved successfully",
+    "saveError": "Failed to save app configuration"
+  },
+  "asset": {
+    "title": "Asset Management",
+    "subtitle": "Track company assets, equipment assignments, and requests",
+    "inventory": "Inventory",
+    "categories": "Categories",
+    "requests": "Requests",
+    "newAsset": "New Asset",
+    "newCategory": "New Category",
+    "newRequest": "New Request",
+    "searchAssets": "Search assets...",
+    "searchCategories": "Search categories...",
+    "searchRequests": "Search requests...",
+    "noData": "No assets found",
+    "assetName": "Asset Name",
+    "serialNumber": "Serial Number",
+    "category": "Category",
+    "assignedTo": "Assigned To",
+    "status": "Status",
+    "actions": "Actions"
+  },
+  "myKpi": {
+    "title": "My Performance",
+    "subtitle": "Track your goals, self-evaluation, and review history",
+    "myGoals": "My Goals",
+    "teamOverview": "Team KPI Overview",
+    "noGoals": "No KPI goals assigned for this cycle"
+  },
+  "notification": {
+    "title": "Notifications",
+    "emptyTitle": "No notifications yet",
+    "emptyDesc": "We will notify you when things require your attention.",
+    "markAllRead": "Mark all as read",
+    "clearAll": "Clear all"
+  },
+  "scanner": {
+    "title": "AI Document Scanner",
+    "uploadPrompt": "Upload or drag document here",
+    "scanning": "Scanning document..."
   }
 }

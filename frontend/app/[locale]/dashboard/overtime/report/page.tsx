@@ -43,6 +43,8 @@ import { getAllEmployees } from "@/services/employee.services";
 import { toast } from "sonner";
 import { useMe } from "@/hooks/useMe";
 import { exportReportToPDF } from "@/lib/pdf-export";
+import { Label } from "@/components/ui/label";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { type DateRange } from "react-day-picker";
 
 const toISODate = (d: Date) => {
@@ -50,6 +52,13 @@ const toISODate = (d: Date) => {
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
+};
+
+const parseLocalDate = (val: string): Date => {
+  if (!val) return new Date();
+  const [y, m, d] = val.split("-").map(Number);
+  if (y && m && d) return new Date(y, m - 1, d);
+  return new Date(val);
 };
 
 export default function OvertimeReportPage() {
@@ -288,96 +297,80 @@ export default function OvertimeReportPage() {
           <h1 className="text-2xl font-bold tracking-tight">{tReport("title")}</h1>
           <p className="text-gray-500">{tReport("description")}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Date Range Picker (Single Input) */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className="min-w-[240px] justify-start gap-2 rounded-xl shadow-sm text-left font-normal cursor-pointer"
-              >
-                <CalendarIcon className="size-4 text-muted-foreground" />
-                <div className="flex flex-col text-left">
-                  <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider leading-none mb-1">
-                    {locale === "km" ? "ចន្លោះកាលបរិច្ឆេទ" : "Date Range"}
-                  </span>
-                  <span className="text-xs font-semibold leading-tight">
-                    {dateRange?.from ? (
-                      dateRange.to ? (
-                        <>
-                          {dateRange.from.toLocaleDateString(locale === "km" ? "km-KH" : "en-US", { month: "short", day: "numeric", year: "numeric" })} -{" "}
-                          {dateRange.to.toLocaleDateString(locale === "km" ? "km-KH" : "en-US", { month: "short", day: "numeric", year: "numeric" })}
-                        </>
-                      ) : (
-                        dateRange.from.toLocaleDateString(locale === "km" ? "km-KH" : "en-US", { month: "short", day: "numeric", year: "numeric" })
-                      )
-                    ) : (
-                      locale === "km" ? "ជ្រើសរើសចន្លោះកាលបរិច្ឆេទ" : "Pick a date range"
-                    )}
-                  </span>
-                </div>
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="end">
-              <Calendar
-                mode="range"
-                selected={dateRange}
-                onSelect={handleDateRangeSelect}
-              />
-            </PopoverContent>
-          </Popover>
+        <div className="flex flex-wrap items-end gap-3">
+          {/* Date Range Picker (From / To) */}
+          <DateRangePicker
+            startDate={toISODate(startDate)}
+            endDate={toISODate(endDate)}
+            onStartDateChange={(val) => setStartDate(parseLocalDate(val))}
+            onEndDateChange={(val) => setEndDate(parseLocalDate(val))}
+            fromLabel={locale === "km" ? "ពី" : "From"}
+            toLabel={locale === "km" ? "ដល់" : "To"}
+          />
 
           {/* Department Select */}
-          <Select value={selectedDeptId} onValueChange={setSelectedDeptId}>
-            <SelectTrigger className="w-[180px] rounded-xl shadow-sm">
-              <SelectValue placeholder={locale === "km" ? "នាយកដ្ឋាន" : "Department"} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{locale === "km" ? "ទាំងអស់" : "All"}</SelectItem>
-              {departments.map((dept) => (
-                <SelectItem key={dept.id} value={String(dept.id)}>
-                  {dept.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex flex-col gap-1.5 min-w-[150px]">
+            <Label className="text-xs font-medium text-muted-foreground">{locale === "km" ? "នាយកដ្ឋាន" : "Department"}</Label>
+            <Select value={selectedDeptId} onValueChange={setSelectedDeptId}>
+              <SelectTrigger className="h-10 rounded-xl shadow-xs bg-background border-gray-200/80">
+                <SelectValue placeholder={locale === "km" ? "នាយកដ្ឋាន" : "Department"} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{locale === "km" ? "ទាំងអស់" : "All"}</SelectItem>
+                {departments.map((dept) => (
+                  <SelectItem key={dept.id} value={String(dept.id)}>
+                    {dept.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           {/* Employee Select */}
-          <Select value={selectedEmpId} onValueChange={setSelectedEmpId}>
-            <SelectTrigger className="w-[180px] rounded-xl shadow-sm">
-              <SelectValue placeholder={locale === "km" ? "បុគ្គលិក" : "Employee"} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{locale === "km" ? "ទាំងអស់" : "All"}</SelectItem>
-              {employees.map((emp) => (
-                <SelectItem key={emp.id} value={String(emp.id)}>
-                  {`${emp.first_name} ${emp.last_name}`}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex flex-col gap-1.5 min-w-[150px]">
+            <Label className="text-xs font-medium text-muted-foreground">{locale === "km" ? "បុគ្គលិក" : "Employee"}</Label>
+            <Select value={selectedEmpId} onValueChange={setSelectedEmpId}>
+              <SelectTrigger className="h-10 rounded-xl shadow-xs bg-background border-gray-200/80">
+                <SelectValue placeholder={locale === "km" ? "បុគ្គលិក" : "Employee"} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{locale === "km" ? "ទាំងអស់" : "All"}</SelectItem>
+                {employees.map((emp) => (
+                  <SelectItem key={emp.id} value={String(emp.id)}>
+                    {`${emp.first_name} ${emp.last_name}`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           {/* Status Filter */}
-          <Select value={filter} onValueChange={setFilter}>
-            <SelectTrigger className="w-[180px] rounded-xl shadow-sm">
-              <SelectValue placeholder={locale === "km" ? "ស្ថានភាព" : "Status"} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{locale === "km" ? "ទាំងអស់" : "All"}</SelectItem>
-              <SelectItem value="pending">{tOt("pending")}</SelectItem>
-              <SelectItem value="approved">{tOt("approved")}</SelectItem>
-              <SelectItem value="rejected">{tOt("rejected")}</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex flex-col gap-1.5 min-w-[140px]">
+            <Label className="text-xs font-medium text-muted-foreground">{locale === "km" ? "ស្ថានភាព" : "Status"}</Label>
+            <Select value={filter} onValueChange={setFilter}>
+              <SelectTrigger className="h-10 rounded-xl shadow-xs bg-background border-gray-200/80">
+                <SelectValue placeholder={locale === "km" ? "ស្ថានភាព" : "Status"} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{locale === "km" ? "ទាំងអស់" : "All"}</SelectItem>
+                <SelectItem value="pending">{tOt("pending")}</SelectItem>
+                <SelectItem value="approved">{tOt("approved")}</SelectItem>
+                <SelectItem value="rejected">{tOt("rejected")}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-          <Button
-            onClick={handleExportPDF}
-            className="flex items-center gap-2 rounded-xl shadow-sm bg-primary hover:bg-primary/90 text-white font-medium cursor-pointer"
-            disabled={filteredOvertimes.length === 0}
-          >
-            <Printer className="size-4" />
-            {tReport("exportPDF") || "Export PDF"}
-          </Button>
+          <div className="flex flex-col gap-1.5 justify-end">
+            <span className="text-xs font-medium opacity-0 select-none hidden sm:inline-block">Action</span>
+            <Button
+              onClick={handleExportPDF}
+              className="h-10 flex items-center gap-2 rounded-xl shadow-xs bg-primary hover:bg-primary/90 text-white font-medium cursor-pointer"
+              disabled={filteredOvertimes.length === 0}
+            >
+              <Printer className="size-4" />
+              {tReport("exportPDF") || "Export PDF"}
+            </Button>
+          </div>
         </div>
       </div>
 

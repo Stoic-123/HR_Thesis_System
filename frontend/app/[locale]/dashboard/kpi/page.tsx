@@ -15,7 +15,7 @@ import { getDepartments } from "@/services/department.services";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { DatePicker } from "@/components/ui/date-picker";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -283,22 +283,14 @@ export default function KpiDashboardPage() {
                         className="rounded-xl"
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2 flex flex-col">
-                        <Label className="font-semibold text-zinc-700">Start Date</Label>
-                        <DatePicker
-                          value={cycleForm.start_date}
-                          onChange={(val) => setCycleForm({ ...cycleForm, start_date: val })}
-                        />
-                      </div>
-                      <div className="space-y-2 flex flex-col">
-                        <Label className="font-semibold text-zinc-700">End Date</Label>
-                        <DatePicker
-                          value={cycleForm.end_date}
-                          onChange={(val) => setCycleForm({ ...cycleForm, end_date: val })}
-                        />
-                      </div>
-                    </div>
+                    <DateRangePicker
+                      startDate={cycleForm.start_date}
+                      endDate={cycleForm.end_date}
+                      onStartDateChange={(val) => setCycleForm({ ...cycleForm, start_date: val })}
+                      onEndDateChange={(val) => setCycleForm({ ...cycleForm, end_date: val })}
+                      fromLabel="From"
+                      toLabel="To"
+                    />
                   </div>
                   <DialogFooter className="gap-2">
                     <DialogClose asChild>

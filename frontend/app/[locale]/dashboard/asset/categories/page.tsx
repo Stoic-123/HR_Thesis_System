@@ -13,8 +13,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogT
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 export default function AssetCategoriesPage() {
+  const t = useTranslations("asset");
+  const tCommon = useTranslations("common");
   const queryClient = useQueryClient();
   const { data: categoriesResponse, isLoading } = useAssetCategories();
   const categories: AssetCategory[] = categoriesResponse?.data || [];
@@ -45,32 +48,32 @@ export default function AssetCategoriesPage() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Asset Categories</h1>
-          <p className="text-sm text-muted-foreground">Manage different types of assets.</p>
+          <h1 className="text-2xl font-semibold tracking-tight">{t("categories")}</h1>
+          <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
         </div>
         
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button><Plus className="size-4 mr-2" /> New Category</Button>
+            <Button><Plus className="size-4 mr-2" /> {t("newCategory")}</Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Create Asset Category</DialogTitle>
+              <DialogTitle>{t("newCategory")}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label>Name</Label>
+                <Label>{tCommon("name")}</Label>
                 <Input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Laptop" />
               </div>
               <div className="space-y-2">
-                <Label>Description</Label>
+                <Label>{tCommon("description")}</Label>
                 <Input value={description} onChange={e => setDescription(e.target.value)} placeholder="Optional details..." />
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>{tCommon("cancel")}</Button>
               <Button onClick={handleSubmit} disabled={isSubmitting}>
-                {isSubmitting ? "Saving..." : "Save"}
+                {isSubmitting ? tCommon("saving") : tCommon("save")}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -79,21 +82,21 @@ export default function AssetCategoriesPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>All Categories</CardTitle>
+          <CardTitle>{t("categories")}</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <LoadingState variant="table" count={1} />
           ) : categories.length === 0 ? (
-            <div className="text-center py-10 text-muted-foreground">No categories found.</div>
+            <div className="text-center py-10 text-muted-foreground">{tCommon("noData")}</div>
           ) : (
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>ID</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Description</TableHead>
+                    <TableHead>{tCommon("name")}</TableHead>
+                    <TableHead>{tCommon("description")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

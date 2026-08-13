@@ -8,8 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Target, CheckCircle2, UsersRound } from "lucide-react";
 import { LoadingState } from "@/components/ui/loading-state";
+import { useTranslations } from "next-intl";
 
 export default function MyKpiPage() {
+  const t = useTranslations("myKpi");
+  const tCommon = useTranslations("common");
   const { data: cycles, isLoading: loadingCycles } = useKpiCycles();
   const activeCycle = cycles?.find((c: any) => c.status === "active");
 
@@ -21,8 +24,8 @@ export default function MyKpiPage() {
   if (!activeCycle) {
     return (
       <div className="text-center py-12">
-        <h2 className="text-xl font-medium">No Active KPI Cycle</h2>
-        <p className="text-muted-foreground mt-2">There is currently no active performance review cycle.</p>
+        <h2 className="text-xl font-medium">{t("noGoals")}</h2>
+        <p className="text-muted-foreground mt-2">{tCommon("noData")}</p>
       </div>
     );
   }
@@ -30,8 +33,8 @@ export default function MyKpiPage() {
   if (!kpi) {
     return (
       <div className="text-center py-12">
-        <h2 className="text-xl font-medium">No KPIs Assigned</h2>
-        <p className="text-muted-foreground mt-2">You don't have any KPI goals assigned for the current cycle.</p>
+        <h2 className="text-xl font-medium">{t("noGoals")}</h2>
+        <p className="text-muted-foreground mt-2">{tCommon("noData")}</p>
       </div>
     );
   }
@@ -50,16 +53,16 @@ export default function MyKpiPage() {
     <div className="space-y-6 max-w-5xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">My KPI Dashboard</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
           <p className="text-sm text-muted-foreground">
-            Cycle: {activeCycle.name}
+            {activeCycle.name}
           </p>
         </div>
         {myKpiData?.is_manager && (
           <Link href="/dashboard/my-kpi/team">
             <Button variant="outline" className="gap-2 rounded-xl">
               <UsersRound className="size-4" />
-              Team KPI Dashboard
+              {t("teamOverview")}
             </Button>
           </Link>
         )}
@@ -98,8 +101,8 @@ export default function MyKpiPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>My Goals</CardTitle>
-          <CardDescription>Update your progress for each goal below.</CardDescription>
+          <CardTitle>{t("myGoals")}</CardTitle>
+          <CardDescription>{t("subtitle")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {kpi.kpigoal?.map((goal: any) => (
@@ -128,7 +131,7 @@ export default function MyKpiPage() {
             </div>
           ))}
           {!kpi.kpigoal?.length && (
-            <p className="text-center text-muted-foreground py-4">No goals configured.</p>
+            <p className="text-center text-muted-foreground py-4">{tCommon("noData")}</p>
           )}
         </CardContent>
       </Card>

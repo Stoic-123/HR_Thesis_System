@@ -15,15 +15,17 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Target, CheckCircle2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 export default function KpiEvaluatePage() {
+  const t = useTranslations("kpi");
+  const tCommon = useTranslations("common");
   const queryClient = useQueryClient();
   const { data: cycles, isLoading: loadingCycles } = useKpiCycles();
   
   const activeCycles = cycles?.filter((c: any) => c.status === "active") || [];
   const [selectedCycleId, setSelectedCycleId] = useState<string>("");
   
-  // Set default cycle
   React.useEffect(() => {
     if (activeCycles.length > 0 && !selectedCycleId) {
       setSelectedCycleId(activeCycles[0].id.toString());
@@ -44,13 +46,13 @@ export default function KpiEvaluatePage() {
   const evaluationMutation = useMutation({
     mutationFn: submitHrScore,
     onSuccess: (data) => {
-      toast.success(data.message || "Evaluation completed successfully!");
+      toast.success(data.message || tCommon("success"));
       queryClient.invalidateQueries({ queryKey: ["kpi-evaluations", selectedCycleId] });
       setSelectedKpi(null);
       setHrScores({});
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.error || "Error submitting evaluation");
+      toast.error(error?.response?.data?.error || tCommon("error"));
     }
   });
 
@@ -58,7 +60,6 @@ export default function KpiEvaluatePage() {
     setSelectedKpi(kpi);
     const initialScores: Record<string, string> = {};
     kpi.kpigoal?.forEach((g: any) => {
-      // Pre-fill with manager score if HR score isn't set, otherwise use HR score or 0
       initialScores[g.id] = (g.hr_score || g.manager_score || 0).toString();
     });
     setHrScores(initialScores);
@@ -83,9 +84,9 @@ export default function KpiEvaluatePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">HR KPI Evaluation</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("step4Title")}</h1>
         <p className="text-sm text-muted-foreground">
-          Review manager scores and input final HR scores for employee KPIs.
+          {t("step4Desc")}
         </p>
       </div>
 
@@ -93,8 +94,8 @@ export default function KpiEvaluatePage() {
         <CardHeader className="pb-4">
           <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
             <div>
-              <CardTitle>Evaluation Queue</CardTitle>
-              <CardDescription>Select a cycle to view employees ready for final evaluation.</CardDescription>
+              <CardTitle>{t("step4Title")}</CardTitle>
+              <CardDescription>{t("step4Desc")}</CardDescription>
             </div>
             <div className="w-full md:w-64">
               <Select value={selectedCycleId} onValueChange={setSelectedCycleId}>
@@ -114,20 +115,20 @@ export default function KpiEvaluatePage() {
           {loadingEvaluations ? (
             <LoadingState variant="table" count={1} />
           ) : !selectedCycleId ? (
-            <div className="text-center py-10 text-muted-foreground">Please select an active cycle</div>
+            <div className="text-center py-10 text-muted-foreground">{tCommon("noData")}</div>
           ) : evaluations.length === 0 ? (
-            <div className="text-center py-10 text-muted-foreground">No KPI records found for this cycle.</div>
+            <div className="text-center py-10 text-muted-foreground">{tCommon("noData")}</div>
           ) : (
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Employee</TableHead>
-                    <TableHead>Department</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>{tCommon("employee")}</TableHead>
+                    <TableHead>{tCommon("department")}</TableHead>
+                    <TableHead>{tCommon("status")}</TableHead>
                     <TableHead>Goals</TableHead>
                     <TableHead>Total Score</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="text-right">{tCommon("actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -160,7 +161,7 @@ export default function KpiEvaluatePage() {
                             onClick={() => handleEvaluateClick(kpi)}
                             disabled={kpi.evaluation_status === 'pending_manager'}
                           >
-                            {kpi.evaluation_status === 'completed' ? 'Edit Score' : 'Evaluate'}
+                            {kpi.evaluation_status === 'completed' ? tCommon("edit") : tCommon("view")}
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -177,19 +178,13 @@ export default function KpiEvaluatePage() {
       <Dialog open={!!selectedKpi} onOpenChange={(open) => !open && setSelectedKpi(null)}>
         <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>HR Final Evaluation</DialogTitle>
+            <DialogTitle>{t("step4Title")}</DialogTitle>
             <DialogDescription>
               Evaluating KPI for {selectedKpi?.employee?.first_name} {selectedKpi?.employee?.last_name}
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-6 my-4">
-            {selectedKpi?.evaluation_status === 'pending_manager' && (
-              <div className="bg-amber-50 text-amber-800 p-3 rounded-md text-sm">
-                Warning: The manager has not yet submitted their evaluation. You can still input HR scores, but this is usually done after the manager.
-              </div>
-            )}
-
             {selectedKpi?.kpigoal?.map((goal: any) => (
               <div key={goal.id} className="bg-slate-50 border rounded-xl p-4">
                 <div className="flex justify-between items-start mb-2">
@@ -222,12 +217,12 @@ export default function KpiEvaluatePage() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setSelectedKpi(null)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setSelectedKpi(null)}>{tCommon("cancel")}</Button>
             <Button onClick={handleSubmitEvaluation} disabled={evaluationMutation.isPending}>
-              {evaluationMutation.isPending ? "Submitting..." : (
+              {evaluationMutation.isPending ? tCommon("submitting") : (
                 <>
                   <CheckCircle2 className="size-4 mr-2" />
-                  Finalize Evaluation
+                  {tCommon("submit")}
                 </>
               )}
             </Button>

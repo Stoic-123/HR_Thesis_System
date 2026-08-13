@@ -52,6 +52,7 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
   expireDate,
 }) => {
   const t = useTranslations("employeeCard");
+  const tCommon = useTranslations("common");
   const { data: fetchedCompanyData } = useCompany();
   const companyData: CompanyData = propCompany || fetchedCompanyData?.data || fetchedCompanyData || {};
 
@@ -280,13 +281,13 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
             <div className="space-y-4 text-center text-[#374151] w-full">
               {/* Email */}
               <div className="space-y-1">
-                <p className="text-xs text-[#6B7280] uppercase tracking-wider font-semibold">Email</p>
+                <p className="text-xs text-[#6B7280] uppercase tracking-wider font-semibold">{tCommon("email")}</p>
                 <p className="font-bold text-[#111827] text-base">{companyEmail}</p>
               </div>
 
               {/* Phone */}
               <div className="space-y-1">
-                <p className="text-xs text-[#6B7280] uppercase tracking-wider font-semibold">Phone</p>
+                <p className="text-xs text-[#6B7280] uppercase tracking-wider font-semibold">{tCommon("phone")}</p>
                 <p className="font-bold text-[#111827] text-base">{companyPhone}</p>
               </div>
             </div>

@@ -12,8 +12,11 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { UsersRound, Activity, ChevronDown, ChevronRight, CheckCircle2 } from "lucide-react";
 import { LoadingState } from "@/components/ui/loading-state";
+import { useTranslations } from "next-intl";
 
 export default function TeamKpiPage() {
+  const t = useTranslations("myKpi");
+  const tCommon = useTranslations("common");
   const queryClient = useQueryClient();
   const { data: cycles, isLoading: loadingCycles } = useKpiCycles();
   const activeCycle = cycles?.find((c: any) => c.status === "active");
@@ -22,7 +25,6 @@ export default function TeamKpiPage() {
   
   const [expandedEmployees, setExpandedEmployees] = useState<Record<number, boolean>>({});
   
-  // Review Form State
   const [reviewingKpi, setReviewingKpi] = useState<any>(null);
   const [reviewQuarter, setReviewQuarter] = useState("Q1");
   const [reviewComment, setReviewComment] = useState("");
@@ -32,11 +34,11 @@ export default function TeamKpiPage() {
     mutationFn: submitQuarterlyReview,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["kpi-team-dashboard"] });
-      toast.success("Quarterly review submitted!");
+      toast.success(tCommon("success"));
       setReviewingKpi(null);
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.error || "Error submitting review");
+      toast.error(error?.response?.data?.error || tCommon("error"));
     }
   });
 
@@ -61,7 +63,7 @@ export default function TeamKpiPage() {
     const goalsProgressData = reviewingKpi.kpigoal.map((g: any) => ({
       kpi_goal_id: g.id,
       progress_percentage: parseFloat(goalProgress[g.id]) || 0,
-      manager_comment: "" // Could be expanded to per-goal comments later
+      manager_comment: ""
     }));
 
     reviewMutation.mutate({
@@ -77,7 +79,7 @@ export default function TeamKpiPage() {
   if (!activeCycle) {
     return (
       <div className="text-center py-12">
-        <h2 className="text-xl font-medium">No Active KPI Cycle</h2>
+        <h2 className="text-xl font-medium">{t("noGoals")}</h2>
       </div>
     );
   }
@@ -99,7 +101,7 @@ export default function TeamKpiPage() {
             <h1 className="text-2xl font-semibold tracking-tight">Submit Quarterly Review</h1>
             <p className="text-sm text-muted-foreground">Evaluating {reviewingKpi.employee?.first_name} {reviewingKpi.employee?.last_name}</p>
           </div>
-          <Button variant="outline" onClick={() => setReviewingKpi(null)}>Cancel</Button>
+          <Button variant="outline" onClick={() => setReviewingKpi(null)}>{tCommon("cancel")}</Button>
         </div>
 
         <Card>
@@ -154,7 +156,7 @@ export default function TeamKpiPage() {
 
               <div className="flex justify-end">
                 <Button type="submit" disabled={reviewMutation.isPending} className="rounded-xl px-8">
-                  {reviewMutation.isPending ? "Submitting..." : "Submit Review"}
+                  {reviewMutation.isPending ? tCommon("submitting") : tCommon("submit")}
                 </Button>
               </div>
             </form>
@@ -167,15 +169,15 @@ export default function TeamKpiPage() {
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Team Performance Dashboard</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("teamOverview")}</h1>
         <p className="text-sm text-muted-foreground">
-          Department: {teamData.department} | Active Cycle: {activeCycle.name}
+          {teamData.department} | {activeCycle.name}
         </p>
       </div>
 
       <div className="space-y-4">
         {teamData.members?.map((emp: any) => {
-          const kpi = emp.employeekpi?.[0]; // Current cycle KPI
+          const kpi = emp.employeekpi?.[0];
           const isExpanded = expandedEmployees[emp.id];
 
           return (
@@ -247,7 +249,7 @@ export default function TeamKpiPage() {
               )}
               {isExpanded && !kpi && (
                 <CardContent className="bg-gray-50/50 border-t p-6 text-center text-muted-foreground">
-                  This employee does not have a KPI configured for the current cycle.
+                  {tCommon("noData")}
                 </CardContent>
               )}
             </Card>
@@ -255,7 +257,7 @@ export default function TeamKpiPage() {
         })}
         {(!teamData.members || teamData.members.length === 0) && (
           <div className="text-center py-12 text-muted-foreground">
-            No active team members found in your department.
+            {tCommon("noData")}
           </div>
         )}
       </div>

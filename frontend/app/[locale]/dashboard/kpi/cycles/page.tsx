@@ -7,7 +7,7 @@ import { createCycle } from "@/services/kpi.services";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { DatePicker } from "@/components/ui/date-picker";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -23,8 +23,11 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { LoadingState } from "@/components/ui/loading-state";
+import { useTranslations } from "next-intl";
 
 export default function KpiCyclesPage() {
+  const t = useTranslations("kpi");
+  const tCommon = useTranslations("common");
   const queryClient = useQueryClient();
   const { data: cycles, isLoading } = useKpiCycles();
   
@@ -39,12 +42,12 @@ export default function KpiCyclesPage() {
     mutationFn: createCycle,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["kpi-cycles"] });
-      toast.success("KPI Cycle created successfully!");
+      toast.success(tCommon("success"));
       setIsDialogOpen(false);
       setFormData({ name: "", start_date: "", end_date: "" });
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.error || "An error occurred");
+      toast.error(error?.response?.data?.error || tCommon("error"));
     }
   });
 
@@ -66,9 +69,9 @@ export default function KpiCyclesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">KPI Cycles</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{t("step1Title")}</h1>
           <p className="text-sm text-muted-foreground">
-            Manage your annual or quarterly performance cycles.
+            {t("step1Desc")}
           </p>
         </div>
 
@@ -76,18 +79,18 @@ export default function KpiCyclesPage() {
           <DialogTrigger asChild>
             <Button className="rounded-xl gap-2">
               <Plus className="size-4" />
-              Create Cycle
+              {t("step1Btn")}
             </Button>
           </DialogTrigger>
           <DialogContent>
             <form onSubmit={handleSubmit}>
               <DialogHeader>
-                <DialogTitle>Create New KPI Cycle</DialogTitle>
-                <DialogDescription>Define the timeline for the performance review cycle.</DialogDescription>
+                <DialogTitle>{t("step1Title")}</DialogTitle>
+                <DialogDescription>{t("step1Desc")}</DialogDescription>
               </DialogHeader>
               <div className="py-4 space-y-4">
                 <div className="space-y-2">
-                  <Label>Cycle Name</Label>
+                  <Label>{tCommon("name")}</Label>
                   <Input 
                     placeholder="e.g. 2026 Annual Performance" 
                     value={formData.name} 
@@ -95,29 +98,21 @@ export default function KpiCyclesPage() {
                     required 
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2 flex flex-col">
-                    <Label>Start Date</Label>
-                    <DatePicker 
-                      value={formData.start_date} 
-                      onChange={val => setFormData({ ...formData, start_date: val })} 
-                    />
-                  </div>
-                  <div className="space-y-2 flex flex-col">
-                    <Label>End Date</Label>
-                    <DatePicker 
-                      value={formData.end_date} 
-                      onChange={val => setFormData({ ...formData, end_date: val })} 
-                    />
-                  </div>
-                </div>
+                <DateRangePicker
+                  startDate={formData.start_date}
+                  endDate={formData.end_date}
+                  onStartDateChange={(val) => setFormData({ ...formData, start_date: val })}
+                  onEndDateChange={(val) => setFormData({ ...formData, end_date: val })}
+                  fromLabel="From"
+                  toLabel="To"
+                />
               </div>
               <DialogFooter>
                 <DialogClose asChild>
-                  <Button type="button" variant="outline">Cancel</Button>
+                  <Button type="button" variant="outline">{tCommon("cancel")}</Button>
                 </DialogClose>
                 <Button type="submit" disabled={mutation.isPending}>
-                  {mutation.isPending ? "Saving..." : "Save Cycle"}
+                  {mutation.isPending ? tCommon("saving") : tCommon("save")}
                 </Button>
               </DialogFooter>
             </form>
@@ -127,16 +122,16 @@ export default function KpiCyclesPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Performance Cycles</CardTitle>
+          <CardTitle>{t("title")}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="w-full overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b">
-                  <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Cycle Name</th>
+                  <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{tCommon("name")}</th>
                   <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Duration</th>
-                  <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Status</th>
+                  <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{tCommon("status")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -159,7 +154,7 @@ export default function KpiCyclesPage() {
                 {!cycles?.length && (
                   <tr>
                     <td colSpan={3} className="h-24 px-4 text-center text-muted-foreground">
-                      No KPI cycles found.
+                      {tCommon("noData")}
                     </td>
                   </tr>
                 )}
