@@ -259,22 +259,24 @@ const computeAttendanceMeta = async ({ employee_id, company_id, timeMode, workAt
   let is_early = false;
   let status = "present";
 
+  const grace = Number(schedule?.timeSheet?.grace_period ?? ATTENDANCE_GRACE_MINUTES);
+
   if (expectedMin !== null) {
     if (timeField === "time_in") {
-      if (actualMin > expectedMin + ATTENDANCE_GRACE_MINUTES) {
+      if (actualMin > expectedMin + grace) {
         is_late = true;
         status = "late";
       }
     } else if (timeField === "time_out") {
-      if (actualMin < expectedMin - ATTENDANCE_GRACE_MINUTES) {
+      if (actualMin < expectedMin - grace) {
         is_early = true;
       }
     } else if (timeField === "lunch_out") {
-      if (actualMin < expectedMin - ATTENDANCE_GRACE_MINUTES) {
+      if (actualMin < expectedMin - grace) {
         is_early = true;
       }
     } else if (timeField === "lunch_in") {
-      if (actualMin > expectedMin + ATTENDANCE_GRACE_MINUTES) {
+      if (actualMin > expectedMin + grace) {
         is_late = true;
         status = "late";
       }
@@ -289,7 +291,7 @@ const computeAttendanceMeta = async ({ employee_id, company_id, timeMode, workAt
       timeSheet: schedule.timeSheet,
       timeField,
       expectedTime,
-      graceMinutes: ATTENDANCE_GRACE_MINUTES,
+      graceMinutes: grace,
       isRequired,
     },
   };
@@ -419,16 +421,17 @@ export const getAttendanceReportController = async (req, res) => {
       const timeStr = `${String(ictWorkAt.getUTCHours()).padStart(2, '0')}:${String(ictWorkAt.getUTCMinutes()).padStart(2, '0')}`;
       const actualMin = ictWorkAt.getUTCHours() * 60 + ictWorkAt.getUTCMinutes();
 
+      const grace = Number(schedule?.timeSheet?.grace_period ?? ATTENDANCE_GRACE_MINUTES);
       let late_minutes = 0;
       let early_minutes = 0;
 
       if (expectedMin !== null) {
         if (field === "time_in" || field === "lunch_in") {
-          if (actualMin > expectedMin) {
+          if (actualMin > expectedMin + grace) {
             late_minutes = actualMin - expectedMin;
           }
         } else if (field === "time_out" || field === "lunch_out") {
-          if (actualMin < expectedMin) {
+          if (actualMin < expectedMin - grace) {
             early_minutes = expectedMin - actualMin;
           }
         }
