@@ -153,6 +153,7 @@ app.get("/uploads/*path", async (req, res) => {
 
 // Public routes
 app.use("/api/auth", authRoutes);
+app.use("/api/recruitment", recruitmentRoutes);
 
 // Protected routes (apply middleware)
 app.use(requireAuth);
@@ -187,7 +188,6 @@ app.use("/api/asset", assetRoutes);
 app.use("/api/notification", notificationRoutes);
 app.use("/api/announcement", announcementRoutes);
 app.use("/api/app-menu", appMenuRoutes);
-app.use("/api/recruitment", recruitmentRoutes);
 
 app.get("/", (req, res) => {
   res.send("HR System API is running");

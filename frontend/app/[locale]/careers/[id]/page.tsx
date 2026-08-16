@@ -158,7 +158,11 @@ export default function PublicJobCareersPage() {
           <div className="flex items-center gap-3">
             {job.company?.logo_path ? (
               <img
-                src={job.company.logo_path}
+                src={
+                  job.company.logo_path.startsWith("http")
+                    ? job.company.logo_path
+                    : `${process.env.NEXT_PUBLIC_API_URL || ""}${job.company.logo_path}`
+                }
                 alt={job.company.name}
                 className="size-10 rounded-2xl object-cover border shadow-xs"
               />

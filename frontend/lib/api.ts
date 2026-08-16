@@ -30,8 +30,9 @@ api.interceptors.response.use(
         localStorage.removeItem("auth_token");
         sessionStorage.removeItem("auth_token");
 
-        // Redirect to login only if not already on the login page
-        if (!window.location.pathname.includes("/login")) {
+        // Redirect to login only if not already on the login page or public careers page
+        const isPublicPage = window.location.pathname.includes("/login") || window.location.pathname.includes("/careers");
+        if (!isPublicPage) {
           const locale = window.location.pathname.match(/^\/(km|en)/)?.[1] || "en";
           window.location.href = `/${locale}/login?logout=true&expired=true`;
         }
