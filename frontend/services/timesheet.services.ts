@@ -9,6 +9,7 @@ export interface TimeSheet {
   lunch_out?: string;
   lunch_in?: string;
   time_out?: string;
+  grace_period?: number;
   require_time_in?: boolean;
   require_lunch_out?: boolean;
   require_lunch_in?: boolean;

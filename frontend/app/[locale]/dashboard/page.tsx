@@ -62,21 +62,21 @@ const DashboardPage = () => {
       icon: Users,
     },
     {
-      label: "Total Departments",
+      label: t("totalDepartments") || "Total Departments",
       value: deptsRes?.pagination?.total || deptsRes?.total || deptsRes?.data?.length || 0,
       caption: tc("active") || "Active",
       delta: "",
       icon: Building2,
     },
     {
-      label: "Total Positions",
+      label: t("totalPositions") || "Total Positions",
       value: posRes?.pagination?.total || posRes?.total || posRes?.data?.length || 0,
       caption: tc("active") || "Active",
       delta: "",
       icon: BriefcaseBusiness,
     },
     {
-      label: "Total Locations",
+      label: t("totalLocations") || "Total Locations",
       value: locsRes?.data?.length || 0,
       caption: tc("active") || "Active",
       delta: "",
@@ -134,10 +134,10 @@ const DashboardPage = () => {
     const total = male + female;
     
     return [
-      { name: "Male", value: male, fill: "#0071E3", percentage: total ? Math.round((male / total) * 100) : 0 },
-      { name: "Female", value: female, fill: "#FF5A5F", percentage: total ? Math.round((female / total) * 100) : 0 }
+      { name: tc("male") || "Male", value: male, fill: "#0071E3", percentage: total ? Math.round((male / total) * 100) : 0 },
+      { name: tc("female") || "Female", value: female, fill: "#FF5A5F", percentage: total ? Math.round((female / total) * 100) : 0 }
     ].filter(d => d.value > 0);
-  }, [employeesRes]);
+  }, [employeesRes, tc]);
 
   const employmentStatus = useMemo(() => {
     const total = employeesRes?.pagination?.total || 0;
@@ -146,10 +146,10 @@ const DashboardPage = () => {
     const totalPct = total > 0 ? total : 1; // avoid division by zero
     
     return [
-      { label: "Active", value: active, color: "bg-emerald-500", pct: (active / totalPct) * 100 },
-      { label: "Inactive", value: inactive, color: "bg-rose-500", pct: (inactive / totalPct) * 100 },
+      { label: tc("active") || "Active", value: active, color: "bg-emerald-500", pct: (active / totalPct) * 100 },
+      { label: tc("inactive") || "Inactive", value: inactive, color: "bg-rose-500", pct: (inactive / totalPct) * 100 },
     ];
-  }, [employeesRes]);
+  }, [employeesRes, tc]);
 
   if (isDataLoading) {
     return (
@@ -246,7 +246,7 @@ const DashboardPage = () => {
           <CardHeader className="flex-row items-center justify-between">
             <CardTitle>{t("headcountGrowth")}</CardTitle>
             <Badge className="rounded-full bg-primary/10 text-primary">
-              All Time
+              {t("allTime")}
             </Badge>
           </CardHeader>
           <CardContent className="h-80">
@@ -270,14 +270,14 @@ const DashboardPage = () => {
                   }}
                 />
                 <Bar
-                  name="New Hires"
+                  name={t("newHires")}
                   dataKey="newHires"
                   barSize={14}
                   radius={12}
                   fill="rgba(0,113,227,0.35)"
                 />
                 <Line
-                  name="Total Headcount"
+                  name={t("totalHeadcount")}
                   type="monotone"
                   dataKey="headcount"
                   stroke="#0071e3"
@@ -380,7 +380,7 @@ const DashboardPage = () => {
                 }}
                 className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 shadow-sm transition-all cursor-pointer"
               >
-                <Download className="size-3.5 text-emerald-600" /> Export Excel
+                <Download className="size-3.5 text-emerald-600" /> {tc("exportExcel")}
               </button>
               <button
                 type="button"
@@ -421,7 +421,7 @@ const DashboardPage = () => {
                 }}
                 className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 shadow-sm transition-all cursor-pointer"
               >
-                <Printer className="size-3.5 text-blue-600" /> Print PDF
+                <Printer className="size-3.5 text-blue-600" /> {tc("printPdf")}
               </button>
             </div>
           </CardHeader>
@@ -432,10 +432,10 @@ const DashboardPage = () => {
                 <thead>
                   <tr className="border-b border-white/35">
                     <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">
-                      Employee
+                      {tc("employee")}
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">
-                      Email
+                      {tc("email")}
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">
                       {tc("status")}
@@ -463,19 +463,19 @@ const DashboardPage = () => {
                         <div>
                           <p className="font-semibold">{row.full_name}</p>
                           <p className="text-xs text-muted-foreground">
-                            {row.position_name || "No Position"}
+                            {row.position_name || tc("notSet")}
                           </p>
                         </div>
                       </div>
                       </td>
                       <td className="px-4 py-3">
                         <span className="text-xs font-semibold text-muted-foreground">
-                          {row.email}
+                          {row.email || tc("noEmail")}
                         </span>
                       </td>
                       <td className="px-4 py-3">
                       <Badge className="rounded-full bg-emerald-50 text-emerald-700">
-                        Active
+                        {row.is_active === "inactive" ? tc("inactive") : tc("active")}
                       </Badge>
                       </td>
                       <td className="px-4 py-3">
@@ -491,7 +491,7 @@ const DashboardPage = () => {
                   {(!employeesRes?.data || employeesRes.data.length === 0) && (
                     <tr>
                       <td colSpan={4} className="py-8 text-center text-muted-foreground">
-                        No employees found
+                        {t("noEmployeesFound")}
                       </td>
                     </tr>
                   )}
@@ -514,15 +514,15 @@ const DashboardPage = () => {
                       </div>
                       <div>
                         <p className="font-semibold text-sm">{row.full_name}</p>
-                        <p className="text-xs text-muted-foreground">{row.position_name || "No Position"}</p>
+                        <p className="text-xs text-muted-foreground">{row.position_name || tc("notSet")}</p>
                       </div>
                     </div>
                     <Badge className="rounded-full bg-emerald-50 text-emerald-700 text-[10px]">
-                      Active
+                      {row.is_active === "inactive" ? tc("inactive") : tc("active")}
                     </Badge>
                   </div>
                   <div className="text-xs text-muted-foreground truncate pt-2 border-t flex items-center justify-between">
-                    <span>✉️ {row.email || "No email"}</span>
+                    <span>✉️ {row.email || tc("noEmail")}</span>
                     <Link
                       href={`/dashboard/employee/${row.id}`}
                       className="rounded-lg bg-muted/60 px-2.5 py-1 text-[11px] font-semibold text-foreground/80 hover:bg-primary hover:text-white transition-colors"

@@ -98,6 +98,7 @@ model timesheet {
   lunch_out             String?           @db.VarChar(10)
   lunch_in              String?           @db.VarChar(10)
   time_out              String?           @db.VarChar(10)
+  grace_period          Int?              @default(10)
   require_time_in       Boolean?          @default(true)
   require_lunch_out     Boolean?          @default(false)
   require_lunch_in      Boolean?          @default(false)
@@ -223,6 +224,8 @@ model company {
   assethistory       assethistory[]
   assetrequest       assetrequest[]
   appmenu            appmenu[]
+  jobposting         jobposting[]
+  candidate          candidate[]
   @@index([name], map: "idx_company_name")
 }
 
@@ -238,6 +241,7 @@ model department {
   employee_department_manager_idToemployee    employee?   @relation("department_manager_idToemployee", fields: [manager_id], references: [id], onUpdate: NoAction, map: "fk_department_manager")
   employee_employee_department_idTodepartment employee[]  @relation("employee_department_idTodepartment")
   positions                                   positions[]
+  jobposting                                  jobposting[]
 
   @@index([company_id], map: "idx_department_company")
   @@index([manager_id], map: "idx_department_manager")
@@ -338,6 +342,7 @@ model employee {
   assethistory                 assethistory[]
   assetrequest_requested_by    assetrequest[] @relation("assetrequest_requested_by")
   assetrequest_manager_id      assetrequest[] @relation("assetrequest_manager_id")
+  candidate_hired              candidate[]    @relation("candidate_hired_employee")
   @@index([is_active], map: "idx_employee_active")
   @@index([company_id], map: "idx_employee_company")
   @@index([company_id, is_active], map: "idx_employee_company_active")
@@ -504,6 +509,7 @@ model positions {
   updated_at    DateTime?   @default(now()) @db.DateTime(0)
   employee      employee[]
   department    department? @relation(fields: [department_id], references: [id], onUpdate: NoAction, map: "fk_position_department")
+  jobposting    jobposting[]
 
   @@index([department_id], map: "idx_position_department")
 }
@@ -963,3 +969,62 @@ model appmenu {
   @@unique([company_id, menu_key], map: "idx_appmenu_company_key")
   @@index([company_id], map: "idx_appmenu_company")
 }
+
+model jobposting {
+  id              Int          @id @default(autoincrement())
+  company_id      Int
+  department_id   Int
+  position_id     Int
+  title           String       @db.VarChar(255)
+  description     String?      @db.Text
+  requirements    String?      @db.Text
+  employment_type String       @default("FULL_TIME") @db.VarChar(50) // FULL_TIME, PART_TIME, CONTRACT, INTERNSHIP
+  salary_min      Decimal?     @db.Decimal(10, 2)
+  salary_max      Decimal?     @db.Decimal(10, 2)
+  openings_count  Int          @default(1)
+  status          String       @default("OPEN") @db.VarChar(50) // DRAFT, OPEN, CLOSED
+  posted_date     DateTime?    @default(now()) @db.DateTime(0)
+  closing_date    DateTime?    @db.DateTime(0)
+  created_at      DateTime?    @default(now()) @db.DateTime(0)
+  updated_at      DateTime?    @default(now()) @db.DateTime(0)
+
+  company         company      @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  department      department   @relation(fields: [department_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  position        positions    @relation(fields: [position_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  candidate       candidate[]
+
+  @@index([company_id], map: "idx_jobposting_company")
+  @@index([department_id], map: "idx_jobposting_department")
+  @@index([position_id], map: "idx_jobposting_position")
+  @@index([status], map: "idx_jobposting_status")
+}
+
+model candidate {
+  id                 Int          @id @default(autoincrement())
+  company_id         Int
+  job_posting_id     Int?
+  first_name         String       @db.VarChar(255)
+  last_name          String       @db.VarChar(255)
+  email              String       @db.VarChar(255)
+  phone              String?      @db.VarChar(50)
+  resume_url         String?      @db.VarChar(500)
+  cover_letter       String?      @db.Text
+  status             String       @default("APPLIED") @db.VarChar(50) // APPLIED, SCREENING, INTERVIEW, OFFER, HIRED, REJECTED
+  rating             Int?         @default(0) // 1-5
+  notes              String?      @db.Text
+  interview_date     DateTime?    @db.DateTime(0)
+  offered_salary     Decimal?     @db.Decimal(10, 2)
+  hired_employee_id  Int?
+  created_at         DateTime?    @default(now()) @db.DateTime(0)
+  updated_at         DateTime?    @default(now()) @db.DateTime(0)
+
+  company            company      @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  jobposting         jobposting?  @relation(fields: [job_posting_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  hired_employee     employee?    @relation("candidate_hired_employee", fields: [hired_employee_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@index([company_id], map: "idx_candidate_company")
+  @@index([job_posting_id], map: "idx_candidate_job")
+  @@index([status], map: "idx_candidate_status")
+  @@index([hired_employee_id], map: "idx_candidate_hired_employee")
+}
+

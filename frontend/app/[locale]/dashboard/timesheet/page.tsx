@@ -24,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2, Clock } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
@@ -82,6 +82,7 @@ export const TimeSheetPage = () => {
     time_out: "",
     lunch_out: "",
     lunch_in: "",
+    grace_period: 10,
     require_time_in: true,
     require_lunch_out: false,
     require_lunch_in: false,
@@ -138,6 +139,7 @@ export const TimeSheetPage = () => {
       time_out: "",
       lunch_out: "",
       lunch_in: "",
+      grace_period: 10,
       require_time_in: true,
       require_lunch_out: false,
       require_lunch_in: false,
@@ -154,6 +156,7 @@ export const TimeSheetPage = () => {
       time_out: ts.time_out || "",
       lunch_out: ts.lunch_out || "",
       lunch_in: ts.lunch_in || "",
+      grace_period: ts.grace_period ?? 10,
       require_time_in: ts.require_time_in ?? true,
       require_lunch_out: ts.require_lunch_out ?? false,
       require_lunch_in: ts.require_lunch_in ?? false,
@@ -249,6 +252,36 @@ export const TimeSheetPage = () => {
                     onChange={(val) => setFormData({ ...formData, lunch_in: val })}
                   />
                 </div>
+
+                {/* Editable Grace Period Input */}
+                <div className="col-span-2 p-3.5 bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/70 dark:border-emerald-800/50 rounded-2xl flex flex-col gap-2 mt-1">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg">
+                        <Clock className="size-4" />
+                      </div>
+                      <Label htmlFor="grace_period" className="font-semibold text-xs text-foreground cursor-pointer">
+                        {t("gracePeriod")}
+                      </Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id="grace_period"
+                        type="number"
+                        min={0}
+                        max={120}
+                        className="w-20 h-8 text-center font-bold text-xs bg-background"
+                        value={formData.grace_period}
+                        onChange={(e) => setFormData({ ...formData, grace_period: Number(e.target.value) || 0 })}
+                        required
+                      />
+                      <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                        {t("graceMinutes")}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">{t("gracePeriodDesc")}</p>
+                </div>
               </div>
               <div className="mt-6 space-y-4">
                 <h4 className="font-semibold">{t("requireAttendance")}</h4>
@@ -328,7 +361,7 @@ export const TimeSheetPage = () => {
                   <tr className="border-b border-border/60 bg-muted/30 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     <th className="py-3.5 pl-6 pr-3 min-w-[180px]">{t("nameLabel")}</th>
                     <th className="py-3.5 px-3 min-w-[120px]">{t("codeLabel")}</th>
-                    <th className="py-3.5 px-3 min-w-[100px]">{t("timeIn")}</th>
+                    <th className="py-3.5 px-3 min-w-[120px]">{t("timeIn")}</th>
                     <th className="py-3.5 px-3 min-w-[100px]">{t("lunchOut")}</th>
                     <th className="py-3.5 px-3 min-w-[100px]">{t("lunchIn")}</th>
                     <th className="py-3.5 px-3 min-w-[100px]">{t("timeOut")}</th>
@@ -341,7 +374,16 @@ export const TimeSheetPage = () => {
                     <tr key={ts.id} className="group transition-colors hover:bg-muted/25">
                       <td className="py-3.5 pl-6 pr-3 font-semibold">{ts.name}</td>
                       <td className="py-3.5 px-3 text-muted-foreground font-mono text-xs">{ts.code}</td>
-                      <td className="py-3.5 px-3 tabular-nums">{ts.time_in || "-"}</td>
+                      <td className="py-3.5 px-3 tabular-nums">
+                        <div className="flex flex-col">
+                          <span className="font-medium text-foreground">{ts.time_in || "-"}</span>
+                          {ts.time_in && (
+                            <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                              +{ts.grace_period ?? 10}m {t("graceMinutes")}
+                            </span>
+                          )}
+                        </div>
+                      </td>
                       <td className="py-3.5 px-3 tabular-nums">{ts.lunch_out || "-"}</td>
                       <td className="py-3.5 px-3 tabular-nums">{ts.lunch_in || "-"}</td>
                       <td className="py-3.5 px-3 tabular-nums">{ts.time_out || "-"}</td>

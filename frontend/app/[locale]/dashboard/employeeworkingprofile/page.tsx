@@ -59,9 +59,13 @@ const isWeekend = (key: DayKey) => key === "saturday" || key === "sunday";
 export const EmployeeWorkingProfilePage = () => {
   const queryClient = useQueryClient();
   const [open, setOpen] = React.useState(false);
+  const [isEditing, setIsEditing] = React.useState(false);
   const [selectedEmployee, setSelectedEmployee] = React.useState<string>("");
   const [selectedDayOfWeek, setSelectedDayOfWeek] = React.useState<string>("");
   const [allowBypassLocation, setAllowBypassLocation] = React.useState<boolean>(false);
+  const [profileToDelete, setProfileToDelete] = React.useState<EmployeeWorkingProfile | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
+
   const t = useTranslations("workingProfile");
   const tc = useTranslations("common");
   const days = daysWithTranslations(t);
@@ -81,6 +85,18 @@ export const EmployeeWorkingProfilePage = () => {
     queryFn: () => getAllDayOfWeeks(1, 100),
   });
 
+  // Calculate assigned employee IDs to filter out duplicates in "+ Set Working Hours"
+  const assignedEmployeeIds = React.useMemo(() => {
+    return new Set(profiles?.data?.map((p: any) => p.employee_id) || []);
+  }, [profiles?.data]);
+
+  // Only show unassigned employees when creating; show all / current when editing
+  const availableEmployees = React.useMemo(() => {
+    const list = employees?.data || [];
+    if (isEditing) return list;
+    return list.filter((emp: any) => !assignedEmployeeIds.has(emp.id));
+  }, [employees?.data, assignedEmployeeIds, isEditing]);
+
   const createMutation = useMutation({
     mutationFn: (data: any) =>
       createEmployeeWorkingProfile({
@@ -90,8 +106,9 @@ export const EmployeeWorkingProfilePage = () => {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["employeeworkingprofiles"] });
-      toast.success(t("created"));
+      toast.success(isEditing ? "Working profile updated successfully." : t("created"));
       setOpen(false);
+      setIsEditing(false);
       setSelectedEmployee("");
       setSelectedDayOfWeek("");
       setAllowBypassLocation(false);
@@ -100,6 +117,19 @@ export const EmployeeWorkingProfilePage = () => {
       toast.error(
         error?.response?.data?.message || t("createFailed")
       );
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => deleteEmployeeWorkingProfile(id.toString()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["employeeworkingprofiles"] });
+      toast.success("Working profile removed successfully.");
+      setIsDeleteDialogOpen(false);
+      setProfileToDelete(null);
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || "Failed to remove working profile.");
     },
   });
 
@@ -113,9 +143,18 @@ export const EmployeeWorkingProfilePage = () => {
     });
   };
 
-  const getEmployeeInitials = (firstName: string, lastName: string) => {
-    return `${firstName[0]}${lastName[0]}`.toUpperCase();
+  const handleDelete = () => {
+    if (!profileToDelete) return;
+    deleteMutation.mutate(profileToDelete.id);
   };
+
+  const getEmployeeInitials = (firstName: string, lastName: string) => {
+    return `${firstName?.[0] || ""}${lastName?.[0] || ""}`.toUpperCase();
+  };
+
+  const selectedEmployeeObj = employees?.data?.find(
+    (emp: any) => emp.id.toString() === selectedEmployee
+  );
 
   return (
     <div className="space-y-6">
@@ -128,55 +167,115 @@ export const EmployeeWorkingProfilePage = () => {
           </p>
         </div>
 
+        <Button
+          onClick={() => {
+            setIsEditing(false);
+            setSelectedEmployee("");
+            setSelectedDayOfWeek("");
+            setAllowBypassLocation(false);
+            setOpen(true);
+          }}
+          className="rounded-2xl gap-2 h-11 px-6 shadow-lg shadow-primary/20"
+        >
+          <Plus className="size-4" />
+          {t("assignButton")}
+        </Button>
+
+        {/* Create / Edit Working Profile Modal */}
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button className="rounded-2xl gap-2 h-11 px-6 shadow-lg shadow-primary/20">
-              <Plus className="size-4" />
-              {t("assignButton")}
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-xl">
+          <DialogContent className="sm:max-w-xl rounded-2xl">
             <form onSubmit={handleSubmit}>
               <DialogHeader>
-                <DialogTitle className="text-2xl">{t("assignTitle")}</DialogTitle>
+                <DialogTitle className="text-xl font-bold">
+                  {isEditing ? "Edit Working Hours" : t("assignTitle")}
+                </DialogTitle>
                 <DialogDescription>
-                  {t("assignDesc")}
+                  {isEditing
+                    ? "Update the assigned working week schedule or location bypass for this employee."
+                    : t("assignDesc")}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 mt-4">
                 <Field>
-                  <Label htmlFor="employee">{t("employeeLabel")}</Label>
-                  <Select
-                    value={selectedEmployee}
-                    onValueChange={setSelectedEmployee}
-                  >
-                    <SelectTrigger id="employee" className="w-full">
-                      <SelectValue placeholder={t("selectEmployee")} />
-                    </SelectTrigger>
-                    <SelectContent position="popper" className="z-[100]">
-                      <SelectGroup>
-                        {employees?.data?.map((emp: any) => (
-                          <SelectItem key={emp.id} value={emp.id.toString()}>
-                            {emp.first_name} {emp.last_name}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="employee" className="font-semibold text-xs text-foreground">
+                    {t("employeeLabel")} *
+                  </Label>
+                  {isEditing && selectedEmployeeObj ? (
+                    <div className="p-3 bg-muted/40 border border-border/50 rounded-xl flex items-center gap-3">
+                      <Avatar className="h-9 w-9 shrink-0">
+                        <AvatarImage
+                          src={
+                            selectedEmployeeObj.profile_path
+                              ? `${process.env.NEXT_PUBLIC_API_URL}${selectedEmployeeObj.profile_path}`
+                              : undefined
+                          }
+                          alt={`${selectedEmployeeObj.first_name} ${selectedEmployeeObj.last_name}`}
+                        />
+                        <AvatarFallback className="text-xs font-bold">
+                          {getEmployeeInitials(selectedEmployeeObj.first_name, selectedEmployeeObj.last_name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-bold text-sm text-foreground truncate">
+                          {selectedEmployeeObj.first_name} {selectedEmployeeObj.last_name}
+                        </div>
+                        <div className="text-xs text-muted-foreground truncate">
+                          {selectedEmployeeObj.email || "No email"}
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="text-[10px] bg-primary/5 text-primary border-primary/20 font-semibold">
+                        Locked
+                      </Badge>
+                    </div>
+                  ) : (
+                    <Select
+                      value={selectedEmployee}
+                      onValueChange={setSelectedEmployee}
+                      disabled={availableEmployees.length === 0}
+                    >
+                      <SelectTrigger id="employee" className="w-full rounded-xl">
+                        <SelectValue
+                          placeholder={
+                            availableEmployees.length === 0
+                              ? "All employees already assigned"
+                              : t("selectEmployee")
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent position="popper" className="z-[100] rounded-xl">
+                        <SelectGroup>
+                          {availableEmployees.map((emp: any) => (
+                            <SelectItem key={emp.id} value={emp.id.toString()} className="text-xs">
+                              {emp.first_name} {emp.last_name} ({emp.email || "No email"})
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  )}
+                  {!isEditing && availableEmployees.length === 0 && (
+                    <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1">
+                      ℹ️ All active employees have already been assigned a working profile. Use the edit button in the table below to modify an existing schedule.
+                    </p>
+                  )}
                 </Field>
+
                 <Field>
-                  <Label htmlFor="dayofweek">{t("workingWeekLabel")}</Label>
+                  <Label htmlFor="dayofweek" className="font-semibold text-xs text-foreground">
+                    {t("workingWeekLabel")} *
+                  </Label>
                   <Select
                     value={selectedDayOfWeek}
                     onValueChange={setSelectedDayOfWeek}
+                    required
                   >
-                    <SelectTrigger id="dayofweek" className="w-full">
+                    <SelectTrigger id="dayofweek" className="w-full rounded-xl">
                       <SelectValue placeholder={t("selectWorkingWeek")} />
                     </SelectTrigger>
-                    <SelectContent position="popper" className="z-[100]">
+                    <SelectContent position="popper" className="z-[100] rounded-xl">
                       <SelectGroup>
                         {dayOfWeeks?.data?.map((dow: DayOfWeek) => (
-                          <SelectItem key={dow.id} value={dow.id.toString()}>
+                          <SelectItem key={dow.id} value={dow.id.toString()} className="text-xs">
                             {dow.name}
                           </SelectItem>
                         ))}
@@ -184,6 +283,7 @@ export const EmployeeWorkingProfilePage = () => {
                     </SelectContent>
                   </Select>
                 </Field>
+
                 {/* Location bypass toggle */}
                 <div
                   className="flex items-start gap-3 rounded-xl border border-border bg-muted/40 p-4 cursor-pointer select-none transition-colors hover:bg-muted/60"
@@ -202,15 +302,18 @@ export const EmployeeWorkingProfilePage = () => {
                   </div>
                 </div>
               </div>
-              <DialogFooter className="mt-8">
+              <DialogFooter className="mt-8 gap-2">
                 <DialogClose asChild>
-                  <Button variant="outline">{tc("cancel")}</Button>
+                  <Button variant="outline" className="rounded-xl">{tc("cancel")}</Button>
                 </DialogClose>
                 <Button
                   type="submit"
                   disabled={!selectedEmployee || !selectedDayOfWeek || createMutation.isPending}
+                  className="rounded-xl font-bold px-6"
                 >
-                  {createMutation.isPending ? t("assigning") : t("assign")}
+                  {createMutation.isPending
+                    ? (isEditing ? "Updating..." : t("assigning"))
+                    : (isEditing ? "Update Profile" : t("assign"))}
                 </Button>
               </DialogFooter>
             </form>
@@ -262,7 +365,7 @@ export const EmployeeWorkingProfilePage = () => {
                       </th>
                     ))}
                     <th className="py-3.5 px-3 text-center min-w-[170px] whitespace-nowrap">{t("onlineAttendance")}</th>
-                    <th className="py-3.5 pl-3 pr-6 text-right min-w-[90px]">{tc("actions")}</th>
+                    <th className="py-3.5 pl-3 pr-6 text-right min-w-[110px]">{tc("actions")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/30">
@@ -272,7 +375,7 @@ export const EmployeeWorkingProfilePage = () => {
                       className="group transition-colors hover:bg-muted/25"
                     >
                       {/* ── Employee ── */}
-                      <td className="py-3.5 pl-6 pr-3">
+                      <td className="py-3.5 pl-6 pr-3 align-middle">
                         <div className="flex items-center gap-3">
                           <Avatar className="h-9 w-9 ring-2 ring-background shadow-sm shrink-0">
                             <AvatarImage
@@ -305,7 +408,7 @@ export const EmployeeWorkingProfilePage = () => {
                       </td>
 
                       {/* ── Schedule Name ── */}
-                      <td className="py-3.5 px-3">
+                      <td className="py-3.5 px-3 align-middle">
                         <Badge
                           variant="outline"
                           className="rounded-lg bg-indigo-50/80 dark:bg-indigo-950/40 px-2.5 py-1 text-xs font-medium text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/40 whitespace-nowrap"
@@ -324,7 +427,7 @@ export const EmployeeWorkingProfilePage = () => {
                         const hasSchedule = !!timeSheet;
 
                         return (
-                          <td key={key} className="py-3.5 px-3 text-center">
+                          <td key={key} className="py-3.5 px-3 text-center align-middle">
                             {hasSchedule ? (
                               <div className="inline-flex flex-col items-center gap-0.5">
                                 <span className="text-xs font-medium leading-tight whitespace-nowrap">
@@ -347,7 +450,7 @@ export const EmployeeWorkingProfilePage = () => {
                       })}
 
                       {/* ── Online Attendance ── */}
-                      <td className="py-3.5 px-3 text-center">
+                      <td className="py-3.5 px-3 text-center align-middle">
                         {profile.allow_online_bypass_location ? (
                           <Badge className="rounded-full bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/40 shadow-none whitespace-nowrap">
                             <MapPinOff className="mr-1 size-3 text-emerald-500 shrink-0" />
@@ -362,22 +465,40 @@ export const EmployeeWorkingProfilePage = () => {
                       </td>
 
                       {/* ── Actions ── */}
-                      <td className="py-3.5 pl-3 pr-6 text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            setSelectedEmployee(profile.employee_id.toString());
-                            setSelectedDayOfWeek(profile.day_of_week_id.toString());
-                            setAllowBypassLocation(
-                              profile.allow_online_bypass_location ?? false
-                            );
-                            setOpen(true);
-                          }}
-                          className="size-8 rounded-lg text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
-                        >
-                          <Pencil className="size-3.5" />
-                        </Button>
+                      <td className="py-3.5 pl-3 pr-6 text-right align-middle">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setIsEditing(true);
+                              setSelectedEmployee(profile.employee_id.toString());
+                              setSelectedDayOfWeek(profile.day_of_week_id.toString());
+                              setAllowBypassLocation(
+                                profile.allow_online_bypass_location ?? false
+                              );
+                              setOpen(true);
+                            }}
+                            className="size-8 rounded-lg text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+                            title={tc("edit")}
+                          >
+                            <Pencil className="size-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setProfileToDelete(profile);
+                              setIsDeleteDialogOpen(true);
+                            }}
+                            className="size-8 rounded-lg text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors"
+                            title={tc("delete")}
+                          >
+                            <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                            </svg>
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -387,6 +508,38 @@ export const EmployeeWorkingProfilePage = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-[420px] rounded-2xl p-6">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold">{tc("confirmDelete")}</DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground pt-1">
+              Are you sure you want to remove the working schedule for <strong className="text-foreground">{profileToDelete?.employee?.first_name} {profileToDelete?.employee?.last_name}</strong>? They will no longer have an assigned shift.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 pt-3">
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => setIsDeleteDialogOpen(false)}
+              className="rounded-xl"
+              disabled={deleteMutation.isPending}
+            >
+              {tc("cancel")}
+            </Button>
+            <Button
+              variant="destructive"
+              type="button"
+              onClick={handleDelete}
+              disabled={deleteMutation.isPending}
+              className="rounded-xl"
+            >
+              {deleteMutation.isPending ? tc("deleting") : tc("delete")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

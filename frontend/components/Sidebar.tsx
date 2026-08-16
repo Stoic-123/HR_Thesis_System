@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { usePathname } from "@/src/i18n/routing";
 import { Link } from "@/src/i18n/routing";
 import { useTranslations } from "next-intl";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, Reorder, useDragControls } from "framer-motion";
 
 import {
   LayoutDashboard,
@@ -28,6 +28,8 @@ import {
   Target,
   Laptop,
   Megaphone,
+  UserPlus,
+  GripVertical,
 } from "lucide-react";
 import { useMe } from "@/hooks/useMe";
 import { useCompany } from "@/hooks/useCompany";
@@ -120,6 +122,13 @@ const menuItems: MenuItem[] = [
     ],
   },
   {
+    title: "Recruitment",
+    labelKey: "recruitment",
+    icon: UserPlus,
+    href: "/dashboard/recruitment",
+    permission: "recruitment:manage",
+  },
+  {
     title: "Time Attendance",
     labelKey: "timeAttendance",
     icon: Clock,
@@ -189,13 +198,13 @@ const menuItems: MenuItem[] = [
     href: "/dashboard/holiday",
     permission: "department:manage",
   },
-    {
-        title: "Document Type",
-        labelKey: "documentType",
-        icon: FileText,
-        href: "/dashboard/document-type",
-        permission: "role:manage",
-      },
+  {
+    title: "Document Type",
+    labelKey: "documentType",
+    icon: FileText,
+    href: "/dashboard/document-type",
+    permission: "role:manage",
+  },
   {
     title: "Overtime",
     labelKey: "overtime",
@@ -259,7 +268,7 @@ const menuItems: MenuItem[] = [
     href: "/dashboard/kpi",
     permission: "kpi:evaluate",
   },
-   {
+  {
     title: "Asset",
     labelKey: "asset",
     icon: Laptop,
@@ -294,34 +303,265 @@ const menuItems: MenuItem[] = [
       },
     ],
   },
- 
 ];
+
+const SIDEBAR_ORDER_STORAGE_KEY = "sarana_sidebar_order_v1";
+
+function SidebarItemRow({
+  item,
+  isActive,
+  isOpen,
+  isExpanded,
+  toggleMenu,
+  pathname,
+  t,
+}: {
+  item: MenuItem;
+  isActive: boolean;
+  isOpen: boolean;
+  isExpanded: boolean;
+  toggleMenu: (title: string) => void;
+  pathname: string;
+  t: (key: string) => string;
+}) {
+  const dragControls = useDragControls();
+
+  return (
+    <Reorder.Item
+      value={item}
+      dragListener={false}
+      dragControls={dragControls}
+      className="relative select-none group"
+      whileDrag={{
+        scale: 1.02,
+        zIndex: 50,
+        boxShadow: "0 12px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.08)",
+      }}
+      transition={{ duration: 0.15 }}
+    >
+      {item.submenu ? (
+        <div>
+          {isExpanded ? (
+            <div
+              className={`relative flex w-full items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer ${
+                isActive || isOpen
+                  ? "bg-gray-50/80 text-gray-900"
+                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+              }`}
+              onClick={() => toggleMenu(item.title)}
+            >
+              <div className="flex items-center gap-3 relative z-10">
+                <item.icon className="h-4.5 w-4.5 shrink-0" />
+                <span>{t(item.labelKey)}</span>
+              </div>
+              <div className="flex items-center gap-1.5 relative z-10">
+                {/* Drag Grip Handle */}
+                <div
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    dragControls.start(e);
+                  }}
+                  className="cursor-grab active:cursor-grabbing p-1 -m-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                  title="Drag to reorder"
+                >
+                  <GripVertical className="size-3.5 text-gray-400 hover:text-gray-600" />
+                </div>
+                {isOpen ? (
+                  <ChevronDown className="h-4 w-4 text-gray-400" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 text-gray-400" />
+                )}
+              </div>
+            </div>
+          ) : (
+            <div
+              className="relative"
+              onPointerDown={(e) => dragControls.start(e)}
+            >
+              <Link
+                href={item.submenu[0]?.href || "#"}
+                draggable={false}
+                className={`relative flex w-full items-center justify-center rounded-xl py-2.5 transition-colors ${
+                  isActive
+                    ? "text-white font-semibold"
+                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                }`}
+              >
+                {isActive && (
+                  <motion.div
+                    layoutId="activeSidebarCollapsedPill"
+                    className="absolute inset-0 bg-primary rounded-xl z-0 shadow-md shadow-primary/20"
+                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                  />
+                )}
+                <item.icon className="h-4.5 w-4.5 relative z-10" />
+              </Link>
+            </div>
+          )}
+
+          <AnimatePresence initial={false}>
+            {isOpen && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2, ease: "easeInOut" }}
+                className="ml-3 mt-1 space-y-1 border-l border-gray-200 pl-3 overflow-hidden"
+              >
+                {item.submenu?.map((subItem) => {
+                  const hasMoreSpecificMatch = item.submenu?.some((otherSub) =>
+                    otherSub.href !== subItem.href &&
+                    otherSub.href.length > subItem.href.length &&
+                    pathname.startsWith(otherSub.href)
+                  ) ?? false;
+                  const isSubActive =
+                    pathname === subItem.href ||
+                    (pathname.startsWith(subItem.href + "/") && !hasMoreSpecificMatch);
+                  return (
+                    <Link
+                      key={subItem.title}
+                      href={subItem.href}
+                      draggable={false}
+                      className={`relative flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
+                        isSubActive
+                          ? "text-primary font-semibold"
+                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                      }`}
+                    >
+                      {isSubActive && (
+                        <motion.div
+                          layoutId="activeSidebarSubPill"
+                          className="absolute inset-0 bg-primary/10 rounded-lg z-0"
+                          transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                        />
+                      )}
+                      <subItem.icon className="h-4 w-4 relative z-10" />
+                      <span className="relative z-10">{t(subItem.labelKey)}</span>
+                    </Link>
+                  );
+                })}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      ) : (
+        <div className="relative">
+          <Link
+            href={item.href || "#"}
+            draggable={false}
+            className={`relative flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+              isActive
+                ? "text-white font-semibold"
+                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+            } ${!isExpanded ? "justify-center px-0" : ""}`}
+          >
+            {isActive && (
+              <motion.div
+                layoutId="activeSidebarMainPill"
+                className="absolute inset-0 bg-primary rounded-xl z-0 shadow-md shadow-primary/20"
+                transition={{ type: "spring", stiffness: 380, damping: 30 }}
+              />
+            )}
+            <div className="flex items-center gap-3 relative z-10">
+              <item.icon className="h-4.5 w-4.5 shrink-0" />
+              {isExpanded && <span>{t(item.labelKey)}</span>}
+            </div>
+
+            {isExpanded && (
+              <div
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  dragControls.start(e);
+                }}
+                className="cursor-grab active:cursor-grabbing p-1 -m-1 opacity-0 group-hover:opacity-100 transition-opacity relative z-10"
+                title="Drag to reorder"
+              >
+                <GripVertical
+                  className={`size-3.5 ${
+                    isActive ? "text-white/80 hover:text-white" : "text-gray-400 hover:text-gray-600"
+                  }`}
+                />
+              </div>
+            )}
+          </Link>
+        </div>
+      )}
+    </Reorder.Item>
+  );
+}
 
 export function Sidebar({ collapsed = false }: { collapsed?: boolean }) {
   const pathname = usePathname();
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
+  const [menuList, setMenuList] = useState<MenuItem[]>([]);
   const { data: user, isLoading: isLoadingUser } = useMe();
   const { data: companyRes, isLoading: isLoadingCompany } = useCompany();
   const company = companyRes?.data;
   const isLoading = isLoadingUser || isLoadingCompany;
   const t = useTranslations("sidebar");
 
-  const filteredMenuItems = menuItems
-    .map((item) => {
-      if (item.submenu) {
-        const visibleSubmenu = item.submenu.filter((sub) => {
-          if (!sub.permission) return true;
-          if (user?.employee?.role === "Admin") return true;
-          return user?.employee?.permissions?.includes(sub.permission);
-        });
-        return { ...item, submenu: visibleSubmenu };
+  const filteredMenuItems = useMemo(() => {
+    const userPermissions = user?.employee?.permissions || [];
+    const isSuperAdmin = userPermissions.includes("*");
+
+    return menuItems
+      .map((item) => {
+        if (item.submenu) {
+          const visibleSubmenu = item.submenu.filter((sub) => {
+            if (!sub.permission) return true;
+            if (isSuperAdmin) return true;
+            return userPermissions.includes(sub.permission);
+          });
+          return { ...item, submenu: visibleSubmenu };
+        }
+        if (!item.permission) return item;
+        if (isSuperAdmin) return item;
+        const hasPerm = userPermissions.includes(item.permission);
+        return hasPerm ? item : null;
+      })
+      .filter((item): item is MenuItem => item !== null && (!item.submenu || item.submenu.length > 0));
+  }, [user]);
+
+  // Load and apply saved order to menuList
+  useEffect(() => {
+    if (filteredMenuItems.length === 0) return;
+
+    let order: string[] = [];
+    try {
+      const stored = localStorage.getItem(SIDEBAR_ORDER_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          order = parsed;
+        }
       }
-      if (!item.permission) return item;
-      if (user?.employee?.role === "Admin") return item;
-      const hasPerm = user?.employee?.permissions?.includes(item.permission);
-      return hasPerm ? item : null;
-    })
-    .filter((item): item is MenuItem => item !== null && (!item.submenu || item.submenu.length > 0));
+    } catch (e) {
+      console.error("Failed to load sidebar order:", e);
+    }
+
+    if (order.length > 0) {
+      const orderMap = new Map(order.map((title, idx) => [title, idx]));
+      const sorted = [...filteredMenuItems].sort((a, b) => {
+        const posA = orderMap.has(a.title) ? orderMap.get(a.title)! : 999;
+        const posB = orderMap.has(b.title) ? orderMap.get(b.title)! : 999;
+        return posA - posB;
+      });
+      setMenuList(sorted);
+    } else {
+      setMenuList(filteredMenuItems);
+    }
+  }, [filteredMenuItems]);
+
+  const handleReorder = (newItems: MenuItem[]) => {
+    setMenuList(newItems);
+    const newOrder = newItems.map((item) => item.title);
+    try {
+      localStorage.setItem(SIDEBAR_ORDER_STORAGE_KEY, JSON.stringify(newOrder));
+    } catch (e) {
+      console.error("Failed to save sidebar order:", e);
+    }
+  };
 
   useEffect(() => {
     filteredMenuItems.forEach((item) => {
@@ -399,8 +639,14 @@ export function Sidebar({ collapsed = false }: { collapsed?: boolean }) {
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto px-2 py-4 space-y-1 custom-scrollbar">
-        {filteredMenuItems.map((item) => {
+      <Reorder.Group
+        axis="y"
+        values={menuList}
+        onReorder={handleReorder}
+        className="flex-1 overflow-y-auto px-2 py-4 space-y-1 custom-scrollbar list-none"
+        as="div"
+      >
+        {menuList.map((item) => {
           const isActive =
             item.href === pathname ||
             (item.submenu &&
@@ -408,117 +654,19 @@ export function Sidebar({ collapsed = false }: { collapsed?: boolean }) {
           const isOpen = openMenus[item.title] && isExpanded;
 
           return (
-            <motion.div layout key={item.title} className="relative" initial={false}>
-              {item.submenu ? (
-                <div>
-                  {isExpanded ? (
-                    <button
-                      onClick={() => toggleMenu(item.title)}
-                      className={`relative flex w-full items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-                        isActive || isOpen
-                          ? "bg-gray-50/80 text-gray-900"
-                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                      }`}
-                      type="button"
-                    >
-                      <div className="flex items-center gap-3 relative z-10">
-                        <item.icon className="h-4.5 w-4.5" />
-                        {t(item.labelKey)}
-                      </div>
-                      {isOpen ? (
-                        <ChevronDown className="h-4 w-4 relative z-10" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4 relative z-10" />
-                      )}
-                    </button>
-                  ) : (
-                    <Link
-                      href={item.submenu[0]?.href || "#"}
-                      className={`relative flex w-full items-center justify-center rounded-xl py-2.5 transition-colors ${
-                        isActive
-                          ? "text-white font-semibold"
-                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                      }`}
-                    >
-                      {isActive && (
-                        <motion.div
-                          layoutId="activeSidebarCollapsedPill"
-                          className="absolute inset-0 bg-primary rounded-xl z-0 shadow-md shadow-primary/20"
-                          transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                        />
-                      )}
-                      <item.icon className="h-4.5 w-4.5 relative z-10" />
-                    </Link>
-                  )}
-
-                  <AnimatePresence initial={false}>
-                    {isOpen && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.2, ease: "easeInOut" }}
-                        className="ml-3 mt-1 space-y-1 border-l border-gray-200 pl-3 overflow-hidden"
-                      >
-                        {item.submenu?.map((subItem) => {
-                          const hasMoreSpecificMatch = item.submenu?.some(otherSub =>
-                            otherSub.href !== subItem.href &&
-                            otherSub.href.length > subItem.href.length &&
-                            pathname.startsWith(otherSub.href)
-                          ) ?? false;
-                          const isSubActive =
-                            pathname === subItem.href ||
-                            (pathname.startsWith(subItem.href + "/") && !hasMoreSpecificMatch);
-                          return (
-                            <Link
-                              key={subItem.title}
-                              href={subItem.href}
-                              className={`relative flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
-                                isSubActive
-                                  ? "text-primary font-semibold"
-                                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                              }`}
-                            >
-                              {isSubActive && (
-                                <motion.div
-                                  layoutId="activeSidebarSubPill"
-                                  className="absolute inset-0 bg-primary/10 rounded-lg z-0"
-                                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                                />
-                              )}
-                              <subItem.icon className="h-4 w-4 relative z-10" />
-                              <span className="relative z-10">{t(subItem.labelKey)}</span>
-                            </Link>
-                          );
-                        })}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              ) : (
-                <Link
-                  href={item.href || "#"}
-                  className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-                    isActive
-                      ? "text-white font-semibold"
-                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                  } ${!isExpanded ? "justify-center px-0" : ""}`}
-                >
-                  {isActive && (
-                    <motion.div
-                      layoutId="activeSidebarMainPill"
-                      className="absolute inset-0 bg-primary rounded-xl z-0 shadow-md shadow-primary/20"
-                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                    />
-                  )}
-                  <item.icon className="h-4.5 w-4.5 relative z-10" />
-                  {isExpanded && <span className="relative z-10">{t(item.labelKey)}</span>}
-                </Link>
-              )}
-            </motion.div>
+            <SidebarItemRow
+              key={item.title}
+              item={item}
+              isActive={!!isActive}
+              isOpen={!!isOpen}
+              isExpanded={isExpanded}
+              toggleMenu={toggleMenu}
+              pathname={pathname}
+              t={t}
+            />
           );
         })}
-      </div>
+      </Reorder.Group>
 
       <div className="p-4 border-t border-gray-100">
         <div

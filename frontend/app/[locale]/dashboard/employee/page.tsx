@@ -362,7 +362,7 @@ export default function EmployeePage() {
                   <Field className="col-span-1">
                     <Label htmlFor="gender">{t("gender")}</Label>
                     <Select
-                      value={formData.gender}
+                      value={formData.gender || undefined}
                       onValueChange={(v) => setFormData({ ...formData, gender: v })}
                     >
                       <SelectTrigger id="gender" className="w-full">
@@ -394,7 +394,7 @@ export default function EmployeePage() {
                   <Field className="col-span-1">
                     <Label htmlFor="department_id">{tc("department")}</Label>
                     <Select
-                      value={formData.department_id}
+                      value={formData.department_id || undefined}
                       onValueChange={(v) => {
                         setFormData({ ...formData, department_id: v, position_id: "" });
                       }}
@@ -416,7 +416,7 @@ export default function EmployeePage() {
                   <Field className="col-span-1">
                     <Label htmlFor="position_id">{tc("position")}</Label>
                     <Select
-                      value={formData.position_id}
+                      value={formData.position_id || undefined}
                       disabled={!formData.department_id}
                       onValueChange={(v) =>
                         setFormData({ ...formData, position_id: v })
@@ -443,7 +443,7 @@ export default function EmployeePage() {
                   <Field className="col-span-1">
                     <Label htmlFor="role_id">{t("userRole")}</Label>
                     <Select
-                      value={formData.role_id}
+                      value={formData.role_id || undefined}
                       onValueChange={(v) => setFormData({ ...formData, role_id: v })}
                     >
                       <SelectTrigger id="role_id" className="w-full">

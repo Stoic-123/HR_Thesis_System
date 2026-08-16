@@ -485,9 +485,9 @@ export default function EmployeeDetailPage() {
                     </div>
                     <div className="space-y-2 text-left">
                       <Label>{t("gender")}</Label>
-                      <Select value={formData.gender} onValueChange={(v) => setFormData({ ...formData, gender: v })}>
+                      <Select value={formData.gender || undefined} onValueChange={(v) => setFormData({ ...formData, gender: v })}>
                         <SelectTrigger className="w-full">
-                          <SelectValue />
+                          <SelectValue placeholder={te("selectGender")} />
                         </SelectTrigger>
                         <SelectContent position="popper">
                           <SelectItem value="male">{t("male")}</SelectItem>
@@ -510,9 +510,9 @@ export default function EmployeeDetailPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label>{tc("status")}</Label>
-                  <Select value={formData.is_active} onValueChange={(v) => setFormData({ ...formData, is_active: v })}>
+                  <Select value={formData.is_active || undefined} onValueChange={(v) => setFormData({ ...formData, is_active: v })}>
                     <SelectTrigger className="w-full">
-                      <SelectValue />
+                      <SelectValue placeholder={te("selectStatus")} />
                     </SelectTrigger>
                     <SelectContent position="popper">
                       <SelectItem value="active">{t("statusActive")}</SelectItem>
@@ -551,8 +551,10 @@ export default function EmployeeDetailPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>{tc("department")}</Label>
-                  <Select value={formData.department_id} onValueChange={(v) => setFormData({ ...formData, department_id: v, position_id: "" })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                  <Select value={formData.department_id || undefined} onValueChange={(v) => setFormData({ ...formData, department_id: v, position_id: "" })}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder={te("selectDepartment")} />
+                    </SelectTrigger>
                     <SelectContent position="popper">
                       {departments?.data?.map((d: any) => (
                         <SelectItem key={d.id} value={d.id.toString()}>{d.name}</SelectItem>
@@ -562,8 +564,10 @@ export default function EmployeeDetailPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>{tc("position")}</Label>
-                  <Select value={formData.position_id} disabled={!formData.department_id} onValueChange={(v) => setFormData({ ...formData, position_id: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                  <Select value={formData.position_id || undefined} disabled={!formData.department_id} onValueChange={(v) => setFormData({ ...formData, position_id: v })}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder={formData.department_id ? te("selectPosition") : te("selectDepartmentFirst")} />
+                    </SelectTrigger>
                     <SelectContent position="popper">
                       {positions?.data?.map((p: any) => (
                         <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>
@@ -598,8 +602,10 @@ export default function EmployeeDetailPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>{t("systemRole")}</Label>
-                  <Select value={formData.role_id} onValueChange={(v) => setFormData({ ...formData, role_id: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                  <Select value={formData.role_id || undefined} onValueChange={(v) => setFormData({ ...formData, role_id: v })}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder={te("selectRole")} />
+                    </SelectTrigger>
                     <SelectContent position="popper">
                       {roles?.data?.map((r: any) => (
                         <SelectItem key={r.id} value={r.id.toString()}>{r.name}</SelectItem>
@@ -623,8 +629,10 @@ export default function EmployeeDetailPage() {
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label>{t("maritalStatus")}</Label>
-                  <Select value={formData.relationship_status} onValueChange={(v) => setFormData({ ...formData, relationship_status: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                  <Select value={formData.relationship_status || undefined} onValueChange={(v) => setFormData({ ...formData, relationship_status: v })}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder={t("maritalStatus")} />
+                    </SelectTrigger>
                     <SelectContent position="popper">
                       <SelectItem value="single">{t("single")}</SelectItem>
                       <SelectItem value="married">{t("married")}</SelectItem>
@@ -680,8 +688,10 @@ export default function EmployeeDetailPage() {
                   </div>
                   <div className="space-y-2">
                     <Label>{tc("status")}</Label>
-                    <Select value={formData.father_live_status} onValueChange={(v) => setFormData({ ...formData, father_live_status: v })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                    <Select value={formData.father_live_status || undefined} onValueChange={(v) => setFormData({ ...formData, father_live_status: v })}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder={tc("status")} />
+                      </SelectTrigger>
                       <SelectContent position="popper">
                         <SelectItem value="alive">{t("alive")}</SelectItem>
                         <SelectItem value="deceased">{t("deceased")}</SelectItem>
@@ -701,8 +711,10 @@ export default function EmployeeDetailPage() {
                   </div>
                   <div className="space-y-2">
                     <Label>{tc("status")}</Label>
-                    <Select value={formData.mother_live_status} onValueChange={(v) => setFormData({ ...formData, mother_live_status: v })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                    <Select value={formData.mother_live_status || undefined} onValueChange={(v) => setFormData({ ...formData, mother_live_status: v })}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder={tc("status")} />
+                      </SelectTrigger>
                       <SelectContent position="popper">
                         <SelectItem value="alive">{t("alive")}</SelectItem>
                         <SelectItem value="deceased">{t("deceased")}</SelectItem>
@@ -1151,8 +1163,8 @@ export default function EmployeeDetailPage() {
                       <div className="py-4 space-y-4">
                         <div className="space-y-2">
                           <Label>{t("docType")}</Label>
-                          <Select value={docTypeId} onValueChange={setDocTypeId}>
-                            <SelectTrigger>
+                          <Select value={docTypeId || undefined} onValueChange={setDocTypeId}>
+                            <SelectTrigger className="w-full">
                               <SelectValue placeholder={t("selectType")} />
                             </SelectTrigger>
                             <SelectContent>

@@ -1,4 +1,4 @@
-import { addRole, getRole, updateRole, updateRolePermissions } from "../service/Role.js";
+import { addRole, getRole, updateRole, updateRolePermissions, deleteRole } from "../service/Role.js";
 
 export const addRoleController = async (req, res) => {
   try {
@@ -62,6 +62,23 @@ export const updateRolePermissionsController = async (req, res) => {
       });
     }
     const result = await updateRolePermissions(role_id, permissions, req.user.company_id);
+    res.status(200).json(result);
+  } catch (error) {
+    console.log(error.message);
+    res.status(500).json({ result: false, message: error.message });
+  }
+};
+
+export const deleteRoleController = async (req, res) => {
+  try {
+    const { role_id } = req.params;
+    if (!role_id) {
+      return res.status(400).json({ result: false, message: "Role ID is required." });
+    }
+    const result = await deleteRole(role_id, req.user.company_id);
+    if (!result.result) {
+      return res.status(400).json(result);
+    }
     res.status(200).json(result);
   } catch (error) {
     console.log(error.message);

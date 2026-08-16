@@ -11,7 +11,8 @@ export const createTimeSheet = async (
   require_time_in = true,
   require_lunch_out = false,
   require_lunch_in = false,
-  require_time_out = true
+  require_time_out = true,
+  grace_period = 10
 ) => {
   try {
     await prisma.timesheet.create({
@@ -23,6 +24,7 @@ export const createTimeSheet = async (
         lunch_out,
         lunch_in,
         time_out,
+        grace_period: grace_period !== undefined ? parseInt(grace_period) : 10,
         require_time_in,
         require_lunch_out,
         require_lunch_in,
@@ -121,7 +123,8 @@ export const updateTimeSheet = async (
   require_time_in,
   require_lunch_out,
   require_lunch_in,
-  require_time_out
+  require_time_out,
+  grace_period
 ) => {
   try {
     const updateData = {};
@@ -132,6 +135,7 @@ export const updateTimeSheet = async (
     if (lunch_out !== undefined) updateData.lunch_out = lunch_out;
     if (lunch_in !== undefined) updateData.lunch_in = lunch_in;
     if (time_out !== undefined) updateData.time_out = time_out;
+    if (grace_period !== undefined) updateData.grace_period = parseInt(grace_period);
     if (require_time_in !== undefined) updateData.require_time_in = require_time_in;
     if (require_lunch_out !== undefined) updateData.require_lunch_out = require_lunch_out;
     if (require_lunch_in !== undefined) updateData.require_lunch_in = require_lunch_in;

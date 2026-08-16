@@ -19,6 +19,7 @@ export const createTimeSheetController = async (req, res) => {
       require_lunch_out,
       require_lunch_in,
       require_time_out,
+      grace_period,
     } = req.body;
     const company_id = req.user.company_id;
 
@@ -40,7 +41,8 @@ export const createTimeSheetController = async (req, res) => {
       require_time_in,
       require_lunch_out,
       require_lunch_in,
-      require_time_out
+      require_time_out,
+      grace_period
     );
     res.status(200).json(timeSheetData);
   } catch (error) {
@@ -101,6 +103,7 @@ export const updateTimeSheetController = async (req, res) => {
       require_lunch_out,
       require_lunch_in,
       require_time_out,
+      grace_period,
     } = req.body;
 
     if (!id) {
@@ -121,7 +124,8 @@ export const updateTimeSheetController = async (req, res) => {
       require_time_in,
       require_lunch_out,
       require_lunch_in,
-      require_time_out
+      require_time_out,
+      grace_period
     );
     res.status(200).json(timeSheetData);
   } catch (error) {

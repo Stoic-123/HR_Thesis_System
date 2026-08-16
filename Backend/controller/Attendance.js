@@ -72,8 +72,9 @@ const inferTimeFieldFromSchedule = (timeSheet, nowMinutes, clockedFields = new S
   const lunchOut = parseTimeToMinutes(timeSheet.lunch_out);
   const lunchIn  = parseTimeToMinutes(timeSheet.lunch_in);
   const timeOut  = parseTimeToMinutes(timeSheet.time_out);
+  const grace    = Number(timeSheet.grace_period ?? ATTENDANCE_GRACE_MINUTES);
 
-  console.log("[Schedule Debug]", { timeIn, lunchOut, lunchIn, timeOut, nowMinutes, clockedFields: Array.from(clockedFields) });
+  console.log("[Schedule Debug]", { timeIn, lunchOut, lunchIn, timeOut, grace, nowMinutes, clockedFields: Array.from(clockedFields) });
 
   const WINDOW = 120;
 
@@ -87,7 +88,7 @@ const inferTimeFieldFromSchedule = (timeSheet, nowMinutes, clockedFields = new S
 
   if (
     timeIn !== null &&
-    nowMinutes >= timeIn - ATTENDANCE_GRACE_MINUTES &&
+    nowMinutes >= timeIn - grace &&
     nowMinutes <= timeInEnd
   ) {
     if (!clockedFields.has("time_in")) {

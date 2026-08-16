@@ -47,7 +47,7 @@ import {
   AvatarFallback,
   AvatarImage,
 } from "@/components/ui/avatar";
-import { Bell, Search, Loader2, PanelLeft, ShieldAlert, Pencil, Camera, User, X } from "lucide-react";
+import { Bell, Search, Loader2, PanelLeft, ShieldAlert, Pencil, Camera, User, X, Check } from "lucide-react";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { useMe } from "@/hooks/useMe";
 import { LoadingState } from "@/components/ui/loading-state";
@@ -63,6 +63,7 @@ const routePermissions = [
   { path: "/dashboard/department", permission: "department:manage" },
   { path: "/dashboard/position", permission: "department:manage" },
   { path: "/dashboard/employee", permission: "employee:manage" },
+  { path: "/dashboard/recruitment", permission: "employee:manage" },
   { path: "/dashboard/user", permission: "role:manage" },
   { path: "/dashboard/role", permission: "role:manage" },
   { path: "/dashboard/time-attendance/report", permission: "leave:approve" },
@@ -242,6 +243,21 @@ export default function DashboardLayout({
       }
     }
   }, [isLoading, isAuthorized, router]);
+
+  useEffect(() => {
+    if (user?.employee?.company?.primary_color) {
+      const pColor = user.employee.company.primary_color;
+      document.documentElement.style.setProperty("--primary", pColor);
+      document.documentElement.style.setProperty("--color-primary", pColor);
+      document.documentElement.style.setProperty("--sidebar-primary", pColor);
+      document.documentElement.style.setProperty("--sidebar-ring", pColor);
+    }
+    if (user?.employee?.company?.secondary_color) {
+      const sColor = user.employee.company.secondary_color;
+      document.documentElement.style.setProperty("--secondary", sColor);
+      document.documentElement.style.setProperty("--color-secondary", sColor);
+    }
+  }, [user?.employee?.company?.primary_color, user?.employee?.company?.secondary_color]);
 
   useEffect(() => {
     if (isError) {
@@ -560,114 +576,170 @@ export default function DashboardLayout({
               </Dialog>
 
               {/* ── Standalone Change Password Dialog ── */}
-              <Dialog open={isChangePasswordOpen} onOpenChange={setIsChangePasswordOpen}>
+              <Dialog 
+                open={isChangePasswordOpen} 
+                onOpenChange={(open) => {
+                  setIsChangePasswordOpen(open);
+                  if (!open) {
+                    setCurrentPassword("");
+                    setNewPassword("");
+                    setConfirmNewPassword("");
+                    setShowCurrentPassword(false);
+                    setShowNewPassword(false);
+                    setShowConfirmNewPassword(false);
+                  }
+                }}
+              >
                 <DialogContent className="sm:max-w-md rounded-2xl z-50">
                   <DialogHeader>
                     <DialogTitle className="text-xl font-bold">{t("changePasswordTitle")}</DialogTitle>
                     <DialogDescription>{t("changePasswordHint")}</DialogDescription>
                   </DialogHeader>
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      if (newPassword !== confirmNewPassword) {
-                        toast.error("New passwords do not match");
-                        return;
-                      }
-                      if (newPassword.length < 6) {
-                        toast.error("New password must be at least 6 characters");
-                        return;
-                      }
-                      changePasswordMutation.mutate({
-                        current_password: currentPassword,
-                        new_password: newPassword,
-                        confirm_password: confirmNewPassword,
-                      });
-                    }}
-                  >
-                    <FieldGroup>
-                      <FieldSet>
-                        <Field>
-                          <FieldLabel>{t("currentPassword")}</FieldLabel>
+                  {(() => {
+                    const isMinLength = newPassword.length >= 8;
+                    const hasLetter = /[a-zA-Z]/.test(newPassword);
+                    const hasNumber = /[0-9]/.test(newPassword);
+                    const hasSymbol = /[^a-zA-Z0-9]/.test(newPassword);
+                    const isStrong = isMinLength && hasLetter && hasNumber && hasSymbol;
 
+                    return (
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          if (!isStrong) {
+                            toast.error(t("pwdCriteriaNotMet"));
+                            return;
+                          }
+                          if (newPassword !== confirmNewPassword) {
+                            toast.error(t("pwdMismatch"));
+                            return;
+                          }
+                          changePasswordMutation.mutate({
+                            current_password: currentPassword,
+                            new_password: newPassword,
+                            confirm_password: confirmNewPassword,
+                          });
+                        }}
+                        className="space-y-4 pt-2"
+                      >
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-semibold">{t("currentPassword")}</Label>
                           <div className="relative">
                             <Input
                               type={showCurrentPassword ? "text" : "password"}
                               value={currentPassword}
                               required
                               placeholder={t("enterPassword")}
-                              className="h-11 rounded-2xl border-border/70 bg-background px-4 pr-10 shadow-none focus:border-primary"
+                              className="rounded-xl pr-10 h-10"
                               onChange={(e) => setCurrentPassword(e.target.value)}
                             />
-
                             <button
                               type="button"
                               onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-lg text-muted-foreground/70 hover:text-foreground hover:bg-muted transition cursor-pointer flex items-center justify-center"
+                              tabIndex={-1}
                             >
-                              {showCurrentPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                              {showCurrentPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                             </button>
                           </div>
-                        </Field>
-                        <Field>
-                          <FieldLabel>{t("newPassword")}</FieldLabel>
+                        </div>
 
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-semibold">{t("newPassword")}</Label>
                           <div className="relative">
                             <Input
                               type={showNewPassword ? "text" : "password"}
                               value={newPassword}
                               required
                               placeholder={t("enterPassword")}
-                              className="h-11 rounded-2xl border-border/70 bg-background px-4 pr-10 shadow-none focus:border-primary"
+                              className="rounded-xl pr-10 h-10"
                               onChange={(e) => setNewPassword(e.target.value)}
                             />
-
                             <button
                               type="button"
                               onClick={() => setShowNewPassword(!showNewPassword)}
-                              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-lg text-muted-foreground/70 hover:text-foreground hover:bg-muted transition cursor-pointer flex items-center justify-center"
+                              tabIndex={-1}
                             >
-                              {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                              {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                             </button>
                           </div>
-                        </Field>
-                        <Field>
-                          <FieldLabel>{t("confirmPassword")}</FieldLabel>
 
+                          {/* Password Criteria Checklist */}
+                          {newPassword.length > 0 && (
+                            <div className="grid grid-cols-2 gap-1.5 pt-1.5 px-0.5 text-xs animate-in fade-in duration-200">
+                              <div className={`flex items-center gap-1.5 transition-colors ${isMinLength ? "text-emerald-600 font-medium" : "text-muted-foreground/70"}`}>
+                                <Check className={`size-3.5 shrink-0 ${isMinLength ? "text-emerald-600" : "opacity-30"}`} />
+                                <span>{t("pwdLength")}</span>
+                              </div>
+                              <div className={`flex items-center gap-1.5 transition-colors ${hasLetter ? "text-emerald-600 font-medium" : "text-muted-foreground/70"}`}>
+                                <Check className={`size-3.5 shrink-0 ${hasLetter ? "text-emerald-600" : "opacity-30"}`} />
+                                <span>{t("pwdLetter")}</span>
+                              </div>
+                              <div className={`flex items-center gap-1.5 transition-colors ${hasNumber ? "text-emerald-600 font-medium" : "text-muted-foreground/70"}`}>
+                                <Check className={`size-3.5 shrink-0 ${hasNumber ? "text-emerald-600" : "opacity-30"}`} />
+                                <span>{t("pwdNumber")}</span>
+                              </div>
+                              <div className={`flex items-center gap-1.5 transition-colors ${hasSymbol ? "text-emerald-600 font-medium" : "text-muted-foreground/70"}`}>
+                                <Check className={`size-3.5 shrink-0 ${hasSymbol ? "text-emerald-600" : "opacity-30"}`} />
+                                <span>{t("pwdSymbol")}</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-semibold">{t("confirmPassword")}</Label>
                           <div className="relative">
                             <Input
                               type={showConfirmNewPassword ? "text" : "password"}
                               value={confirmNewPassword}
                               required
                               placeholder={t("enterPassword")}
-                              className="h-11 rounded-2xl border-border/70 bg-background px-4 pr-10 shadow-none focus:border-primary"
+                              className="rounded-xl pr-10 h-10"
                               onChange={(e) => setConfirmNewPassword(e.target.value)}
                             />
-
                             <button
                               type="button"
                               onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
-                              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-lg text-muted-foreground/70 hover:text-foreground hover:bg-muted transition cursor-pointer flex items-center justify-center"
+                              tabIndex={-1}
                             >
-                              {showConfirmNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                              {showConfirmNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                             </button>
                           </div>
-                        </Field>
-                      </FieldSet>
-                    </FieldGroup>
+                          {confirmNewPassword.length > 0 && newPassword !== confirmNewPassword && (
+                            <p className="text-xs text-rose-500 pt-0.5">{t("pwdMismatch")}</p>
+                          )}
+                        </div>
 
-                    <DialogFooter className="pt-4">
-                      <Button type="button" className="py-2.5 rounded-xl" variant="outline" onClick={() => setIsChangePasswordOpen(false)}>
-                        {tc("cancel")}
-                      </Button>
-                      <Button
-                        type="submit"
-                        className="px-6 py-2.5 rounded-xl"
-                        disabled={changePasswordMutation.isPending}
-                      >
-                        {changePasswordMutation.isPending ? tc("submitting") : tc("save")}
-                      </Button>
-                    </DialogFooter>
-                  </form>
+                        <DialogFooter className="pt-3 gap-2">
+                          <Button
+                            type="button"
+                            className="rounded-xl"
+                            variant="outline"
+                            onClick={() => setIsChangePasswordOpen(false)}
+                          >
+                            {tc("cancel")}
+                          </Button>
+                          <Button
+                            type="submit"
+                            className="rounded-xl"
+                            disabled={changePasswordMutation.isPending || !isStrong}
+                          >
+                            {changePasswordMutation.isPending ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                {tc("submitting")}
+                              </>
+                            ) : (
+                              tc("save")
+                            )}
+                          </Button>
+                        </DialogFooter>
+                      </form>
+                    );
+                  })()}
                 </DialogContent>
               </Dialog>
             </div>

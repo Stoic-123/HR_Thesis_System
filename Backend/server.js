@@ -55,6 +55,7 @@ import assetRoutes from "./routes/asset.routes.js";
 import notificationRoutes from "./routes/Notification.js";
 import announcementRoutes from "./routes/Announcement.js";
 import appMenuRoutes from "./routes/AppMenu.js";
+import recruitmentRoutes from "./routes/recruitment.routes.js";
 import http from "http";
 import { initSocket } from "./utils/socket.js";
 
@@ -186,6 +187,7 @@ app.use("/api/asset", assetRoutes);
 app.use("/api/notification", notificationRoutes);
 app.use("/api/announcement", announcementRoutes);
 app.use("/api/app-menu", appMenuRoutes);
+app.use("/api/recruitment", recruitmentRoutes);
 
 app.get("/", (req, res) => {
   res.send("HR System API is running");

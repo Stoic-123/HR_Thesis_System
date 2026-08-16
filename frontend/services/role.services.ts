@@ -25,3 +25,8 @@ export const updateRolePermissions = async (
   return res.data;
 };
 
+export const deleteRole = async (roleId: number) => {
+  const res = await api.delete(`/api/role/delete-role/${roleId}`);
+  return res.data;
+};
+
