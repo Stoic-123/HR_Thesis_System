@@ -437,40 +437,48 @@ export const getAttendanceReportController = async (req, res) => {
         }
       }
 
+      const isLateThisRecord = expectedMin !== null ? late_minutes > 0 : Boolean(r.is_late || r.status === "late");
+      const isEarlyThisRecord = expectedMin !== null ? early_minutes > 0 : Boolean(r.is_early);
+      const recordStatus = isLateThisRecord ? "late" : "present";
+
       // Populate dynamic scan map
       entry.scans[r.time_mode_id] = {
         time: timeStr,
-        is_late: (r.is_late || late_minutes > 0),
-        is_early: (r.is_early || early_minutes > 0),
-        status: r.status,
+        is_late: isLateThisRecord,
+        is_early: isEarlyThisRecord,
+        status: recordStatus,
         late_minutes,
         early_minutes,
         expected_time: expectedTime,
       };
 
-      if (late_minutes > 0) {
+      if (isLateThisRecord) {
         entry.isLate = true;
         entry.status = "late";
       }
 
-      if (early_minutes > 0) {
+      if (isEarlyThisRecord) {
         entry.isEarly = true;
       }
 
       if (field === "time_in" && !entry.timeIn) {
         entry.timeIn = timeStr;
-        if (r.is_late || late_minutes > 0) entry.isLate = true;
-        if (r.status === "late" || late_minutes > 0) entry.status = "late";
+        if (isLateThisRecord) {
+          entry.isLate = true;
+          entry.status = "late";
+        }
       }
       if (field === "time_out") {
         entry.timeOut = timeStr;
-        if (r.is_early || early_minutes > 0) entry.isEarly = true;
+        if (isEarlyThisRecord) entry.isEarly = true;
       }
       // Fallback: if we haven't captured time_in/time_out yet, use first/last record
       if (!entry.timeIn && field !== "time_out") {
         entry.timeIn = timeStr;
-        if (r.is_late || late_minutes > 0) entry.isLate = true;
-        if (r.status === "late" || late_minutes > 0) entry.status = "late";
+        if (isLateThisRecord) {
+          entry.isLate = true;
+          entry.status = "late";
+        }
       }
       if (field === "time_out" || (!entry.timeOut && entry.timeIn && entry.records.length > 1)) {
         entry.timeOut = timeStr;
