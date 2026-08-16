@@ -22,8 +22,8 @@
     "of": "នៃ",
     "actions": "សកម្មភាព",
     "status": "ស្ថានភាព",
-    "active": "ដំណើរការ",
-    "inactive": "ផ្អាក",
+    "active": "សកម្ម",
+    "inactive": "អសកម្ម",
     "location": "ទីតាំង",
     "notSet": "មិនទាន់កំណត់",
     "name": "ឈ្មោះ",
@@ -46,7 +46,12 @@
     "create": "បង្កើត",
     "creating": "កំពុងបង្កើត...",
     "close": "បិទ",
-    "selectDate": "ជ្រើសរើសកាលបរិច្ឆេទ"
+    "selectDate": "ជ្រើសរើសកាលបរិច្ឆេទ",
+    "male": "ប្រុស",
+    "female": "ស្រី",
+    "refresh": "ទាញយកឡើងវិញ",
+    "exportPDF": "ទាញយកជា PDF",
+    "exportPdf": "ទាញយកជា PDF"
   },
   "sidebar": {
     "overview": "ទិដ្ឋភាពទូទៅ",
@@ -169,7 +174,10 @@
     "headcountGrowth": "ការកើនឡើងចំនួនបុគ្គលិក",
     "employmentStatus": "ស្ថានភាពការងារ",
     "genderDistribution": "ការបែងចែកភេទ",
-    "recentEmployees": "បុគ្គលិកថ្មីៗ"
+    "recentEmployees": "បុគ្គលិកថ្មីៗ",
+    "totalDepartments": "នាយកដ្ឋានសរុប",
+    "totalPositions": "តួនាទីសរុប",
+    "totalLocations": "ទីតាំងសរុប"
   },
   "company": {
     "title": "ក្រុមហ៊ុន",
@@ -210,12 +218,12 @@
     "currentLogo": "ឡូហ្គោបច្ចុប្បន្ន",
     "uploadImage": "ទាញយកឯកសាររូបភាពមកទីនេះ ឬចុចដើម្បីជ្រើសរើស",
     "supportedFormats": "គាំទ្រ JPEG, PNG (ទំហំអតិបរមា 2MB)",
-    "groupIdLabel": "អត្តសញ្ញាណក្រុមលំនាំដើម (Default Group ID)",
-    "attendanceGroupIdLabel": "អត្តសញ្ញាណក្រុមវត្តមាន (Attendance Group ID)",
-    "leaveGroupIdLabel": "អត្តសញ្ញាណក្រុមច្បាប់ឈប់សម្រាក (Leave Group ID)",
-    "overtimeGroupIdLabel": "អត្តសញ្ញាណក្រុមថែមម៉ោង (Overtime Group ID)",
-    "announcementGroupIdLabel": "អត្តសញ្ញាណក្រុមសេចក្តីជូនដំណឹង (Announcement Group ID)",
-    "backupGroupIdLabel": "អត្តសញ្ញាណក្រុមចម្លងទុក (Backup Group ID)",
+    "groupIdLabel": "អត្តសញ្ញាណក្រុមលំនាំដើម",
+    "attendanceGroupIdLabel": "អត្តសញ្ញាណក្រុមវត្តមាន",
+    "leaveGroupIdLabel": "អត្តសញ្ញាណក្រុមច្បាប់ឈប់សម្រាក",
+    "overtimeGroupIdLabel": "អត្តសញ្ញាណក្រុមថែមម៉ោង",
+    "announcementGroupIdLabel": "អត្តសញ្ញាណក្រុមសេចក្តីជូនដំណឹង",
+    "backupGroupIdLabel": "អត្តសញ្ញាណក្រុមចម្លងទុក",
     "botTokenLabel": "ថូខឹនប៊ុត (Bot Token)",
     "defaultPasswordTitle": "លេខសម្ងាត់លំនាំដើម",
     "defaultPasswordDesc": "លេខសម្ងាត់លំនាំដើមដែលត្រូវកំណត់ដោយស្វ័យប្រវត្តសម្រាប់គណនីបុគ្គលិកដែលបង្កើតថ្មី និងការកំណត់លេខសម្ងាត់ឡើងវិញ។",
@@ -249,7 +257,9 @@
     "aiModelPlaceholder": "ឧ. Qwen/Qwen2.5-7B-Instruct, google/gemini-2.5-flash:free ឬ qwen2.5:1.5b",
     "aiLocalOption": "ម៉ូដែលមូលដ្ឋាន (Local Ollama)",
     "aiHuggingFaceOption": "Hugging Face API",
-    "aiOpenrouterOption": "OpenRouter API"
+    "aiOpenrouterOption": "OpenRouter API",
+    "telegramChannels": "ប៉ុស្តិ៍ជូនដំណឹង Telegram",
+    "telegramChannelsDesc": "កំណត់អត្តសញ្ញាណក្រុម Telegram សម្រាប់មុខងារនីមួយៗ ឬប្រើប្រាស់អត្តសញ្ញាណក្រុមលំនាំដើម។"
   },
   "department": {
     "title": "នាយកដ្ឋាន",
@@ -518,7 +528,7 @@
     "noRequests": "រកមិនឃើញសំណើម៉ោងបន្ថែម",
     "approvedSuccess": "សំណើម៉ោងបន្ថែមត្រូវបានអនុម័ត",
     "rejectedSuccess": "សំណើម៉ោងបន្ថែមត្រូវបានបដិសេធ",
-    "exportPDF": "នាំចេញជា PDF"
+    "exportPDF": "ទាញយកជា PDF"
   },
   "timemode": {
     "title": "របៀបម៉ោងធ្វើការ",
@@ -682,7 +692,7 @@
     "noRecords": "គ្មានកំណត់ត្រាវត្តមានសម្រាប់ថៃ្ងនេះទេ។",
     "selectDifferentDate": "សូមជ្រើសរើសកាលបរិច្ឆេទផ្សេង ឬរង់ចាំទិន្នន័យថ្មី។",
     "loadFailed": "មិនអាចផ្ទុករបាយការណ៍វត្តមានបានទេ",
-    "exportPDF": "នាំចេញជា PDF",
+    "exportPDF": "ទាញយកជា PDF",
     "dateRange": "កាលបរិច្ឆេទ",
     "employee": "បុគ្គលិក",
     "department": "នាយកដ្ឋាន",
@@ -843,7 +853,8 @@
     "approvedCount": "អនុម័ត",
     "pendingCount": "កំពុងរង់ចាំ",
     "allRequests": "សរុបសំណើ",
-    "weekBadge": "ខែនេះ"
+    "weekBadge": "ខែនេះ",
+    "exportPDF": "ទាញយកជា PDF"
   },
   "overtimeReport": {
     "title": "របាយការណ៍ម៉ោងបន្ថែម",
@@ -853,7 +864,7 @@
     "pendingCount": "កំពុងរង់ចាំ",
     "allRequests": "សរុបសំណើ",
     "weekBadge": "ខែនេះ",
-    "exportPDF": "នាំចេញជា PDF"
+    "exportPDF": "ទាញយកជា PDF"
   },
   "leaveProfile": {
     "title": "ទម្រង់ឈប់សម្រាកបុគ្គលិក",
@@ -947,7 +958,7 @@
     "summaryReport": "របាយការណ៍សង្ខេប",
     "year": "ឆ្នាំ",
     "exportExcel": "នាំចេញ Excel",
-    "exportPdf": "នាំចេញ PDF",
+    "exportPdf": "ទាញយកជា PDF",
     "exportSuccess": "នាំចេញរបាយការណ៍ដោយជោគជ័យ",
     "exportError": "មិនអាចនាំចេញរបាយការណ៍បានទេ",
     "taxAutoCalc": "គណនាដោយស្វ័យប្រវត្តិតាមអត្រាពន្ធខែបុគ្គលិកក្នុងស្រុក (USD)",
@@ -977,7 +988,8 @@
       "generated": "បានបង្កើត",
       "approved": "បានអនុម័ត",
       "paid": "បានបង់"
-    }
+    },
+    "exportPDF": "ទាញយកជា PDF"
   },
   "kpi": {
     "title": "ការវាយតម្លៃ & គ្រប់គ្រងគោលដៅ",
@@ -988,7 +1000,7 @@
     "tab4": "៤. ដាក់ពិន្ទុបុគ្គលិក",
     "step1Title": "ជំហានទី ១៖ កំណត់កាលបរិច្ឆេទវាយតម្លៃ",
     "step1Desc": "បង្កើតរយៈពេលវាយតម្លៃប្រចាំខែ ប្រចាំត្រីមាស ឬប្រចាំឆ្នាំ (ឧទាហរណ៍៖ សីហា ២០២៦)។",
-    "step1Btn": "+ បង្កើតកាលបរិច្ឆេទថ្មី",
+    "step1Btn": "បង្កើតកាលបរិច្ឆេទថ្មី",
     "step2Title": "ជំហានទី ២៖ គំរូគោលដៅការងារ",
     "step2Desc": "បង្កើតគំរូគោលដៅស្តង់ដារសម្រាប់តួនាទី ឬនាយកដ្ឋាន។",
     "step2Btn": "+ បង្កើតគំរូគោលដៅថ្មី",
@@ -996,7 +1008,11 @@
     "step3Desc": "ផ្ញើគំរូគោលដៅស្តង់ដារទៅកាន់បុគ្គលិកសម្រាប់រយៈពេលវាយតម្លៃដែលបានជ្រើសរើស។",
     "step3Btn": "ចាត់តាំងគោលដៅទៅបុគ្គលិក",
     "step4Title": "ជំហានទី ៤៖ វាយតម្លៃ & ដាក់ពិន្ទុបុគ្គលិក",
-    "step4Desc": "ពិនិត្យលទ្ធផលសម្រេចបានរបស់បុគ្គលិក និងបញ្ចូលពិន្ទុវាយតម្លៃចុងក្រោយ។"
+    "step4Desc": "ពិនិត្យលទ្ធផលសម្រេចបានរបស់បុគ្គលិក និងបញ្ចូលពិន្ទុវាយតម្លៃចុងក្រោយ។",
+    "createCycle": "បង្កើតវដ្ត KPI ថ្មី",
+    "createCycleDesc": "កំណត់កាលបរិច្ឆេទសម្រាប់វដ្តវាយតម្លៃ។",
+    "cycleNamePlaceholder": "ឧ. ការវាយតម្លៃប្រចាំឆ្នាំ ២០២៦",
+    "saveCycle": "រក្សាទុកវដ្ត"
   },
   "announcement": {
     "title": "ការជូនដំណឹង",
@@ -1056,7 +1072,8 @@
     "title": "ការកំណត់កម្មវិធី",
     "subtitle": "គ្រប់គ្រងការកំណត់កម្មវិធី មុខងារ និងការតភ្ជាប់ប្រព័ន្ធ",
     "saveSuccess": "បានរក្សាទុកការកំណត់កម្មវិធីដោយជោគជ័យ",
-    "saveError": "មិនអាចរក្សាទុកការកំណត់កម្មវិធីបានទេ"
+    "saveError": "មិនអាចរក្សាទុកការកំណត់កម្មវិធីបានទេ",
+    "color": "ពណ៌"
   },
   "asset": {
     "title": "ការគ្រប់គ្រងទ្រព្យសកម្ម",
@@ -1076,7 +1093,38 @@
     "category": "ប្រភេទ",
     "assignedTo": "ប្រគល់ជូន",
     "status": "ស្ថានភាព",
-    "actions": "សកម្មភាព"
+    "actions": "សកម្មភាព",
+    "repairAsset": "ទ្រព្យសកម្មជួសជុល",
+    "brokenAsset": "ទ្រព្យសកម្មខូច",
+    "searchPlaceholder": "ស្វែងរកទ្រព្យសកម្ម, ស៊េរី, បុគ្គលិក...",
+    "exportPdf": "ទាញយកជា PDF",
+    "assetInventory": "បញ្ជីសារពើភ័ណ្ឌទ្រព្យសកម្ម",
+    "assetInventoryDesc": "បន្ថែមទិន្នន័យ និងប្រគល់ទ្រព្យសកម្មដោយផ្ទាល់",
+    "addAsset": "បន្ថែមទ្រព្យសកម្ម",
+    "addNewAsset": "បន្ថែមទ្រព្យសកម្មថ្មី",
+    "addAssetDesc": "បង្កើតទ្រព្យសកម្មក្រុមហ៊ុន និងផ្ទុកឡើងរូបភាព",
+    "nameModel": "ឈ្មោះ / ម៉ូដែល",
+    "serialTagNumber": "លេខស៊េរី / ស្លាក",
+    "condition": "លក្ខខណ្ឌ",
+    "assetImage": "រូបភាពទ្រព្យសកម្ម",
+    "assetDetails": "ព័ត៌មានលម្អិតទ្រព្យសកម្ម",
+    "unassigned": "មិនទាន់ប្រគល់",
+    "assign": "ប្រគល់ជូន",
+    "return": "ប្រគល់មកវិញ",
+    "good": "ល្អ",
+    "fair": "មធ្យម",
+    "damaged": "ខូច",
+    "available": "ទំនេរ",
+    "assigned": "បានប្រគល់",
+    "underRepair": "កំពុងជួសជុល",
+    "broken": "ខូច",
+    "noActiveAssets": "មិនមានទ្រព្យសកម្មសកម្មក្នុងស្តុកទេ",
+    "noRepairAssets": "មិនមានទ្រព្យសកម្មកំពុងជួសជុលទេ",
+    "noBrokenAssets": "មិនមានទ្រព្យសកម្មខូចទេ",
+    "assetCategories": "ប្រភេទទ្រព្យសកម្ម",
+    "assetCategoriesDesc": "គ្រប់គ្រងប្រភេទទ្រព្យសកម្មដូចជា កុំព្យូទ័រ ឬទូរស័ព្ទ",
+    "repairAssetsDesc": "ទ្រព្យសកម្មកំពុងថែទាំ ឬជួសជុល",
+    "brokenAssetsDesc": "ទ្រព្យសកម្មដែលខូច ឬឈប់ប្រើប្រាស់"
   },
   "myKpi": {
     "title": "ការវាយតម្លៃរបស់ខ្ញុំ",

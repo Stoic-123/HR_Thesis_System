@@ -291,28 +291,45 @@ export default function OvertimeReportPage() {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="space-y-6">
+      {/* Top Header Row */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">{tReport("title")}</h1>
-          <p className="text-gray-500">{tReport("description")}</p>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">{tReport("title")}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{tReport("description")}</p>
         </div>
-        <div className="flex flex-wrap items-end gap-3">
+        <Button
+          onClick={handleExportPDF}
+          size="lg"
+          className="rounded-2xl shadow-sm bg-primary hover:bg-primary/90 text-white font-semibold gap-2 self-start sm:self-auto cursor-pointer"
+          disabled={filteredOvertimes.length === 0}
+        >
+          <Printer className="size-4" />
+          {tReport("exportPDF") || "Export PDF"}
+        </Button>
+      </div>
+
+      {/* Filter Control Bar */}
+      <Card className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
           {/* Date Range Picker (From / To) */}
-          <DateRangePicker
-            startDate={toISODate(startDate)}
-            endDate={toISODate(endDate)}
-            onStartDateChange={(val) => setStartDate(parseLocalDate(val))}
-            onEndDateChange={(val) => setEndDate(parseLocalDate(val))}
-            fromLabel={locale === "km" ? "ពី" : "From"}
-            toLabel={locale === "km" ? "ដល់" : "To"}
-          />
+          <div className="space-y-1.5 lg:col-span-2">
+            <Label className="text-xs font-semibold text-muted-foreground">{locale === "km" ? "កាលបរិច្ឆេទ" : "Date Range"}</Label>
+            <DateRangePicker
+              startDate={toISODate(startDate)}
+              endDate={toISODate(endDate)}
+              onStartDateChange={(val) => setStartDate(parseLocalDate(val))}
+              onEndDateChange={(val) => setEndDate(parseLocalDate(val))}
+              fromLabel={locale === "km" ? "ពី" : "From"}
+              toLabel={locale === "km" ? "ដល់" : "To"}
+            />
+          </div>
 
           {/* Department Select */}
-          <div className="flex flex-col gap-1.5 min-w-[150px]">
-            <Label className="text-xs font-medium text-muted-foreground">{locale === "km" ? "នាយកដ្ឋាន" : "Department"}</Label>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-muted-foreground">{locale === "km" ? "នាយកដ្ឋាន" : "Department"}</Label>
             <Select value={selectedDeptId} onValueChange={setSelectedDeptId}>
-              <SelectTrigger className="h-10 rounded-xl shadow-xs bg-background border-gray-200/80">
+              <SelectTrigger className="h-10 rounded-xl shadow-xs bg-background border-border/60">
                 <SelectValue placeholder={locale === "km" ? "នាយកដ្ឋាន" : "Department"} />
               </SelectTrigger>
               <SelectContent>
@@ -327,10 +344,10 @@ export default function OvertimeReportPage() {
           </div>
 
           {/* Employee Select */}
-          <div className="flex flex-col gap-1.5 min-w-[150px]">
-            <Label className="text-xs font-medium text-muted-foreground">{locale === "km" ? "បុគ្គលិក" : "Employee"}</Label>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-muted-foreground">{locale === "km" ? "បុគ្គលិក" : "Employee"}</Label>
             <Select value={selectedEmpId} onValueChange={setSelectedEmpId}>
-              <SelectTrigger className="h-10 rounded-xl shadow-xs bg-background border-gray-200/80">
+              <SelectTrigger className="h-10 rounded-xl shadow-xs bg-background border-border/60">
                 <SelectValue placeholder={locale === "km" ? "បុគ្គលិក" : "Employee"} />
               </SelectTrigger>
               <SelectContent>
@@ -345,10 +362,10 @@ export default function OvertimeReportPage() {
           </div>
 
           {/* Status Filter */}
-          <div className="flex flex-col gap-1.5 min-w-[140px]">
-            <Label className="text-xs font-medium text-muted-foreground">{locale === "km" ? "ស្ថានភាព" : "Status"}</Label>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-muted-foreground">{locale === "km" ? "ស្ថានភាព" : "Status"}</Label>
             <Select value={filter} onValueChange={setFilter}>
-              <SelectTrigger className="h-10 rounded-xl shadow-xs bg-background border-gray-200/80">
+              <SelectTrigger className="h-10 rounded-xl shadow-xs bg-background border-border/60">
                 <SelectValue placeholder={locale === "km" ? "ស្ថានភាព" : "Status"} />
               </SelectTrigger>
               <SelectContent>
@@ -359,77 +376,65 @@ export default function OvertimeReportPage() {
               </SelectContent>
             </Select>
           </div>
-
-          <div className="flex flex-col gap-1.5 justify-end">
-            <span className="text-xs font-medium opacity-0 select-none hidden sm:inline-block">Action</span>
-            <Button
-              onClick={handleExportPDF}
-              className="h-10 flex items-center gap-2 rounded-xl shadow-xs bg-primary hover:bg-primary/90 text-white font-medium cursor-pointer"
-              disabled={filteredOvertimes.length === 0}
-            >
-              <Printer className="size-4" />
-              {tReport("exportPDF") || "Export PDF"}
-            </Button>
-          </div>
         </div>
-      </div>
+      </Card>
 
       {/* Summary Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4 sm:grid-cols-2 grid-cols-1">
-        <Card className="rounded-3xl border border-border/60 bg-primary-foreground shadow-sm">
-          <CardContent className="flex items-center gap-3 py-5">
-            <div className="rounded-xl bg-primary/10 p-2.5 text-primary">
-              <CalendarRange className="size-4.5" />
+        <Card className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl bg-primary/10 p-3 text-primary">
+              <CalendarRange className="size-5" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs font-medium text-muted-foreground">
                 {locale === "km" ? "សរុបសំណើ" : "Total Requests"}
               </p>
-              <p className="text-xl font-semibold">{stats.total}</p>
+              <p className="text-2xl font-bold tracking-tight">{stats.total}</p>
             </div>
-          </CardContent>
+          </div>
         </Card>
-        <Card className="rounded-3xl border border-border/60 bg-primary-foreground shadow-sm">
-          <CardContent className="flex items-center gap-3 py-5">
-            <div className="rounded-xl bg-emerald-100 p-2.5 text-emerald-700">
-              <CheckCircle className="size-4.5" />
+        <Card className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl bg-emerald-500/10 p-3 text-emerald-600">
+              <CheckCircle className="size-5" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">{tReport("approvedCount")}</p>
-              <p className="text-xl font-semibold">{stats.approved}</p>
+              <p className="text-xs font-medium text-muted-foreground">{tReport("approvedCount")}</p>
+              <p className="text-2xl font-bold tracking-tight text-emerald-600">{stats.approved}</p>
             </div>
-          </CardContent>
+          </div>
         </Card>
-        <Card className="rounded-3xl border border-border/60 bg-primary-foreground shadow-sm">
-          <CardContent className="flex items-center gap-3 py-5">
-            <div className="rounded-xl bg-amber-100 p-2.5 text-amber-700">
-              <Clock className="size-4.5" />
+        <Card className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl bg-amber-500/10 p-3 text-amber-600">
+              <Clock className="size-5" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">{tReport("pendingCount")}</p>
-              <p className="text-xl font-semibold">{stats.pending}</p>
+              <p className="text-xs font-medium text-muted-foreground">{tReport("pendingCount")}</p>
+              <p className="text-2xl font-bold tracking-tight text-amber-600">{stats.pending}</p>
             </div>
-          </CardContent>
+          </div>
         </Card>
-        <Card className="rounded-3xl border border-border/60 bg-primary-foreground shadow-sm">
-          <CardContent className="flex items-center gap-3 py-5">
-            <div className="rounded-xl bg-red-100 p-2.5 text-red-700">
-              <XCircle className="size-4.5" />
+        <Card className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl bg-rose-500/10 p-3 text-rose-600">
+              <XCircle className="size-5" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs font-medium text-muted-foreground">
                 {locale === "km" ? "បដិសេធ" : "Rejected"}
               </p>
-              <p className="text-xl font-semibold">{stats.rejected}</p>
+              <p className="text-2xl font-bold tracking-tight text-rose-600">{stats.rejected}</p>
             </div>
-          </CardContent>
+          </div>
         </Card>
       </div>
 
-      <Card className="rounded-3xl border border-border/60 bg-primary-foreground shadow-sm">
-        <CardHeader className="pb-3 px-6">
-          <CardTitle>{tOt("overtimeList")}</CardTitle>
-          <CardDescription>{tOt("overtimeListDesc")}</CardDescription>
+      <Card className="rounded-2xl border border-border/60 bg-card shadow-sm overflow-hidden">
+        <CardHeader className="pb-3 px-6 pt-6">
+          <CardTitle className="text-lg font-bold">{tOt("overtimeList")}</CardTitle>
+          <CardDescription className="text-xs">{tOt("overtimeListDesc")}</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (

@@ -23,7 +23,7 @@
     "actions": "Actions",
     "status": "Status",
     "active": "Active",
-    "inactive": "Suspended",
+    "inactive": "Inactive",
     "location": "Location",
     "notSet": "Not set",
     "name": "Name",
@@ -46,7 +46,10 @@
     "create": "Create",
     "creating": "Creating...",
     "close": "Close",
-    "selectDate": "Pick a date"
+    "selectDate": "Pick a date",
+    "male": "Male",
+    "female": "Female",
+    "refresh": "Refresh"
   },
   "sidebar": {
     "overview": "Overview",
@@ -169,7 +172,10 @@
     "headcountGrowth": "Headcount Growth",
     "employmentStatus": "Employment Status",
     "genderDistribution": "Gender Distribution",
-    "recentEmployees": "Recent Employees"
+    "recentEmployees": "Recent Employees",
+    "totalDepartments": "Total Departments",
+    "totalPositions": "Total Positions",
+    "totalLocations": "Total Locations"
   },
   "company": {
     "title": "Company",
@@ -210,12 +216,12 @@
     "currentLogo": "Current logo",
     "uploadImage": "Drag & drop an image here or click to select",
     "supportedFormats": "Supports JPEG, PNG (max 2MB)",
-    "groupIdLabel": "Default Group ID",
-    "attendanceGroupIdLabel": "Attendance Group ID",
-    "leaveGroupIdLabel": "Leave Group ID",
-    "overtimeGroupIdLabel": "Overtime Group ID",
-    "announcementGroupIdLabel": "Announcement Group ID",
-    "backupGroupIdLabel": "Backup Group ID",
+    "groupIdLabel": "DEFAULT GROUP ID",
+    "attendanceGroupIdLabel": "ATTENDANCE GROUP ID",
+    "leaveGroupIdLabel": "LEAVE GROUP ID",
+    "overtimeGroupIdLabel": "OVERTIME GROUP ID",
+    "announcementGroupIdLabel": "ANNOUNCEMENT GROUP ID",
+    "backupGroupIdLabel": "BACKUP GROUP ID",
     "botTokenLabel": "Bot Token",
     "defaultPasswordTitle": "Default Password",
     "defaultPasswordDesc": "The default password automatically assigned to newly created employee accounts and password resets.",
@@ -249,7 +255,9 @@
     "aiModelPlaceholder": "e.g., Qwen/Qwen2.5-7B-Instruct, google/gemini-2.5-flash:free, or qwen2.5:1.5b",
     "aiLocalOption": "Local Model (Ollama)",
     "aiHuggingFaceOption": "Hugging Face API",
-    "aiOpenrouterOption": "OpenRouter API"
+    "aiOpenrouterOption": "OpenRouter API",
+    "telegramChannels": "Telegram Notification Channels",
+    "telegramChannelsDesc": "Configure specific Telegram group IDs for each feature, or use the Default Group ID as a fallback."
   },
   "department": {
     "title": "Department",
@@ -988,7 +996,7 @@
     "tab4": "4. Grade Staff",
     "step1Title": "Step 1: Set Review Period",
     "step1Desc": "Create a monthly, quarterly, or yearly evaluation timeframe (e.g. August 2026).",
-    "step1Btn": "+ New Review Period",
+    "step1Btn": "Create New Cycle",
     "step2Title": "Step 2: Standard Goal Presets",
     "step2Desc": "Create standard goal presets for job roles or departments.",
     "step2Btn": "+ New Goal Preset",
@@ -996,7 +1004,11 @@
     "step3Desc": "Send standard goal presets to staff for the selected review period.",
     "step3Btn": "Deploy Goals to Staff",
     "step4Title": "Step 4: Grade & Score Staff",
-    "step4Desc": "Review employee goal achievements and input final performance scores."
+    "step4Desc": "Review employee goal achievements and input final performance scores.",
+    "createCycle": "Create New KPI Cycle",
+    "createCycleDesc": "Define the timeline for the performance review cycle.",
+    "cycleNamePlaceholder": "e.g. 2026 Annual Performance",
+    "saveCycle": "Save Cycle"
   },
   "announcement": {
     "title": "Announcements",
@@ -1056,7 +1068,8 @@
     "title": "App Configuration",
     "subtitle": "Manage application preferences, feature flags, and system integrations",
     "saveSuccess": "App configuration saved successfully",
-    "saveError": "Failed to save app configuration"
+    "saveError": "Failed to save app configuration",
+    "color": "Color"
   },
   "asset": {
     "title": "Asset Management",
@@ -1076,7 +1089,38 @@
     "category": "Category",
     "assignedTo": "Assigned To",
     "status": "Status",
-    "actions": "Actions"
+    "actions": "Actions",
+    "repairAsset": "Repair Asset",
+    "brokenAsset": "Broken Asset",
+    "searchPlaceholder": "Search assets, SN, employee...",
+    "exportPdf": "Export PDF",
+    "assetInventory": "Asset Inventory",
+    "assetInventoryDesc": "Add new items and direct assign them.",
+    "addAsset": "Add Asset",
+    "addNewAsset": "Add New Asset",
+    "addAssetDesc": "Create a company asset item and optionally upload its image.",
+    "nameModel": "Name / Model",
+    "serialTagNumber": "Serial / Tag Number",
+    "condition": "Condition",
+    "assetImage": "Asset Image",
+    "assetDetails": "Asset Details",
+    "unassigned": "Unassigned",
+    "assign": "Assign",
+    "return": "Return",
+    "good": "Good",
+    "fair": "Fair",
+    "damaged": "Damaged",
+    "available": "Available",
+    "assigned": "Assigned",
+    "underRepair": "Under Repair",
+    "broken": "Broken",
+    "noActiveAssets": "No active assets found in inventory.",
+    "noRepairAssets": "No assets currently in repair.",
+    "noBrokenAssets": "No broken or retired assets found.",
+    "assetCategories": "Asset Categories",
+    "assetCategoriesDesc": "Manage category types like Laptops or Phones.",
+    "repairAssetsDesc": "Assets currently undergoing maintenance or repairs.",
+    "brokenAssetsDesc": "Assets that are damaged, broken, or retired."
   },
   "myKpi": {
     "title": "My Performance",

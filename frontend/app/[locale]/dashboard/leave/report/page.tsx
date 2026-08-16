@@ -342,30 +342,44 @@ const LeaveReportPage = () => {
 
   return (
     <div className="space-y-6">
-      {/* Top Section */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      {/* Top Header Row */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
-          <p className="text-sm text-muted-foreground">{t("description")}</p>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">{t("title")}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{t("description")}</p>
         </div>
-        
-        {/* Filters Panel */}
-        <div className="flex flex-wrap items-end gap-3">
+        <Button
+          onClick={handleExportPDF}
+          size="lg"
+          className="rounded-2xl shadow-sm bg-primary hover:bg-primary/90 text-white font-semibold gap-2 self-start sm:self-auto cursor-pointer"
+          disabled={filteredLeaves.length === 0}
+        >
+          <Printer className="size-4" />
+          {t("exportPDF") || "Export PDF"}
+        </Button>
+      </div>
+
+      {/* Filter Control Bar */}
+      <Card className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 items-end">
           {/* Date Range Picker (From / To) */}
-          <DateRangePicker
-            startDate={toISODate(startDate)}
-            endDate={toISODate(endDate)}
-            onStartDateChange={(val) => setStartDate(parseLocalDate(val))}
-            onEndDateChange={(val) => setEndDate(parseLocalDate(val))}
-            fromLabel={locale === "km" ? "ពី" : "From"}
-            toLabel={locale === "km" ? "ដល់" : "To"}
-          />
+          <div className="space-y-1.5 lg:col-span-2">
+            <Label className="text-xs font-semibold text-muted-foreground">{locale === "km" ? "កាលបរិច្ឆេទ" : "Date Range"}</Label>
+            <DateRangePicker
+              startDate={toISODate(startDate)}
+              endDate={toISODate(endDate)}
+              onStartDateChange={(val) => setStartDate(parseLocalDate(val))}
+              onEndDateChange={(val) => setEndDate(parseLocalDate(val))}
+              fromLabel={locale === "km" ? "ពី" : "From"}
+              toLabel={locale === "km" ? "ដល់" : "To"}
+            />
+          </div>
 
           {/* Department Select */}
-          <div className="flex flex-col gap-1.5 min-w-[150px]">
-            <Label className="text-xs font-medium text-muted-foreground">{locale === "km" ? "នាយកដ្ឋាន" : "Department"}</Label>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-muted-foreground">{locale === "km" ? "នាយកដ្ឋាន" : "Department"}</Label>
             <Select value={selectedDeptId} onValueChange={setSelectedDeptId}>
-              <SelectTrigger className="h-10 rounded-xl shadow-xs bg-background border-gray-200/80">
+              <SelectTrigger className="h-10 rounded-xl shadow-xs bg-background border-border/60">
                 <SelectValue placeholder={locale === "km" ? "នាយកដ្ឋាន" : "Department"} />
               </SelectTrigger>
               <SelectContent>
@@ -380,10 +394,10 @@ const LeaveReportPage = () => {
           </div>
 
           {/* Employee Select */}
-          <div className="flex flex-col gap-1.5 min-w-[150px]">
-            <Label className="text-xs font-medium text-muted-foreground">{locale === "km" ? "បុគ្គលិក" : "Employee"}</Label>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-muted-foreground">{locale === "km" ? "បុគ្គលិក" : "Employee"}</Label>
             <Select value={selectedEmpId} onValueChange={setSelectedEmpId}>
-              <SelectTrigger className="h-10 rounded-xl shadow-xs bg-background border-gray-200/80">
+              <SelectTrigger className="h-10 rounded-xl shadow-xs bg-background border-border/60">
                 <SelectValue placeholder={locale === "km" ? "បុគ្គលិក" : "Employee"} />
               </SelectTrigger>
               <SelectContent>
@@ -398,10 +412,10 @@ const LeaveReportPage = () => {
           </div>
 
           {/* Leave Type Select */}
-          <div className="flex flex-col gap-1.5 min-w-[150px]">
-            <Label className="text-xs font-medium text-muted-foreground">{locale === "km" ? "ប្រភេទច្បាប់" : "Leave Type"}</Label>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-muted-foreground">{locale === "km" ? "ប្រភេទច្បាប់" : "Leave Type"}</Label>
             <Select value={selectedLeaveTypeId} onValueChange={setSelectedLeaveTypeId}>
-              <SelectTrigger className="h-10 rounded-xl shadow-xs bg-background border-gray-200/80">
+              <SelectTrigger className="h-10 rounded-xl shadow-xs bg-background border-border/60">
                 <SelectValue placeholder={locale === "km" ? "ប្រភេទច្បាប់" : "Leave Type"} />
               </SelectTrigger>
               <SelectContent>
@@ -416,10 +430,10 @@ const LeaveReportPage = () => {
           </div>
 
           {/* Status Filter */}
-          <div className="flex flex-col gap-1.5 min-w-[140px]">
-            <Label className="text-xs font-medium text-muted-foreground">{locale === "km" ? "ស្ថានភាព" : "Status"}</Label>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-muted-foreground">{locale === "km" ? "ស្ថានភាព" : "Status"}</Label>
             <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-              <SelectTrigger className="h-10 rounded-xl shadow-xs bg-background border-gray-200/80">
+              <SelectTrigger className="h-10 rounded-xl shadow-xs bg-background border-border/60">
                 <SelectValue placeholder={locale === "km" ? "ស្ថានភាព" : "Status"} />
               </SelectTrigger>
               <SelectContent>
@@ -430,21 +444,8 @@ const LeaveReportPage = () => {
               </SelectContent>
             </Select>
           </div>
-
-          {/* Export PDF Button */}
-          <div className="flex flex-col gap-1.5 justify-end">
-            <span className="text-xs font-medium opacity-0 select-none hidden sm:inline-block">Action</span>
-            <Button
-              onClick={handleExportPDF}
-              className="h-10 flex items-center gap-2 rounded-xl shadow-xs bg-primary hover:bg-primary/90 text-white font-medium cursor-pointer"
-              disabled={filteredLeaves.length === 0}
-            >
-              <Printer className="size-4" />
-              Export PDF
-            </Button>
-          </div>
         </div>
-      </div>
+      </Card>
 
       {/* Stats Cards Section */}
       <div className="grid gap-4 md:grid-cols-4 sm:grid-cols-2 grid-cols-1">

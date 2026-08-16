@@ -26,16 +26,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Plus, UserPlus, Undo2, Laptop, ListTree, PackageSearch, CheckCircle2, UserCircle, RefreshCcw, Pencil, Trash2, Eye, Printer, Search } from "lucide-react";
+import { Plus, UserPlus, Undo2, Laptop, ListTree, PackageSearch, CheckCircle2, UserCircle, RefreshCcw, Pencil, Trash2, Eye, Printer, Search, X } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import dayjs from "dayjs";
 import { useMe } from "@/hooks/useMe";
 import { exportReportToPDF } from "@/lib/pdf-export";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 
 export default function AssetDashboardPage() {
   const t = useTranslations("asset");
   const tCommon = useTranslations("common");
+  const locale = useLocale();
   const queryClient = useQueryClient();
 
   // Queries
@@ -453,11 +454,11 @@ export default function AssetDashboardPage() {
             </TabsTrigger>
             <TabsTrigger value="repair" className="rounded-lg gap-2">
               <RefreshCcw className="size-4" />
-              Repair Asset
+              {t("repairAsset")}
             </TabsTrigger>
             <TabsTrigger value="broken" className="rounded-lg gap-2">
               <Trash2 className="size-4" />
-              Broken Asset
+              {t("brokenAsset")}
             </TabsTrigger>
             <TabsTrigger value="categories" className="rounded-lg gap-2">
               <ListTree className="size-4" />
@@ -475,7 +476,7 @@ export default function AssetDashboardPage() {
               <div className="relative w-64">
                 <Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search assets, SN, employee..."
+                  placeholder={t("searchPlaceholder")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-9 rounded-xl shadow-sm h-9"
@@ -486,7 +487,7 @@ export default function AssetDashboardPage() {
                 className="flex items-center gap-2 rounded-xl shadow-sm bg-primary hover:bg-primary/90 text-white font-medium cursor-pointer h-9 text-xs"
               >
                 <Printer className="size-4" />
-                Export PDF
+                {t("exportPdf")}
               </Button>
             </div>
           )}
@@ -498,24 +499,24 @@ export default function AssetDashboardPage() {
         <TabsContent value="inventory" className="space-y-4 outline-none">
           <div className="flex justify-between items-center">
             <div>
-              <h2 className="text-lg font-bold">Asset Inventory</h2>
-              <p className="text-xs text-muted-foreground">Add new items and direct assign them.</p>
+              <h2 className="text-lg font-bold">{t("assetInventory")}</h2>
+              <p className="text-xs text-muted-foreground">{t("assetInventoryDesc")}</p>
             </div>
 
             <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
               <DialogTrigger asChild>
                 <Button className="rounded-xl shadow-md gap-2">
-                  <Plus className="size-4" /> Add Asset
+                  <Plus className="size-4" /> {t("addAsset")}
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[425px] rounded-2xl">
                 <DialogHeader>
-                  <DialogTitle className="text-xl font-bold">Add New Asset</DialogTitle>
-                  <DialogDescription>Create a company asset item and optionally upload its image.</DialogDescription>
+                  <DialogTitle className="text-xl font-bold">{t("addNewAsset")}</DialogTitle>
+                  <DialogDescription>{t("addAssetDesc")}</DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                   <div className="grid gap-2">
-                    <Label className="font-semibold text-zinc-700">Name / Model</Label>
+                    <Label className="font-semibold text-zinc-700">{t("nameModel")}</Label>
                     <Input
                       value={newAsset.name}
                       onChange={(e) => setNewAsset({ ...newAsset, name: e.target.value })}
@@ -524,13 +525,13 @@ export default function AssetDashboardPage() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label className="font-semibold text-zinc-700">Category</Label>
+                    <Label className="font-semibold text-zinc-700">{t("category")}</Label>
                     <Select
                       value={newAsset.category_id}
                       onValueChange={handleCategoryChange}
                     >
                       <SelectTrigger className="rounded-xl">
-                        <SelectValue placeholder="Select Category" />
+                        <SelectValue placeholder={t("category")} />
                       </SelectTrigger>
                       <SelectContent className="rounded-xl">
                         {categories.map((c) => (
@@ -542,7 +543,7 @@ export default function AssetDashboardPage() {
                     </Select>
                   </div>
                   <div className="grid gap-2">
-                    <Label className="font-semibold text-zinc-700">Serial / Tag Number</Label>
+                    <Label className="font-semibold text-zinc-700">{t("serialTagNumber")}</Label>
                     <Input
                       value={newAsset.serial_number}
                       onChange={(e) => setNewAsset({ ...newAsset, serial_number: e.target.value })}
@@ -551,7 +552,7 @@ export default function AssetDashboardPage() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label className="font-semibold text-zinc-700">Condition</Label>
+                    <Label className="font-semibold text-zinc-700">{t("condition")}</Label>
                     <Select
                       value={newAsset.condition}
                       onValueChange={(v) => setNewAsset({ ...newAsset, condition: v })}
@@ -560,31 +561,60 @@ export default function AssetDashboardPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="rounded-xl">
-                        <SelectItem value="good">Good</SelectItem>
-                        <SelectItem value="fair">Fair</SelectItem>
-                        <SelectItem value="damaged">Damaged</SelectItem>
+                        <SelectItem value="good">{t("good")}</SelectItem>
+                        <SelectItem value="fair">{t("fair")}</SelectItem>
+                        <SelectItem value="damaged">{t("damaged")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="grid gap-2">
-                    <Label className="font-semibold text-zinc-700">Asset Image</Label>
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0] || null;
-                        setNewAsset({ ...newAsset, image: file });
-                      }}
-                      className="rounded-xl cursor-pointer"
-                    />
+                    <Label className="font-semibold text-zinc-700">{t("assetImage")}</Label>
+                    {newAsset.image ? (
+                      <div className="flex items-center gap-3">
+                        <div className="relative w-20 h-20 rounded-xl border overflow-hidden group shadow-sm bg-zinc-50">
+                          <img
+                            src={URL.createObjectURL(newAsset.image)}
+                            alt="Preview"
+                            className="w-full h-full object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setNewAsset({ ...newAsset, image: null })}
+                            className="absolute top-1 right-1 bg-rose-500 hover:bg-rose-600 text-white rounded-full p-1 shadow-md transition-transform hover:scale-110 cursor-pointer"
+                            title="Clear Image"
+                          >
+                            <X className="size-3.5" />
+                          </button>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs text-rose-500 hover:text-rose-600 hover:bg-rose-50 rounded-xl"
+                          onClick={() => setNewAsset({ ...newAsset, image: null })}
+                        >
+                          <X className="size-3.5 mr-1" /> Clear Image
+                        </Button>
+                      </div>
+                    ) : (
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] || null;
+                          setNewAsset({ ...newAsset, image: file });
+                        }}
+                        className="rounded-xl cursor-pointer"
+                      />
+                    )}
                   </div>
                 </div>
                 <DialogFooter className="gap-2">
                   <Button variant="outline" className="rounded-xl" onClick={() => setIsCreateOpen(false)}>
-                    Cancel
+                    {tCommon("cancel")}
                   </Button>
                   <Button className="rounded-xl" onClick={handleCreateAsset} disabled={isSubmitting}>
-                    {isSubmitting ? "Saving..." : "Save"}
+                    {isSubmitting ? tCommon("saving") : tCommon("save")}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -598,18 +628,18 @@ export default function AssetDashboardPage() {
                   <LoadingState variant="table" count={3} />
                 </div>
               ) : filteredActiveAssets.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">No active assets found in inventory.</div>
+                <div className="text-center py-12 text-muted-foreground">{t("noActiveAssets")}</div>
               ) : (
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader className="bg-zinc-50/50">
                       <TableRow>
-                        <TableHead className="font-semibold py-4">Asset Details</TableHead>
-                        <TableHead className="font-semibold">Category</TableHead>
-                        <TableHead className="font-semibold">Status</TableHead>
-                        <TableHead className="font-semibold">Condition</TableHead>
-                        <TableHead className="font-semibold">Assigned To</TableHead>
-                        <TableHead className="text-right font-semibold pr-6">Actions</TableHead>
+                        <TableHead className="font-semibold py-4">{t("assetDetails")}</TableHead>
+                        <TableHead className="font-semibold">{t("category")}</TableHead>
+                        <TableHead className="font-semibold">{t("status")}</TableHead>
+                        <TableHead className="font-semibold">{t("condition")}</TableHead>
+                        <TableHead className="font-semibold">{t("assignedTo")}</TableHead>
+                        <TableHead className="text-right font-semibold pr-6">{tCommon("actions")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -639,10 +669,12 @@ export default function AssetDashboardPage() {
                           <TableCell className="text-zinc-600">{a.category?.name}</TableCell>
                           <TableCell>
                             <Badge variant="outline" className={`rounded-full px-2.5 py-0.5 font-medium ${assetStatusColors[a.status] || ""}`}>
-                              {a.status.replace("_", " ").toUpperCase()}
+                              {a.status === "available" ? t("available") : a.status === "assigned" ? t("assigned") : a.status === "under_repair" ? t("underRepair") : t("broken")}
                             </Badge>
                           </TableCell>
-                          <TableCell className="capitalize text-zinc-600">{a.condition}</TableCell>
+                          <TableCell className="capitalize text-zinc-600">
+                            {a.condition === "good" ? t("good") : a.condition === "fair" ? t("fair") : t("damaged")}
+                          </TableCell>
                           <TableCell className="text-zinc-700">
                             {a.employee ? (
                               <div className="flex items-center gap-2">
@@ -651,7 +683,7 @@ export default function AssetDashboardPage() {
                                 </span>
                               </div>
                             ) : (
-                              <span className="text-muted-foreground italic text-xs">Unassigned</span>
+                              <span className="text-muted-foreground italic text-xs">{t("unassigned")}</span>
                             )}
                           </TableCell>
                           <TableCell className="text-right pr-6 space-x-2">
@@ -662,7 +694,7 @@ export default function AssetDashboardPage() {
                                 className="rounded-xl border-primary/20 text-primary hover:bg-primary/5 gap-1.5"
                                 onClick={() => setAssignOpen({ open: true, asset: a })}
                               >
-                                <UserPlus className="size-4" /> Assign
+                                <UserPlus className="size-4" /> {t("assign")}
                               </Button>
                             )}
                             {a.status === "assigned" && (
@@ -672,7 +704,7 @@ export default function AssetDashboardPage() {
                                 className="rounded-xl border-zinc-200 text-zinc-700 hover:bg-zinc-50 gap-1.5"
                                 onClick={() => setReturnOpen({ open: true, asset: a })}
                               >
-                                <Undo2 className="size-4" /> Return
+                                <Undo2 className="size-4" /> {t("return")}
                               </Button>
                             )}
                             <Button
@@ -715,8 +747,8 @@ export default function AssetDashboardPage() {
         {/* ============================================================ */}
         <TabsContent value="repair" className="space-y-4 outline-none">
           <div>
-            <h2 className="text-lg font-bold">Repair Assets</h2>
-            <p className="text-xs text-muted-foreground">Assets currently undergoing maintenance or repairs.</p>
+            <h2 className="text-lg font-bold">{t("repairAsset")}</h2>
+            <p className="text-xs text-muted-foreground">{t("repairAssetsDesc")}</p>
           </div>
 
           <Card className="rounded-2xl border shadow-sm overflow-hidden">
@@ -726,17 +758,17 @@ export default function AssetDashboardPage() {
                   <LoadingState variant="table" count={3} />
                 </div>
               ) : filteredRepairAssets.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">No assets currently in repair.</div>
+                <div className="text-center py-12 text-muted-foreground">{t("noRepairAssets")}</div>
               ) : (
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader className="bg-zinc-50/50">
                       <TableRow>
-                        <TableHead className="font-semibold py-4">Asset Details</TableHead>
-                        <TableHead className="font-semibold">Category</TableHead>
-                        <TableHead className="font-semibold">Status</TableHead>
-                        <TableHead className="font-semibold">Condition</TableHead>
-                        <TableHead className="text-right font-semibold pr-6">Actions</TableHead>
+                        <TableHead className="font-semibold py-4">{t("assetDetails")}</TableHead>
+                        <TableHead className="font-semibold">{t("category")}</TableHead>
+                        <TableHead className="font-semibold">{t("status")}</TableHead>
+                        <TableHead className="font-semibold">{t("condition")}</TableHead>
+                        <TableHead className="text-right font-semibold pr-6">{tCommon("actions")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -766,10 +798,12 @@ export default function AssetDashboardPage() {
                           <TableCell className="text-zinc-600">{a.category?.name}</TableCell>
                           <TableCell>
                             <Badge variant="outline" className={`rounded-full px-2.5 py-0.5 font-medium ${assetStatusColors[a.status] || ""}`}>
-                              {a.status.replace("_", " ").toUpperCase()}
+                              {a.status === "available" ? t("available") : a.status === "assigned" ? t("assigned") : a.status === "under_repair" ? t("underRepair") : t("broken")}
                             </Badge>
                           </TableCell>
-                          <TableCell className="capitalize text-zinc-600">{a.condition}</TableCell>
+                          <TableCell className="capitalize text-zinc-600">
+                            {a.condition === "good" ? t("good") : a.condition === "fair" ? t("fair") : t("damaged")}
+                          </TableCell>
                           <TableCell className="text-right pr-6 space-x-2">
                             <Button
                               size="sm"
@@ -811,8 +845,8 @@ export default function AssetDashboardPage() {
         {/* ============================================================ */}
         <TabsContent value="broken" className="space-y-4 outline-none">
           <div>
-            <h2 className="text-lg font-bold">Broken Assets</h2>
-            <p className="text-xs text-muted-foreground">Retired assets that are damaged and can no longer be used.</p>
+            <h2 className="text-lg font-bold">{t("brokenAsset")}</h2>
+            <p className="text-xs text-muted-foreground">{t("brokenAssetsDesc")}</p>
           </div>
 
           <Card className="rounded-2xl border shadow-sm overflow-hidden">
@@ -822,17 +856,17 @@ export default function AssetDashboardPage() {
                   <LoadingState variant="table" count={3} />
                 </div>
               ) : filteredBrokenAssets.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">No retired or broken assets.</div>
+                <div className="text-center py-12 text-muted-foreground">{t("noBrokenAssets")}</div>
               ) : (
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader className="bg-zinc-50/50">
                       <TableRow>
-                        <TableHead className="font-semibold py-4">Asset Details</TableHead>
-                        <TableHead className="font-semibold">Category</TableHead>
-                        <TableHead className="font-semibold">Status</TableHead>
-                        <TableHead className="font-semibold">Condition</TableHead>
-                        <TableHead className="text-right font-semibold pr-6">Actions</TableHead>
+                        <TableHead className="font-semibold py-4">{t("assetDetails")}</TableHead>
+                        <TableHead className="font-semibold">{t("category")}</TableHead>
+                        <TableHead className="font-semibold">{t("status")}</TableHead>
+                        <TableHead className="font-semibold">{t("condition")}</TableHead>
+                        <TableHead className="text-right font-semibold pr-6">{tCommon("actions")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -862,10 +896,12 @@ export default function AssetDashboardPage() {
                           <TableCell className="text-zinc-600">{a.category?.name}</TableCell>
                           <TableCell>
                             <Badge variant="outline" className={`rounded-full px-2.5 py-0.5 font-medium ${assetStatusColors[a.status] || ""}`}>
-                              {a.status.replace("_", " ").toUpperCase()}
+                              {a.status === "available" ? t("available") : a.status === "assigned" ? t("assigned") : a.status === "under_repair" ? t("underRepair") : t("broken")}
                             </Badge>
                           </TableCell>
-                          <TableCell className="capitalize text-zinc-600">{a.condition}</TableCell>
+                          <TableCell className="capitalize text-zinc-600">
+                            {a.condition === "good" ? t("good") : a.condition === "fair" ? t("fair") : t("damaged")}
+                          </TableCell>
                           <TableCell className="text-right pr-6 space-x-2">
                             <Button
                               size="sm"
@@ -900,23 +936,23 @@ export default function AssetDashboardPage() {
         <TabsContent value="categories" className="space-y-4 outline-none">
           <div className="flex justify-between items-center">
             <div>
-              <h2 className="text-lg font-bold">Asset Categories</h2>
-              <p className="text-xs text-muted-foreground">Manage category types like Laptops or Phones.</p>
+              <h2 className="text-lg font-bold">{t("assetCategories")}</h2>
+              <p className="text-xs text-muted-foreground">{t("assetCategoriesDesc")}</p>
             </div>
 
             <Dialog open={isCategoryOpen} onOpenChange={setIsCategoryOpen}>
               <DialogTrigger asChild>
                 <Button className="rounded-xl shadow-md gap-2">
-                  <Plus className="size-4" /> New Category
+                  <Plus className="size-4" /> {t("newCategory")}
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[425px] rounded-2xl">
                 <DialogHeader>
-                  <DialogTitle className="text-xl font-bold">Create Asset Category</DialogTitle>
+                  <DialogTitle className="text-xl font-bold">{t("newCategory")}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
-                    <Label className="font-semibold text-zinc-700">Category Name</Label>
+                    <Label className="font-semibold text-zinc-700">{t("category")}</Label>
                     <Input
                       value={categoryName}
                       onChange={(e) => setCategoryName(e.target.value)}
@@ -925,7 +961,7 @@ export default function AssetDashboardPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="font-semibold text-zinc-700">Description</Label>
+                    <Label className="font-semibold text-zinc-700">{tCommon("description") || "Description"}</Label>
                     <Input
                       value={categoryDesc}
                       onChange={(e) => setCategoryDesc(e.target.value)}
@@ -936,10 +972,10 @@ export default function AssetDashboardPage() {
                 </div>
                 <DialogFooter className="gap-2">
                   <Button variant="outline" className="rounded-xl" onClick={() => setIsCategoryOpen(false)}>
-                    Cancel
+                    {tCommon("cancel")}
                   </Button>
                   <Button className="rounded-xl" onClick={handleCreateCategory} disabled={isSubmitting}>
-                    {isSubmitting ? "Saving..." : "Save"}
+                    {isSubmitting ? tCommon("saving") : tCommon("save")}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -953,15 +989,15 @@ export default function AssetDashboardPage() {
                   <LoadingState variant="table" count={2} />
                 </div>
               ) : categories.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">No categories found.</div>
+                <div className="text-center py-12 text-muted-foreground">{tCommon("noData")}</div>
               ) : (
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader className="bg-zinc-50/50">
                       <TableRow>
                         <TableHead className="font-semibold py-4 pl-6">ID</TableHead>
-                        <TableHead className="font-semibold">Category Name</TableHead>
-                        <TableHead className="font-semibold">Description</TableHead>
+                        <TableHead className="font-semibold">{t("category")}</TableHead>
+                        <TableHead className="font-semibold">{tCommon("description") || "Description"}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -969,7 +1005,7 @@ export default function AssetDashboardPage() {
                         <TableRow key={c.id} className="hover:bg-zinc-50/30 transition-colors">
                           <TableCell className="font-mono text-zinc-400 py-4 pl-6">#{c.id}</TableCell>
                           <TableCell className="font-semibold text-zinc-900">{c.name}</TableCell>
-                          <TableCell className="text-zinc-600">{c.description || <span className="italic text-zinc-400 text-xs">No description</span>}</TableCell>
+                          <TableCell className="text-zinc-600">{c.description || <span className="italic text-zinc-400 text-xs">—</span>}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -985,8 +1021,8 @@ export default function AssetDashboardPage() {
         {/* ============================================================ */}
         <TabsContent value="requests" className="space-y-4 outline-none">
           <div>
-            <h2 className="text-lg font-bold">Asset Requests & Returns</h2>
-            <p className="text-xs text-muted-foreground">Review and allocate assets to employee requests.</p>
+            <h2 className="text-lg font-bold">{t("requests")}</h2>
+            <p className="text-xs text-muted-foreground">{t("subtitle")}</p>
           </div>
 
           <Card className="rounded-2xl border shadow-sm overflow-hidden">
@@ -996,7 +1032,7 @@ export default function AssetDashboardPage() {
                   <LoadingState variant="table" count={3} />
                 </div>
               ) : pendingRequests.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">No pending requests found.</div>
+                <div className="text-center py-12 text-muted-foreground">{tCommon("noData")}</div>
               ) : (
                 <div className="overflow-x-auto">
                   <Table>
@@ -1376,9 +1412,9 @@ export default function AssetDashboardPage() {
       <Dialog open={historyOpen.open} onOpenChange={(v) => !v && setHistoryOpen({ open: false, asset: null })}>
         <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold">Details</DialogTitle>
+            <DialogTitle className="text-xl font-bold">{tCommon("details") || (locale === "km" ? "ព័ត៌មានលម្អិត" : "Details")}</DialogTitle>
             <DialogDescription className="text-zinc-500 text-sm font-semibold">
-              Assignment History
+              {locale === "km" ? "ប្រវត្តិការប្រគល់ទ្រព្យសកម្ម" : "Assignment History"}
             </DialogDescription>
           </DialogHeader>
 
@@ -1413,7 +1449,7 @@ export default function AssetDashboardPage() {
               if (events.length === 0) {
                 return (
                   <div className="text-center py-6 text-muted-foreground italic text-sm">
-                    No assignment history found for this asset.
+                    {locale === "km" ? "មិនមានប្រវត្តិការប្រគល់ទ្រព្យសកម្មទេ" : "No assignment history found for this asset."}
                   </div>
                 );
               }
@@ -1442,10 +1478,10 @@ export default function AssetDashboardPage() {
                           <div>
                             <span className="font-bold text-zinc-900">Admin</span>{" "}
                             <span className="text-rose-600 font-semibold">
-                              {isAssign ? "Assign To" : "Return From"}
+                              {isAssign ? (locale === "km" ? "ប្រគល់ជូន" : "Assign To") : (locale === "km" ? "ប្រគល់មកវិញពី" : "Return From")}
                             </span>{" "}
                             <span className="text-zinc-800 font-bold">
-                              {e.employee?.first_name} {e.employee?.last_name} (Employee)
+                              {e.employee?.first_name} {e.employee?.last_name} ({locale === "km" ? "បុគ្គលិក" : "Employee"})
                             </span>
                           </div>
                           <div className="text-xs text-muted-foreground font-mono">
@@ -1462,7 +1498,7 @@ export default function AssetDashboardPage() {
 
           <DialogFooter>
             <Button variant="outline" className="rounded-xl w-full" onClick={() => setHistoryOpen({ open: false, asset: null })}>
-              Close
+              {tCommon("close") || (locale === "km" ? "បិទ" : "Close")}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -77,6 +77,15 @@ import { useMe } from "@/hooks/useMe";
 import { toast } from "sonner";
 import { LoadingState } from "@/components/ui/loading-state";
 
+const getFileUrl = (path?: string) => {
+  if (!path) return "";
+  if (path.startsWith("http://") || path.startsWith("https://")) return path;
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "";
+  const cleanBase = baseUrl.replace(/\/$/, "");
+  const cleanPath = path.startsWith("/") ? path : `/${path}`;
+  return `${cleanBase}${cleanPath}`;
+};
+
 export default function EmployeeDetailPage() {
   const { id } = useParams();
   const router = useRouter();
@@ -311,52 +320,49 @@ export default function EmployeeDetailPage() {
     updateMutation.mutate(data);
   };
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const processSelectedFile = async (file: File) => {
+    setDocFile(file);
+    // Auto default docTypeId if not yet chosen
+    if (!docTypeId && documentTypes?.data?.length > 0) {
+      setDocTypeId(documentTypes.data[0].id.toString());
+    }
 
-    // If it's an image, try auto-scanning
     if (file.type.startsWith("image/")) {
-      setIsScanning(true);
-      try {
-        const scannedBlob = await scanDocument(file, docTypeId);
-        const scannedFile = new File([scannedBlob], file.name, { type: "image/jpeg" });
-        setDocFile(scannedFile);
-        setDocPreview(URL.createObjectURL(scannedBlob));
-        toast.success("ស្កេនដោយ AI រួចរាល់!");
-      } catch (error: any) {
-        console.error("Auto-scan failed:", error);
-        
-        let customMessage = "";
-        try {
-          if (error.response?.data) {
-            const errText = await error.response.data.text();
-            const errObj = JSON.parse(errText);
-            customMessage = errObj.message;
-          }
-        } catch (e) {
-          console.error("Failed to parse error blob", e);
-        }
+      setDocPreview(URL.createObjectURL(file));
+      if (docTypeId) {
+        setIsScanning(true);
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Timeout")), 6000)
+        );
 
-        if (customMessage) {
-          toast.error(customMessage);
-          setDocFile(null);
-          setDocPreview(null);
-          e.target.value = "";
-        } else {
-          setDocFile(file); // Fallback to original file
+        try {
+          const scannedBlob = await Promise.race([
+            scanDocument(file, docTypeId),
+            timeoutPromise
+          ]) as Blob;
+
+          if (scannedBlob && scannedBlob.size > 0) {
+            const scannedFile = new File([scannedBlob], file.name, { type: "image/jpeg" });
+            setDocFile(scannedFile);
+            setDocPreview(URL.createObjectURL(scannedBlob));
+            toast.success("ស្កេនដោយ AI រួចរាល់!");
+          }
+        } catch (error: any) {
+          console.warn("AI scan skipped or failed, using original file:", error);
+          setDocFile(file);
           setDocPreview(URL.createObjectURL(file));
-          toast.error("ស្កេន AI បរាជ័យ កំពុងប្រើរូបដើម");
+        } finally {
+          setIsScanning(false);
         }
-      } finally {
-        setIsScanning(false);
       }
     } else {
-      setDocFile(file);
-      if (file.type === "application/pdf") {
-        setDocPreview(null); // No preview for PDF yet
-      }
+      setDocPreview(null);
     }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) processSelectedFile(file);
   };
 
   const handleDocUploadSubmit = (e: React.FormEvent) => {
@@ -444,6 +450,21 @@ export default function EmployeeDetailPage() {
                       onChange={handleFileChange}
                     />
                   </label>
+                  {selectedFile && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setSelectedFile(null);
+                        setPreview(employee?.profile_path ? `${process.env.NEXT_PUBLIC_API_URL}${employee.profile_path}` : "");
+                      }}
+                      className="absolute -top-1 -right-1 z-20 bg-rose-500 hover:bg-rose-600 text-white rounded-full p-1.5 shadow-md transition-all hover:scale-110 cursor-pointer"
+                      title="Clear Image"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
 
                 <div className="w-full space-y-4 px-4">
@@ -1066,9 +1087,25 @@ export default function EmployeeDetailPage() {
                   ))}
                 
                 {/* AI-Powered Upload Card */}
-                <Dialog open={isDocDialogOpen} onOpenChange={setIsDocDialogOpen}>
+                <Dialog open={isDocDialogOpen} onOpenChange={(open) => {
+                  setIsDocDialogOpen(open);
+                  if (open && !docTypeId && documentTypes?.data?.length > 0) {
+                    setDocTypeId(documentTypes.data[0].id.toString());
+                  }
+                }}>
                   <DialogTrigger asChild>
-                    <div className="border-2 border-dashed border-primary/30 bg-primary/5 rounded-2xl p-6 flex flex-col items-center justify-center text-center space-y-2 hover:bg-primary/10 transition-colors cursor-pointer group col-span-1 md:col-span-2">
+                    <div 
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const file = e.dataTransfer.files?.[0];
+                        if (file) {
+                          setIsDocDialogOpen(true);
+                          processSelectedFile(file);
+                        }
+                      }}
+                      className="border-2 border-dashed border-primary/30 bg-primary/5 rounded-2xl p-6 flex flex-col items-center justify-center text-center space-y-2 hover:bg-primary/10 transition-colors cursor-pointer group col-span-1 md:col-span-2"
+                    >
                       <div className="rounded-full bg-primary/10 p-3 group-hover:scale-110 transition-transform">
                         <Upload className="size-5 text-primary" />
                       </div>
@@ -1079,20 +1116,29 @@ export default function EmployeeDetailPage() {
                   </DialogTrigger>
                   <DialogContent className="overflow-hidden">
                     {isScanning && (
-                      <div className="absolute inset-0 z-50 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center space-y-4 animate-in fade-in duration-300">
+                      <div className="absolute inset-0 z-50 bg-white/90 backdrop-blur-md flex flex-col items-center justify-center space-y-4 animate-in fade-in duration-300 p-6">
                         <div className="relative">
                           <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping" />
                           <div className="relative bg-primary/10 p-4 rounded-full">
                             <Scan className="size-8 text-primary animate-pulse" />
                           </div>
                         </div>
-                        <div className="text-center">
+                        <div className="text-center space-y-1">
                           <p className="text-sm font-bold text-primary uppercase tracking-tighter">{t("scanning")}</p>
                           <p className="text-xs text-muted-foreground">{t("detectingBorders")}</p>
                         </div>
                         <div className="w-48 h-1.5 bg-primary/10 rounded-full overflow-hidden">
                           <div className="h-full bg-primary w-1/3 animate-[loading_1.5s_infinite_ease-in-out]" />
                         </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="rounded-xl text-xs mt-2"
+                          onClick={() => setIsScanning(false)}
+                        >
+                          <X className="size-3.5 mr-1" /> រំលង / ប្រើរូបដើម (Skip AI)
+                        </Button>
                       </div>
                     )}
                     <form onSubmit={handleDocUploadSubmit}>
@@ -1197,7 +1243,7 @@ export default function EmployeeDetailPage() {
             </div>
             <div className="flex items-center gap-2 pr-8">
               <a 
-                href={`${process.env.NEXT_PUBLIC_API_URL}${previewDoc?.path}`} 
+                href={getFileUrl(previewDoc?.path)} 
                 target="_blank" 
                 rel="noopener noreferrer"
               >
@@ -1206,7 +1252,7 @@ export default function EmployeeDetailPage() {
                 </Button>
               </a>
               <a 
-                href={`${process.env.NEXT_PUBLIC_API_URL}${previewDoc?.path}`} 
+                href={getFileUrl(previewDoc?.path)} 
                 download
               >
                 <Button size="sm" className="rounded-xl gap-2 h-9 shadow-lg shadow-primary/20">
@@ -1216,9 +1262,9 @@ export default function EmployeeDetailPage() {
             </div>
           </DialogHeader>
           <div className="relative w-full aspect-[4/3] md:aspect-[16/10] bg-zinc-50/50 flex items-center justify-center overflow-auto p-8">
-            {previewDoc?.path.toLowerCase().endsWith(".pdf") ? (
+            {previewDoc?.path?.toLowerCase().endsWith(".pdf") ? (
               <iframe 
-                src={`${process.env.NEXT_PUBLIC_API_URL}${previewDoc?.path}`}
+                src={getFileUrl(previewDoc?.path)}
                 className="w-full h-full rounded-xl border border-zinc-200 bg-white shadow-sm"
                 title={previewDoc?.name}
               />
@@ -1226,7 +1272,7 @@ export default function EmployeeDetailPage() {
               <div className="relative group">
                 <div className="absolute -inset-4 bg-primary/5 rounded-[2rem] blur-2xl opacity-0 group-hover:opacity-100 transition duration-500" />
                 <img 
-                  src={`${process.env.NEXT_PUBLIC_API_URL}${previewDoc?.path}`}
+                  src={getFileUrl(previewDoc?.path)}
                   alt={previewDoc?.name}
                   className="relative max-w-full max-h-full object-contain shadow-2xl rounded-xl border-4 border-white"
                 />
@@ -1283,7 +1329,7 @@ function DocCard({
           <Eye className="size-4" />
         </Button>
         <a 
-          href={`${process.env.NEXT_PUBLIC_API_URL}${path}`} 
+          href={getFileUrl(path)} 
           target="_blank" 
           rel="noopener noreferrer"
         >

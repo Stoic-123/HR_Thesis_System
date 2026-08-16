@@ -414,33 +414,40 @@ export function Sidebar({ collapsed = false }: { collapsed?: boolean }) {
                   {isExpanded ? (
                     <button
                       onClick={() => toggleMenu(item.title)}
-                      className={`flex w-full items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                      className={`relative flex w-full items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                         isActive || isOpen
-                          ? "bg-gray-50 text-gray-900"
+                          ? "bg-gray-50/80 text-gray-900"
                           : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                       }`}
                       type="button"
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 relative z-10">
                         <item.icon className="h-4.5 w-4.5" />
                         {t(item.labelKey)}
                       </div>
                       {isOpen ? (
-                        <ChevronDown className="h-4 w-4" />
+                        <ChevronDown className="h-4 w-4 relative z-10" />
                       ) : (
-                        <ChevronRight className="h-4 w-4" />
+                        <ChevronRight className="h-4 w-4 relative z-10" />
                       )}
                     </button>
                   ) : (
                     <Link
                       href={item.submenu[0]?.href || "#"}
-                      className={`flex w-full items-center justify-center rounded-lg py-2.5 transition-colors ${
+                      className={`relative flex w-full items-center justify-center rounded-xl py-2.5 transition-colors ${
                         isActive
-                          ? "bg-primary text-white"
+                          ? "text-white font-semibold"
                           : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                       }`}
                     >
-                      <item.icon className="h-4.5 w-4.5" />
+                      {isActive && (
+                        <motion.div
+                          layoutId="activeSidebarCollapsedPill"
+                          className="absolute inset-0 bg-primary rounded-xl z-0 shadow-md shadow-primary/20"
+                          transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                        />
+                      )}
+                      <item.icon className="h-4.5 w-4.5 relative z-10" />
                     </Link>
                   )}
 
@@ -466,14 +473,21 @@ export function Sidebar({ collapsed = false }: { collapsed?: boolean }) {
                             <Link
                               key={subItem.title}
                               href={subItem.href}
-                              className={`flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition-colors ${
+                              className={`relative flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
                                 isSubActive
-                                  ? "bg-primary/10 text-primary font-medium"
+                                  ? "text-primary font-semibold"
                                   : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                               }`}
                             >
-                              <subItem.icon className="h-4 w-4" />
-                              {t(subItem.labelKey)}
+                              {isSubActive && (
+                                <motion.div
+                                  layoutId="activeSidebarSubPill"
+                                  className="absolute inset-0 bg-primary/10 rounded-lg z-0"
+                                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                                />
+                              )}
+                              <subItem.icon className="h-4 w-4 relative z-10" />
+                              <span className="relative z-10">{t(subItem.labelKey)}</span>
                             </Link>
                           );
                         })}
@@ -484,14 +498,21 @@ export function Sidebar({ collapsed = false }: { collapsed?: boolean }) {
               ) : (
                 <Link
                   href={item.href || "#"}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                     isActive
-                      ? "bg-primary text-white"
+                      ? "text-white font-semibold"
                       : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                   } ${!isExpanded ? "justify-center px-0" : ""}`}
                 >
-                  <item.icon className="h-4.5 w-4.5" />
-                  {isExpanded && t(item.labelKey)}
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeSidebarMainPill"
+                      className="absolute inset-0 bg-primary rounded-xl z-0 shadow-md shadow-primary/20"
+                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                    />
+                  )}
+                  <item.icon className="h-4.5 w-4.5 relative z-10" />
+                  {isExpanded && <span className="relative z-10">{t(item.labelKey)}</span>}
                 </Link>
               )}
             </motion.div>

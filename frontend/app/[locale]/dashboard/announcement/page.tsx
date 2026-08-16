@@ -49,6 +49,7 @@ import {
   Check,
   Search,
   X,
+  Building,
   Eye,
   Pencil,
 } from "lucide-react";
@@ -161,14 +162,43 @@ function AnnouncementForm({
 
       <div className="space-y-2">
         <label className="text-sm font-semibold text-gray-700">{t("formImage")} {mode === "edit" ? t("leaveEmptyKeep") : t("optional")}</label>
-        <Input
-          type="file"
-          accept="image/*"
-          onChange={(e) => setSelectedImage(e.target.files?.[0] ?? null)}
-          className="rounded-2xl border-white/60 bg-white/70 shadow-sm"
-        />
+        {selectedImage ? (
+          <div className="flex items-center gap-3">
+            <div className="relative w-24 h-24 rounded-xl border overflow-hidden group shadow-sm bg-zinc-50">
+              <img
+                src={URL.createObjectURL(selectedImage)}
+                alt="Preview"
+                className="w-full h-full object-cover"
+              />
+              <button
+                type="button"
+                onClick={() => setSelectedImage(null)}
+                className="absolute top-1 right-1 bg-rose-500 hover:bg-rose-600 text-white rounded-full p-1 shadow-md transition-transform hover:scale-110 cursor-pointer"
+                title="Clear Image"
+              >
+                <X className="size-3.5" />
+              </button>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-xs text-rose-500 hover:text-rose-600 hover:bg-rose-50 rounded-xl"
+              onClick={() => setSelectedImage(null)}
+            >
+              <X className="size-3.5 mr-1" /> Clear Image
+            </Button>
+          </div>
+        ) : (
+          <Input
+            type="file"
+            accept="image/*"
+            onChange={(e) => setSelectedImage(e.target.files?.[0] ?? null)}
+            className="rounded-2xl border-white/60 bg-white/70 shadow-sm cursor-pointer"
+          />
+        )}
         {mode === "edit" && initial?.image_path && !selectedImage && (
-          <div className="h-20 w-32 rounded-xl overflow-hidden border border-gray-100 mt-1">
+          <div className="relative w-32 h-20 rounded-xl overflow-hidden border border-gray-100 mt-1">
             <img src={`${API_BASE}${initial.image_path}`} alt="current" className="h-full w-full object-cover" />
           </div>
         )}

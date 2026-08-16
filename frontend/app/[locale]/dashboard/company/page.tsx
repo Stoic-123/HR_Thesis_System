@@ -347,14 +347,14 @@ export default function CompanyPage() {
           <TabsList className="grid grid-cols-2 max-w-md bg-white/40 border border-white/50 p-1 rounded-2xl h-12">
             <TabsTrigger 
               value="profile" 
-              className="rounded-xl h-10 font-bold flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-white transition-all text-gray-600"
+              className="rounded-xl h-10 font-semibold flex items-center gap-2"
             >
               <Building2 size={16} />
               {t("companyInfo")}
             </TabsTrigger>
             <TabsTrigger 
               value="locations" 
-              className="rounded-xl h-10 font-bold flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-white transition-all text-gray-600"
+              className="rounded-xl h-10 font-semibold flex items-center gap-2"
             >
               <MapPin size={16} />
               {t("attendanceLocations")} ({locations.length})
@@ -468,10 +468,10 @@ export default function CompanyPage() {
                       <div className="p-5 rounded-2xl bg-sky-50/50 border border-sky-100/50 space-y-4">
                         <h3 className="text-sm font-bold text-sky-900 flex items-center gap-2">
                           <MessageSquare className="size-4.5" />
-                          Telegram Notification Channels
+                          {t("telegramChannels") || "Telegram Notification Channels"}
                         </h3>
                         <p className="text-xs text-sky-700/80 leading-relaxed">
-                          Configure specific Telegram group IDs for each feature, or use the Default Group ID as a fallback.
+                          {t("telegramChannelsDesc") || "Configure specific Telegram group IDs for each feature, or use the Default Group ID as a fallback."}
                         </p>
                         
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

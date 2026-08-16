@@ -47,7 +47,7 @@ import {
   AvatarFallback,
   AvatarImage,
 } from "@/components/ui/avatar";
-import { Bell, Search, Loader2, PanelLeft, ShieldAlert, Pencil, Camera, User } from "lucide-react";
+import { Bell, Search, Loader2, PanelLeft, ShieldAlert, Pencil, Camera, User, X } from "lucide-react";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { useMe } from "@/hooks/useMe";
 import { LoadingState } from "@/components/ui/loading-state";
@@ -425,7 +425,6 @@ export default function DashboardLayout({
                     <div className="flex flex-col items-center justify-center gap-3">
                       <div 
                         className="relative group cursor-pointer"
-                        onClick={() => fileInputRef.current?.click()}
                       >
                         <Avatar className="h-24 w-24 ring-4 ring-primary/20 shadow-md">
                           <AvatarImage
@@ -436,9 +435,27 @@ export default function DashboardLayout({
                             {getInitials(user)}
                           </AvatarFallback>
                         </Avatar>
-                        <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div 
+                          className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => fileInputRef.current?.click()}
+                        >
                           <Camera className="w-6 h-6 text-white" />
                         </div>
+                        {(profilePreview || profileFile || user?.employee?.profile_path) && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setProfileFile(null);
+                              setProfilePreview(null);
+                              if (fileInputRef.current) fileInputRef.current.value = "";
+                            }}
+                            className="absolute -top-1 -right-1 z-20 bg-rose-500 hover:bg-rose-600 text-white rounded-full p-1.5 shadow-md transition-all hover:scale-110 cursor-pointer"
+                            title="Clear Image"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                       <input
                         ref={fileInputRef}
@@ -453,16 +470,34 @@ export default function DashboardLayout({
                           }
                         }}
                       />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="rounded-xl text-xs"
-                        onClick={() => fileInputRef.current?.click()}
-                      >
-                        <Camera className="w-3.5 h-3.5 mr-1.5" />
-                        {t("uploadPhoto")}
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="rounded-xl text-xs"
+                          onClick={() => fileInputRef.current?.click()}
+                        >
+                          <Camera className="w-3.5 h-3.5 mr-1.5" />
+                          {t("uploadPhoto")}
+                        </Button>
+                        {(profilePreview || profileFile) && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="rounded-xl text-xs text-rose-500 hover:text-rose-600 hover:bg-rose-50"
+                            onClick={() => {
+                              setProfileFile(null);
+                              setProfilePreview(null);
+                              if (fileInputRef.current) fileInputRef.current.value = "";
+                            }}
+                          >
+                            <X className="w-3.5 h-3.5 mr-1" />
+                            Clear
+                          </Button>
+                        )}
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">

@@ -380,33 +380,45 @@ const TimeAttendanceReportPage = () => {
   ];
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="space-y-6">
+      {/* Top Header Row */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            {t("pageTitle")}
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t("pageDescription")}
-          </p>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">{t("pageTitle")}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{t("pageDescription")}</p>
         </div>
+        <Button
+          onClick={handleExportPDF}
+          size="lg"
+          className="rounded-2xl shadow-sm bg-primary hover:bg-primary/90 text-white font-semibold gap-2 self-start sm:self-auto cursor-pointer"
+          disabled={!report || rows.length === 0}
+        >
+          <Printer className="size-4" />
+          {t("exportPDF") || "Export PDF"}
+        </Button>
+      </div>
 
-        <div className="flex flex-wrap items-end gap-3">
+      {/* Filter Control Bar */}
+      <Card className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
           {/* Date Range Picker (From / To) */}
-          <DateRangePicker
-            startDate={toISODate(startDate)}
-            endDate={toISODate(endDate)}
-            onStartDateChange={(val) => setStartDate(parseLocalDate(val))}
-            onEndDateChange={(val) => setEndDate(parseLocalDate(val))}
-            fromLabel={locale === "km" ? "ពី" : "From"}
-            toLabel={locale === "km" ? "ដល់" : "To"}
-          />
+          <div className="space-y-1.5 lg:col-span-2">
+            <Label className="text-xs font-semibold text-muted-foreground">{locale === "km" ? "កាលបរិច្ឆេទ" : "Date Range"}</Label>
+            <DateRangePicker
+              startDate={toISODate(startDate)}
+              endDate={toISODate(endDate)}
+              onStartDateChange={(val) => setStartDate(parseLocalDate(val))}
+              onEndDateChange={(val) => setEndDate(parseLocalDate(val))}
+              fromLabel={locale === "km" ? "ពី" : "From"}
+              toLabel={locale === "km" ? "ដល់" : "To"}
+            />
+          </div>
 
           {/* Department Select */}
-          <div className="flex flex-col gap-1.5 min-w-[160px]">
-            <Label className="text-xs font-medium text-muted-foreground">{t("department")}</Label>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-muted-foreground">{t("department")}</Label>
             <Select value={selectedDeptId} onValueChange={setSelectedDeptId}>
-              <SelectTrigger className="h-10 rounded-xl shadow-xs bg-background border-gray-200/80">
+              <SelectTrigger className="h-10 rounded-xl shadow-xs bg-background border-border/60">
                 <SelectValue placeholder={t("department")} />
               </SelectTrigger>
               <SelectContent>
@@ -421,10 +433,10 @@ const TimeAttendanceReportPage = () => {
           </div>
 
           {/* Employee Select */}
-          <div className="flex flex-col gap-1.5 min-w-[160px]">
-            <Label className="text-xs font-medium text-muted-foreground">{t("employee")}</Label>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-muted-foreground">{t("employee")}</Label>
             <Select value={selectedEmpId} onValueChange={setSelectedEmpId}>
-              <SelectTrigger className="h-10 rounded-xl shadow-xs bg-background border-gray-200/80">
+              <SelectTrigger className="h-10 rounded-xl shadow-xs bg-background border-border/60">
                 <SelectValue placeholder={t("employee")} />
               </SelectTrigger>
               <SelectContent>
@@ -437,20 +449,8 @@ const TimeAttendanceReportPage = () => {
               </SelectContent>
             </Select>
           </div>
-
-          <div className="flex flex-col gap-1.5 justify-end">
-            <span className="text-xs font-medium opacity-0 select-none hidden sm:inline-block">Action</span>
-            <Button
-              onClick={handleExportPDF}
-              className="h-10 flex items-center gap-2 rounded-xl shadow-xs bg-primary hover:bg-primary/90 text-white font-medium cursor-pointer"
-              disabled={!report || rows.length === 0}
-            >
-              <Printer className="size-4" />
-              {t("exportPDF") || "Export PDF"}
-            </Button>
-          </div>
         </div>
-      </div>
+      </Card>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((s) => (

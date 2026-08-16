@@ -308,25 +308,42 @@ export default function EmployeePage() {
                   </DialogDescription>
                 </DialogHeader>
                 <div className="flex justify-center mb-6">
-                  <label className="relative cursor-pointer group">
-                    <Avatar className="h-34 w-34 border-4 border-white shadow-xl">
-                      <AvatarImage src={preview} className="object-cover" />
-                      <AvatarFallback className="text-3xl font-bold">
-                        U
-                      </AvatarFallback>
-                    </Avatar>
+                  <div className="relative group">
+                    <label className="relative cursor-pointer block">
+                      <Avatar className="h-34 w-34 border-4 border-white shadow-xl">
+                        <AvatarImage src={preview} className="object-cover" />
+                        <AvatarFallback className="text-3xl font-bold">
+                          U
+                        </AvatarFallback>
+                      </Avatar>
 
-                    <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
-                      <Camera className="h-7 w-7 text-white" />
-                    </div>
+                      <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                        <Camera className="h-7 w-7 text-white" />
+                      </div>
 
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleUpload}
-                    />
-                  </label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleUpload}
+                      />
+                    </label>
+                    {preview && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setSelectedFile(null);
+                          setPreview("");
+                        }}
+                        className="absolute -top-1 -right-1 z-20 bg-rose-500 hover:bg-rose-600 text-white rounded-full p-1.5 shadow-md transition-all hover:scale-110 cursor-pointer"
+                        title="Clear Image"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <FieldGroup className="grid grid-cols-2 gap-4 max-h-[330px] p-2 overflow-auto">

@@ -10,7 +10,8 @@ import {
   EyeOff, 
   CloudUpload,
   RefreshCw,
-  Palette
+  Palette,
+  X
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -120,7 +121,7 @@ export default function AppConfigPage() {
           className="rounded-xl gap-2 border-border/60 hover:bg-muted/50"
         >
           <RefreshCw className={`size-4 ${isLoading ? "animate-spin" : ""}`} />
-          {tCommon("sync")}
+          {tCommon("refresh")}
         </Button>
       </div>
 
@@ -169,16 +170,29 @@ export default function AppConfigPage() {
                 <div className="flex items-center gap-4 p-3 rounded-2xl bg-muted/40 border border-border/40">
                   <div className="relative group size-16 rounded-2xl bg-white dark:bg-zinc-900 border border-border/60 flex items-center justify-center overflow-hidden shadow-sm shrink-0">
                     {item.icon_url ? (
-                      <img 
-                        key={item.icon_url}
-                        src={item.icon_url} 
-                        alt={item.label} 
-                        className="size-12 object-contain"
-                      />
+                      <>
+                        <img 
+                          key={item.icon_url}
+                          src={item.icon_url} 
+                          alt={item.label} 
+                          className="size-12 object-contain"
+                        />
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleUpdateItem(item.id, { icon_url: null });
+                          }}
+                          className="absolute top-1 right-1 z-20 bg-rose-500 hover:bg-rose-600 text-white rounded-full p-1 shadow-md transition-all hover:scale-110 cursor-pointer"
+                          title="Clear Custom Icon"
+                        >
+                          <X className="size-3" />
+                        </button>
+                      </>
                     ) : (
                       <Sparkles className="size-7 text-primary/60" />
                     )}
-                    <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center cursor-pointer transition-opacity text-white text-[10px] font-semibold gap-1">
+                    <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center cursor-pointer transition-opacity text-white text-[10px] font-semibold gap-1 z-10">
                       <CloudUpload className="size-4" />
                       R2 Upload
                       <input 
@@ -229,7 +243,7 @@ export default function AppConfigPage() {
                 <div className="flex items-center justify-between pt-1">
                   <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                     <Palette className="size-3.5" />
-                    Color
+                    {t("color")}
                   </span>
                   <div className="flex items-center gap-2">
                     <button
