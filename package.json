@@ -1,7 +1,0 @@
-{
-  "name": "hr-system-sarana",
-  "private": true,
-  "workspaces": [
-    "mobile-app-hr"
-  ]
-}
