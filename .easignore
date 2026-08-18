@@ -1,0 +1,18 @@
+# Exclude Backend and Frontend from Mobile App Cloud Build
+Backend/
+frontend/
+.gemini/
+.vscode/
+*.sql
+*.log
+*.txt
+*.html
+*.ttf
+node_modules/
+
+# Exclude Mobile App local caches
+mobile-app-hr/node_modules/
+mobile-app-hr/.expo/
+mobile-app-hr/dist/
+mobile-app-hr/android/
+mobile-app-hr/ios/
