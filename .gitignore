@@ -2,10 +2,7 @@
 node_modules/
 jspm_packages/
 web_modules/
-mobile-app-hr/node_modules/
-mobile-app-hr/.expo/
-mobile-app-hr/dist/
-mobile-app-hr/android/
+mobile-app-hr/
 Backend/node_modules/
 frontend/node_modules/
 
