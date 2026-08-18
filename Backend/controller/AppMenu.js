@@ -9,8 +9,7 @@ const DEFAULT_MENUS = [
   { menu_key: "overtime", label: "Overtime", color: "orange", order: 3 },
   { menu_key: "performance", label: "Employee Performance", color: "blue", order: 4 },
   { menu_key: "calendar", label: "Holiday Calendar", color: "blue", order: 5 },
-  { menu_key: "document-scanner", label: "Document Scanner", color: "orange", order: 6 },
-  { menu_key: "asset", label: "Asset Management", color: "blue", order: 7 },
+  { menu_key: "asset", label: "Asset Management", color: "blue", order: 6 },
 ];
 
 /**
@@ -40,7 +39,7 @@ export const getAppMenusController = async (req, res) => {
     }
 
     let menus = await prisma.appmenu.findMany({
-      where: { company_id: userCompanyId },
+      where: { company_id: userCompanyId, NOT: { menu_key: "document-scanner" } },
       orderBy: { order: "asc" },
     });
 
@@ -52,7 +51,7 @@ export const getAppMenusController = async (req, res) => {
       }));
       await prisma.appmenu.createMany({ data: seedData });
       menus = await prisma.appmenu.findMany({
-        where: { company_id: userCompanyId },
+        where: { company_id: userCompanyId, NOT: { menu_key: "document-scanner" } },
         orderBy: { order: "asc" },
       });
     }

@@ -33,7 +33,7 @@ import {
   Inbox,
   UploadCloud,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1119,12 +1119,12 @@ export default function RecruitmentPage() {
                     )}
                   </CardContent>
 
-                  <div className="p-4 pt-0 border-t mt-auto flex items-center gap-2">
+                  <CardFooter className="px-4 py-3 border-t bg-muted/20 flex items-center gap-2 mt-auto">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleCopyJobLink(job.id)}
-                      className="text-xs font-medium gap-1.5 rounded-xl h-9 px-3 hover:bg-primary/10 hover:text-primary transition-all"
+                      className="text-xs font-medium gap-1.5 rounded-xl h-9 px-3 hover:bg-primary/10 hover:text-primary transition-all shrink-0"
                       title={t("copyLink")}
                     >
                       <Link2 className="size-3.5 text-primary" />
@@ -1143,7 +1143,7 @@ export default function RecruitmentPage() {
                       {t("viewApplicants")} ({job._count?.candidate || 0})
                       <ArrowRight className="size-3.5 ml-auto" />
                     </Button>
-                  </div>
+                  </CardFooter>
                 </Card>
               ))
             )}
