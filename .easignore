@@ -1,0 +1,25 @@
+# Ignore everything except mobile-app-hr
+frontend/
+Backend/
+Installation_Image/
+*.exe
+*.rar
+*.pdf
+*.sql
+*.txt
+*.html
+*.ttf
+*.js
+!mobile-app-hr/**
+.gemini/
+.vscode/
+node_modules/
+
+# Inside mobile-app-hr
+mobile-app-hr/node_modules/
+mobile-app-hr/android/
+mobile-app-hr/.expo/
+mobile-app-hr/dist/
+mobile-app-hr/*.log
+mobile-app-hr/.env
+mobile-app-hr/.env*.local
