@@ -2,17 +2,10 @@
 node_modules/
 jspm_packages/
 web_modules/
-mobile-app-hr/node_modules/
-mobile-app-hr/.expo/
-mobile-app-hr/dist/
-mobile-app-hr/android/
-Backend/node_modules/
-frontend/node_modules/
 
 # Next.js build output
 .next/
 out/
-frontend/.next/
 
 # Production / local env files
 .env
@@ -38,7 +31,6 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
-*.log
 
 # IDE/OS files
 .DS_Store
@@ -50,22 +42,21 @@ yarn-error.log*
 *.sln
 *.sw?
 
-# Expo build dirs
+# Expo / mobile app build dirs
 .expo/
 android/build/
 ios/build/
 bin/
 obj/
+mobile-app-hr/node_modules/
+mobile-app-hr/.expo/
+mobile-app-hr/dist/
 
-# Appendix files
+# Database dumps and large docs
+*.sql
+Installation_Image/
 APPENDIX_A_DATA_DICTIONARY.html
 APPENDIX_A_DATA_DICTIONARY.md
 APPENDIX_A_DATA_DICTIONARY.pdf
 APPENDIX_C_PROGRAM_INSTALLATION.html
 APPENDIX_C_PROGRAM_INSTALLATION.md
-
-# Ignore installation images
-Installation_Image/
-
-# Database dumps
-*.sql
