@@ -1,18 +1,34 @@
-# Exclude Backend and Frontend from Mobile App Cloud Build
-Backend/
-frontend/
-.gemini/
-.vscode/
+# Ignore Backend and Frontend from EAS Mobile Build
+Backend
+Backend/**
+frontend
+frontend/**
+.gemini
+.gemini/**
+.vscode
+.vscode/**
 *.sql
 *.log
 *.txt
 *.html
 *.ttf
-node_modules/
+*.rar
+*.pdf
+*.exe
+*.onnx
+*.zip
+*.tar.gz
+node_modules
+node_modules/**
 
-# Exclude Mobile App local caches
-mobile-app-hr/node_modules/
-mobile-app-hr/.expo/
-mobile-app-hr/dist/
-mobile-app-hr/android/
-mobile-app-hr/ios/
+# Ignore mobile native/cache
+mobile-app-hr/node_modules
+mobile-app-hr/node_modules/**
+mobile-app-hr/.expo
+mobile-app-hr/.expo/**
+mobile-app-hr/dist
+mobile-app-hr/dist/**
+mobile-app-hr/android
+mobile-app-hr/android/**
+mobile-app-hr/ios
+mobile-app-hr/ios/**
