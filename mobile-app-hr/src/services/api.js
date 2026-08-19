@@ -211,32 +211,24 @@ export const authService = {
   },
 
   // Update personal profile
-  updateProfile: async (data, photoPath) => {
+  updateProfile: async (data) => {
     try {
-      const { token } = await getStoredAuthState();
-      const formData = new FormData();
-      if (data.telegram_username !== undefined) formData.append("telegram_username", data.telegram_username);
-      if (data.phone_number !== undefined) formData.append("phone_number", data.phone_number);
-      if (data.address !== undefined) formData.append("address", data.address);
-
-      if (photoPath) {
-        const rawName = photoPath.split('/').pop() || 'profile.jpg';
-        const hasExt = /\.\w{2,4}$/.test(rawName);
-        const filename = hasExt ? rawName : `${rawName}.jpg`;
-        formData.append('profile_path', { uri: photoPath, name: filename, type: 'image/jpeg' });
-      }
-
-      const response = await fetch(`${BASE_URL}/api/auth/update-profile`, {
+      const response = await apiRequest("/api/auth/update-profile", {
         method: "PUT",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
+        body: {
+          email: data.email !== undefined ? data.email : undefined,
+          telegram_username: data.telegram_username !== undefined ? data.telegram_username : undefined,
+          phone_number: data.phone_number !== undefined ? data.phone_number : undefined,
+          phone_number1: data.phone_number !== undefined ? data.phone_number : undefined,
+          address: data.address !== undefined ? data.address : undefined,
+          gender: data.gender !== undefined ? data.gender : undefined,
+        },
       });
 
-      const resData = await response.json();
-      if (response.ok && resData.result) {
+      if (response.result) {
         await authService.getProfile();
       }
-      return resData;
+      return response;
     } catch (error) {
       console.error("Update profile error:", error);
       throw error;
@@ -777,6 +769,136 @@ export const notificationService = {
   },
 };
 
+// Document Services
+export const documentService = {
+  // Get active document types
+  getDocumentTypes: async () => {
+    try {
+      const response = await apiRequest("/api/document/get-document-type?limit=100");
+      return response;
+    } catch (error) {
+      console.error("Get document types error:", error);
+      throw error;
+    }
+  },
+
+  // Upload employee document
+  uploadDocument: async (employeeId, documentTypeId, fileAsset) => {
+    try {
+      const { token } = await getStoredAuthState();
+      const formData = new FormData();
+      formData.append("document_type_id", String(documentTypeId));
+
+      if (fileAsset && fileAsset.uri) {
+        const rawName = fileAsset.name || fileAsset.fileName || fileAsset.uri.split('/').pop() || 'document.jpg';
+        const type = fileAsset.mimeType || fileAsset.type || (rawName.endsWith('.pdf') ? 'application/pdf' : 'image/jpeg');
+        formData.append("document", {
+          uri: fileAsset.uri,
+          name: rawName,
+          type: type,
+        });
+      }
+
+      const response = await fetch(`${BASE_URL}/api/employee/upload-document/${employeeId}`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      const resData = await response.json();
+      if (!response.ok) {
+        throw new Error(resData.message || "Failed to upload document");
+      }
+
+      // Refresh profile data
+      await authService.getProfile().catch(() => {});
+      return resData;
+    } catch (error) {
+      console.error("Upload document error:", error);
+      throw error;
+    }
+  },
+
+  // Delete employee document
+  deleteDocument: async (documentId) => {
+    try {
+      const response = await apiRequest(`/api/employee/delete-document/${documentId}`, {
+        method: "DELETE",
+      });
+
+      // Refresh profile data
+      await authService.getProfile().catch(() => {});
+      return response;
+    } catch (error) {
+      console.error("Delete document error:", error);
+      throw error;
+    }
+  },
+
+  // Get employee documents
+  getEmployeeDocuments: async (employeeId) => {
+    try {
+      const response = await apiRequest(`/api/employee/get-employee/${employeeId}`);
+      return response?.document || response?.data?.document || [];
+    } catch (error) {
+      console.error("Get employee documents error:", error);
+      throw error;
+    }
+  },
+};
+
+// Scanner Services (AI Auto-Crop & Enhancement)
+export const scannerService = {
+  scanDocument: async (imageUri) => {
+    try {
+      const { token } = await getStoredAuthState();
+      const formData = new FormData();
+      const rawName = imageUri.split('/').pop() || 'photo.jpg';
+      formData.append("image", {
+        uri: imageUri,
+        name: rawName,
+        type: 'image/jpeg',
+      });
+
+      const response = await fetch(`${BASE_URL}/api/scanner/scan`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("AI crop scan failed");
+      }
+
+      const blob = await response.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          try {
+            const base64data = reader.result.split(',')[1];
+            const filename = `${FileSystem.cacheDirectory}scanned_${Date.now()}.jpg`;
+            await FileSystem.writeAsStringAsync(filename, base64data, {
+              encoding: FileSystem.EncodingType.Base64,
+            });
+            resolve(filename);
+          } catch (err) {
+            reject(err);
+          }
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.warn("[Mobile Scanner] scanDocument error:", error);
+      throw error;
+    }
+  },
+};
+
 export default {
   authService,
   attendanceService,
@@ -788,4 +910,6 @@ export default {
   leaveService,
   kpiService,
   notificationService,
+  documentService,
+  scannerService,
 };

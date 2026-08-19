@@ -14,6 +14,7 @@ import { createCanvas, loadImage } from "canvas";
 import { detectObjects } from "../lib/scanner/yolo.js";
 import { validateFile } from "../utils/fileValidation.js";
 import { uploadToStorage } from "../service/Storage.js";
+import { validateDocTypeMatch } from "../lib/scanner/document-validator.js";
 
 export const addEmployeeController = async (req, res) => {
   try {
@@ -156,7 +157,7 @@ export const uploadEmployeeDocumentController = async (req, res) => {
       return res.status(400).json({ result: false, message: "សូមជ្រើសរើសប្រភេទឯកសារ (Document type is required)" });
     }
 
-    // AI/YOLO Soft Verification for Images (log warning instead of hard blocking)
+    // AI/YOLO Document Type Verification
     const typeIdNum = parseInt(document_type_id);
     if (!isNaN(typeIdNum)) {
       const docType = await prisma.documenttype.findUnique({
@@ -164,28 +165,27 @@ export const uploadEmployeeDocumentController = async (req, res) => {
       });
 
       if (docType) {
-        const typeName = docType.name.toLowerCase();
-        const isPassportSelected = typeName.includes("passport");
-        const isIdCardSelected = typeName.includes("card") || typeName.includes("id") || typeName.includes("identity") || typeName.includes("license");
+        const isImage = document.mimetype && document.mimetype.startsWith("image/");
+        if (isImage) {
+          try {
+            const img = await loadImage(document.data);
+            const canvas = createCanvas(img.width, img.height);
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0);
 
-        if (isPassportSelected || isIdCardSelected) {
-          const isImage = document.mimetype && document.mimetype.startsWith("image/");
-          if (isImage) {
-            try {
-              const img = await loadImage(document.data);
-              const canvas = createCanvas(img.width, img.height);
-              const ctx = canvas.getContext("2d");
-              ctx.drawImage(img, 0, 0);
-
-              const detections = await detectObjects(canvas);
-              if (detections.length > 0) {
-                const topDetection = detections[0];
-                const detectedClass = topDetection.class;
-                console.log(`[AI Verification] Selected: ${docType.name}, Detected: ${detectedClass}`);
+            const detections = await detectObjects(canvas);
+            if (detections.length > 0) {
+              const topDetection = detections[0];
+              const validation = validateDocTypeMatch(docType.name, topDetection.class, topDetection.confidence);
+              if (!validation.isValid) {
+                return res.status(400).json({
+                  result: false,
+                  message: validation.message
+                });
               }
-            } catch (err) {
-              console.error("[AI Verification] Image check error:", err);
             }
+          } catch (err) {
+            console.error("[AI Verification] Image check error:", err);
           }
         }
       }
@@ -194,7 +194,7 @@ export const uploadEmployeeDocumentController = async (req, res) => {
     const documentName = Date.now() + "_" + document.name;
     const document_path = await uploadToStorage(document.data, "documents", documentName, document.mimetype);
 
-    const result = await addDocument(id, document_type_id, document_path);
+    const result = await addDocument(id, document_type_id, document_path, company_id);
 
     // Audit Log
     await addAuditLog(

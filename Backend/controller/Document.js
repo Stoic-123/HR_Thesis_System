@@ -10,6 +10,7 @@ import { createCanvas, loadImage } from "canvas";
 import { detectObjects } from "../lib/scanner/yolo.js";
 import { validateFile } from "../utils/fileValidation.js";
 import { uploadToStorage } from "../service/Storage.js";
+import { validateDocTypeMatch } from "../lib/scanner/document-validator.js";
 
 
 
@@ -61,46 +62,29 @@ export const addDocumentController = async (req, res) => {
       });
 
       if (docType) {
-        const typeName = docType.name.toLowerCase();
-        const isPassportSelected = typeName.includes("passport");
-        const isIdCardSelected = typeName.includes("card") || typeName.includes("id") || typeName.includes("identity") || typeName.includes("license");
+        for (const doc of docs) {
+          // Only perform verification on image files
+          const isImage = doc.mimetype && doc.mimetype.startsWith("image/");
+          if (isImage) {
+            try {
+              const img = await loadImage(doc.data);
+              const canvas = createCanvas(img.width, img.height);
+              const ctx = canvas.getContext("2d");
+              ctx.drawImage(img, 0, 0);
 
-        if (isPassportSelected || isIdCardSelected) {
-          for (const doc of docs) {
-            // Only perform verification on image files
-            const isImage = doc.mimetype && doc.mimetype.startsWith("image/");
-            if (isImage) {
-              try {
-                const img = await loadImage(doc.data);
-                const canvas = createCanvas(img.width, img.height);
-                const ctx = canvas.getContext("2d");
-                ctx.drawImage(img, 0, 0);
-
-                const detections = await detectObjects(canvas);
-                if (detections.length > 0) {
-                  const topDetection = detections[0];
-                  const detectedClass = topDetection.class;
-                  const isCardDetected = detectedClass === "id_card" || detectedClass === "khmer_id";
-                  const isDocDetected = detectedClass === "document" || detectedClass === "passport";
-
-                  if (isPassportSelected && isCardDetected) {
-                    return res.status(400).json({
-                      result: false,
-                      message: "លិខិតឆ្លងដែនមិនត្រឹមត្រូវ៖ ឯកសារនេះមើលទៅដូចជាកាតសម្គាល់ខ្លួន (ID Card) ទៅវិញទេ។ (Invalid Passport: This document looks like an ID card.)"
-                    });
-                  }
-
-                  if (isIdCardSelected && isDocDetected) {
-                    return res.status(400).json({
-                      result: false,
-                      message: "កាតសម្គាល់ខ្លួនមិនត្រឹមត្រូវ៖ ឯកសារនេះមើលទៅដូចជាក្រដាស/លិខិតឆ្លងដែន (Passport/Document) ទៅវិញទេ។ (Invalid ID Card: This document looks like a paper/passport.)"
-                    });
-                  }
+              const detections = await detectObjects(canvas);
+              if (detections.length > 0) {
+                const topDetection = detections[0];
+                const validation = validateDocTypeMatch(docType.name, topDetection.class, topDetection.confidence);
+                if (!validation.isValid) {
+                  return res.status(400).json({
+                    result: false,
+                    message: validation.message
+                  });
                 }
-              } catch (err) {
-                console.error("[AI Verification] Image check error:", err);
-                // In case of an unexpected processing error, log and let it proceed or return error
               }
+            } catch (err) {
+              console.error("[AI Verification] Image check error:", err);
             }
           }
         }

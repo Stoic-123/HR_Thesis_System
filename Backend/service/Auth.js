@@ -165,6 +165,10 @@ export const getMe = async (user_id) => {
             email: true,
             age: true,
             gender: true,
+            phone_number1: true,
+            phone_number2: true,
+            address: true,
+            telegram_username: true,
             company_id: true,
             profile_path: true,
             company: {
@@ -207,6 +211,20 @@ export const getMe = async (user_id) => {
                 },
               },
             },
+            document: {
+              select: {
+                id: true,
+                document_type_id: true,
+                document_path: true,
+                uploaded_at: true,
+                documenttype: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -231,6 +249,11 @@ export const getMe = async (user_id) => {
             email: getMeResult.employee.email,
             age: getMeResult.employee.age,
             gender: getMeResult.employee.gender,
+            phone_number: getMeResult.employee.phone_number1,
+            phone_number1: getMeResult.employee.phone_number1,
+            phone_number2: getMeResult.employee.phone_number2,
+            address: getMeResult.employee.address,
+            telegram_username: getMeResult.employee.telegram_username,
             role: getMeResult.employee.role?.name || "Admin",
             permissions: getMeResult.employee.role?.rolebaseaccess
               ? getMeResult.employee.role.rolebaseaccess.map((p) => p.path)
@@ -244,6 +267,13 @@ export const getMe = async (user_id) => {
             location: getMeResult.employee.employeelocation
               ? getMeResult.employee.employeelocation.map((loc) => loc.location.name)
               : [],
+            documents: getMeResult.employee.document?.map((doc) => ({
+              id: doc.id,
+              document_type_id: doc.document_type_id,
+              document_type_name: doc.documenttype?.name || "Document",
+              document_path: doc.document_path,
+              uploaded_at: doc.uploaded_at,
+            })) || [],
             is_manager: managedDepartments.length > 0,
             managed_departments: managedDepartments,
           }
@@ -253,6 +283,12 @@ export const getMe = async (user_id) => {
             first_name: getMeResult.username,
             last_name: "",
             email: "",
+            phone_number: "",
+            phone_number1: "",
+            phone_number2: "",
+            address: "",
+            telegram_username: "",
+            gender: "other",
             role: "Admin",
             permissions: ["*"],
             department: "Administration",
@@ -260,6 +296,7 @@ export const getMe = async (user_id) => {
             profile_path: null,
             company: null,
             location: [],
+            documents: [],
             is_manager: false,
             managed_departments: [],
           },
@@ -332,7 +369,11 @@ export const forgotPassword = async (username) => {
           company_id: user.employee.company_id,
           role: {
             name: {
-              in: ["HR Manager", "hr manager", "HR manager", "Hr Manager"],
+              in: [
+                "HR Manager", "hr manager", "HR manager", "Hr Manager", "HR MANAGER",
+                "Head of HR", "head of hr", "HR Director", "hr director",
+                "HR Lead", "hr lead"
+              ],
             },
           },
         },
@@ -346,7 +387,41 @@ export const forgotPassword = async (username) => {
       },
     });
 
-    // Fallback: If no role named "HR Manager" is found, look for HR Department Manager or HR role
+    // Fallback 1: If no role named "HR Manager" is found, look for HR Department or HR role
+    if (hrManagers.length === 0) {
+      hrManagers = await prisma.user.findMany({
+        where: {
+          employee: {
+            company_id: user.employee.company_id,
+            OR: [
+              {
+                role: {
+                  name: {
+                    in: ["HR", "hr", "Human Resource", "human resource", "Human Resources", "human resources", "HR Officer", "hr officer", "HR Executive"],
+                  },
+                },
+              },
+              {
+                department_employee_department_idTodepartment: {
+                  name: {
+                    in: ["Human Resource", "human resource", "Human Resources", "human resources", "HR", "hr", "HR Department"],
+                  },
+                },
+              },
+            ],
+          },
+        },
+        include: {
+          employee: {
+            include: {
+              role: true,
+            },
+          },
+        },
+      });
+    }
+
+    // Fallback 2: If still no HR found, look for Admin / Super Admin
     if (hrManagers.length === 0) {
       hrManagers = await prisma.user.findMany({
         where: {
@@ -354,8 +429,7 @@ export const forgotPassword = async (username) => {
             company_id: user.employee.company_id,
             role: {
               name: {
-                notIn: ["Admin", "admin"],
-                in: ["HR", "hr", "Human Resource", "human resource", "Human Resources", "human resources"],
+                in: ["Admin", "admin", "Super Admin", "super admin", "SuperAdmin", "ADMIN"],
               },
             },
           },
@@ -370,9 +444,9 @@ export const forgotPassword = async (username) => {
       });
     }
 
-    console.log(`[Forgot Password] Found ${hrManagers.length} HR Manager user(s)`);
+    console.log(`[Forgot Password] Found ${hrManagers.length} HR/Admin recipient user(s)`);
     for (const hrUser of hrManagers) {
-      console.log(`[Forgot Password] HR Manager ${hrUser.employee.first_name} ${hrUser.employee.last_name} - chat ID: ${hrUser.employee.telegram_chat_id}`);
+      console.log(`[Forgot Password] HR/Admin ${hrUser.employee.first_name} ${hrUser.employee.last_name} - chat ID: ${hrUser.employee.telegram_chat_id}`);
     }
 
     const company = user.employee.company;
@@ -543,3 +617,5 @@ export const resetPasswordToDefault = async (userId) => {
   activeResetLocks.set(numUserId, resetPromise);
   return resetPromise;
 };
+
+export const resetPassword = resetPasswordToDefault;

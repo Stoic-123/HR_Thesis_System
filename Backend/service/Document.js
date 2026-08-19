@@ -26,28 +26,34 @@ export const addDocument = async (
 ) => {
   try {
     const eid = parseInt(employee_id);
-    const cid = parseInt(company_id);
+    const cid = company_id ? parseInt(company_id) : null;
 
-    // Verify employee belongs to company
-    const employee = await prisma.employee.findUnique({
-      where: { id: eid, company_id: cid },
-    });
+    // Verify employee belongs to company if company_id is provided
+    if (cid && !isNaN(cid)) {
+      const employee = await prisma.employee.findUnique({
+        where: { id: eid, company_id: cid },
+      });
 
-    if (!employee) {
-      return { result: false, message: "Employee not found in your company." };
+      if (!employee) {
+        return { result: false, message: "Employee not found in your company." };
+      }
     }
 
-    await prisma.document.create({
+    const newDoc = await prisma.document.create({
       data: {
         employee_id: eid,
         document_type_id: parseInt(document_type_id),
         document_path,
+      },
+      include: {
+        documenttype: true,
       },
     });
 
     return {
       result: true,
       message: "Document added successfully.",
+      data: newDoc,
     };
   } catch (error) {
     console.log(error);

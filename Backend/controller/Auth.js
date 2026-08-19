@@ -10,6 +10,8 @@ import {
   InvalidateToken,
   changePassword,
   forgotPassword,
+  resetPasswordToDefault,
+  resetPassword,
 } from "../service/Auth.js";
 import { validateFile } from "../utils/fileValidation.js";
 import { uploadToStorage } from "../service/Storage.js";
@@ -261,7 +263,19 @@ export const resetPasswordController = async (req, res) => {
 export const updateUserProfileController = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { first_name, last_name, username } = req.body;
+    const { 
+      first_name, 
+      last_name, 
+      username, 
+      email, 
+      gender, 
+      telegram_username, 
+      phone_number, 
+      phone_number1, 
+      phone_number2, 
+      address, 
+      partner_name 
+    } = req.body;
     let profile_path = null;
 
     if (req.files && (req.files.profile_path || req.files.avatar || req.files.file)) {
@@ -276,15 +290,23 @@ export const updateUserProfileController = async (req, res) => {
 
     const currentUser = await prisma.user.findUnique({
       where: { id: userId },
-      include: { employee: true },
+      include: { 
+        employee: {
+          include: {
+            role: true,
+          }
+        }
+      },
     });
 
     if (!currentUser) {
       return res.status(404).json({ result: false, message: "User not found" });
     }
 
-    // Handle username update if provided
-    if (username && username.trim() && username.trim() !== currentUser.username) {
+    const isAdmin = currentUser.employee?.role?.name?.toLowerCase().includes("admin") || !currentUser.employee_id;
+
+    // Handle username update if provided (admin only)
+    if (isAdmin && username && username.trim() && username.trim() !== currentUser.username) {
       const cleanUsername = username.trim();
       const existingUser = await prisma.user.findUnique({ where: { username: cleanUsername } });
       if (existingUser && existingUser.id !== userId) {
@@ -296,31 +318,73 @@ export const updateUserProfileController = async (req, res) => {
       });
     }
 
+    // Validate email format if provided
+    if (email !== undefined && email !== null && email.trim() !== "") {
+      const cleanEmail = email.trim().toLowerCase();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(cleanEmail)) {
+        return res.status(400).json({ result: false, message: "Invalid email format" });
+      }
+    }
+
+    // Validate gender if provided
+    if (gender !== undefined && gender !== null && gender !== "") {
+      const cleanGender = gender.toString().toLowerCase().trim();
+      const validGenders = ["male", "female", "other"];
+      if (!validGenders.includes(cleanGender)) {
+        return res.status(400).json({ result: false, message: "Gender must be 'male', 'female', or 'other'" });
+      }
+    }
+
     // Handle employee update or creation
     if (currentUser.employee_id && currentUser.employee) {
-      const { 
-        telegram_username, 
-        phone_number, 
-        phone_number2, 
-        address, 
-        partner_name 
-      } = req.body;
-
       const empUpdate = {};
-      if (first_name !== undefined && first_name !== null && first_name.trim() !== "") {
-        empUpdate.first_name = first_name.trim();
+
+      // Only Admins can modify first_name, last_name, and profile_path directly
+      if (isAdmin) {
+        if (first_name !== undefined && first_name !== null && first_name.trim() !== "") {
+          empUpdate.first_name = first_name.trim();
+        }
+        if (last_name !== undefined && last_name !== null) {
+          empUpdate.last_name = last_name.trim();
+        }
+        if (profile_path) {
+          empUpdate.profile_path = profile_path;
+        }
       }
-      if (last_name !== undefined && last_name !== null) {
-        empUpdate.last_name = last_name.trim();
+
+      // Fields every employee can update: email, telegram_username, phone_number, address, gender
+      if (email !== undefined) {
+        empUpdate.email = email && email.trim() !== "" ? email.trim().toLowerCase() : null;
       }
+
+      if (gender !== undefined) {
+        const cleanGender = gender.toString().toLowerCase().trim();
+        if (["male", "female", "other"].includes(cleanGender)) {
+          empUpdate.gender = cleanGender;
+        }
+      }
+
       if (telegram_username !== undefined) {
         empUpdate.telegram_username = telegram_username ? telegram_username.trim().replace(/^@+/, '') : null;
       }
-      if (phone_number !== undefined) empUpdate.phone_number = phone_number.trim();
-      if (phone_number2 !== undefined) empUpdate.phone_number2 = phone_number2.trim();
-      if (address !== undefined) empUpdate.address = address.trim();
-      if (partner_name !== undefined) empUpdate.partner_name = partner_name.trim();
-      if (profile_path) empUpdate.profile_path = profile_path;
+
+      const rawPhone = phone_number !== undefined ? phone_number : phone_number1;
+      if (rawPhone !== undefined) {
+        empUpdate.phone_number1 = rawPhone && rawPhone.trim() !== "" ? rawPhone.trim() : null;
+      }
+
+      if (phone_number2 !== undefined) {
+        empUpdate.phone_number2 = phone_number2 && phone_number2.trim() !== "" ? phone_number2.trim() : null;
+      }
+
+      if (address !== undefined) {
+        empUpdate.address = address && address.trim() !== "" ? address.trim() : null;
+      }
+
+      if (partner_name !== undefined) {
+        empUpdate.partner_name = partner_name && partner_name.trim() !== "" ? partner_name.trim() : null;
+      }
 
       if (Object.keys(empUpdate).length > 0) {
         await prisma.employee.update({
@@ -337,6 +401,11 @@ export const updateUserProfileController = async (req, res) => {
           last_name: last_name ? last_name.trim() : "",
           company_id: parseInt(companyId),
           profile_path: profile_path || null,
+          email: email && email.trim() !== "" ? email.trim().toLowerCase() : null,
+          phone_number1: phone_number || phone_number1 || null,
+          address: address || null,
+          gender: gender ? gender.toLowerCase() : "other",
+          telegram_username: telegram_username ? telegram_username.trim().replace(/^@+/, '') : null,
           is_active: "active",
         },
       });

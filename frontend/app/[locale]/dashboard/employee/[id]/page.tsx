@@ -320,40 +320,62 @@ export default function EmployeeDetailPage() {
     updateMutation.mutate(data);
   };
 
-  const processSelectedFile = async (file: File) => {
+  const processSelectedFile = async (file: File, overrideDocTypeId?: string) => {
     setDocFile(file);
-    // Auto default docTypeId if not yet chosen
-    if (!docTypeId && documentTypes?.data?.length > 0) {
-      setDocTypeId(documentTypes.data[0].id.toString());
+    let targetDocTypeId = overrideDocTypeId !== undefined ? overrideDocTypeId : docTypeId;
+    if (!targetDocTypeId && documentTypes?.data?.length > 0) {
+      targetDocTypeId = documentTypes.data[0].id.toString();
+      setDocTypeId(targetDocTypeId);
     }
 
     if (file.type.startsWith("image/")) {
       setDocPreview(URL.createObjectURL(file));
-      if (docTypeId) {
-        setIsScanning(true);
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Timeout")), 6000)
-        );
+      setIsScanning(true);
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Timeout")), 25000)
+      );
 
-        try {
-          const scannedBlob = await Promise.race([
-            scanDocument(file, docTypeId),
-            timeoutPromise
-          ]) as Blob;
+      try {
+        const scannedBlob = await Promise.race([
+          scanDocument(file, targetDocTypeId || undefined),
+          timeoutPromise
+        ]) as Blob;
 
-          if (scannedBlob && scannedBlob.size > 0) {
-            const scannedFile = new File([scannedBlob], file.name, { type: "image/jpeg" });
-            setDocFile(scannedFile);
-            setDocPreview(URL.createObjectURL(scannedBlob));
-            toast.success("ស្កេនដោយ AI រួចរាល់!");
-          }
-        } catch (error: any) {
-          console.warn("AI scan skipped or failed, using original file:", error);
+        if (scannedBlob && scannedBlob.size > 0) {
+          const scannedFile = new File([scannedBlob], file.name, { type: "image/jpeg" });
+          setDocFile(scannedFile);
+          setDocPreview(URL.createObjectURL(scannedBlob));
+          toast.success("ស្កេន និងកាត់តម្រឹមដោយ AI រួចរាល់!");
+        }
+      } catch (error: any) {
+        let errorMessage = "";
+        let isMismatch = false;
+
+        if (error?.response?.data instanceof Blob) {
+          try {
+            const text = await error.response.data.text();
+            const json = JSON.parse(text);
+            if (json.message) {
+              errorMessage = json.message;
+              isMismatch = true;
+            }
+          } catch (_) {}
+        } else if (error?.response?.data?.message) {
+          errorMessage = error.response.data.message;
+          isMismatch = true;
+        }
+
+        if (isMismatch && errorMessage) {
+          toast.error(errorMessage);
+          setDocFile(null);
+          setDocPreview(null);
+        } else {
+          console.warn("AI scan skipped or timed out, using original file:", error);
           setDocFile(file);
           setDocPreview(URL.createObjectURL(file));
-        } finally {
-          setIsScanning(false);
         }
+      } finally {
+        setIsScanning(false);
       }
     } else {
       setDocPreview(null);
@@ -1163,7 +1185,15 @@ export default function EmployeeDetailPage() {
                       <div className="py-4 space-y-4">
                         <div className="space-y-2">
                           <Label>{t("docType")}</Label>
-                          <Select value={docTypeId || undefined} onValueChange={setDocTypeId}>
+                          <Select 
+                            value={docTypeId || undefined} 
+                            onValueChange={(newVal) => {
+                              setDocTypeId(newVal);
+                              if (docFile) {
+                                processSelectedFile(docFile, newVal);
+                              }
+                            }}
+                          >
                             <SelectTrigger className="w-full">
                               <SelectValue placeholder={t("selectType")} />
                             </SelectTrigger>

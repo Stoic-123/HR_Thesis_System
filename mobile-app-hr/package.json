@@ -4,8 +4,9 @@
   "version": "1.0.0",
   "main": "node_modules/expo/AppEntry.js",
   "scripts": {
-    "start": "node set-ip.js && expo start --offline --lan",
-    "start:clean": "node set-ip.js && expo start -c --offline --lan",
+    "start": "node set-ip.js && expo start --lan",
+    "start:clean": "node set-ip.js && expo start -c --lan",
+    "start:offline": "node set-ip.js && expo start --offline",
     "start:tunnel": "node set-ip.js && expo start --tunnel",
     "start:local": "expo start",
     "android": "expo start --android --tunnel",

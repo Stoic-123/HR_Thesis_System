@@ -5,9 +5,10 @@ import { detectObjects } from "../lib/scanner/yolo.js";
 import { refineDetection } from "../lib/scanner/opencv-refinement.js";
 import { perspectiveTransform, getCardDimensions } from "../lib/scanner/perspective-transform.js";
 import { enhanceDocument } from "../lib/scanner/enhancement.js";
-import { getCV } from "../lib/scanner/cv-helper.js";
+import { getCV, sortPoints } from "../lib/scanner/cv-helper.js";
 import prisma from "../lib/prisma.js";
 import { validateFile } from "../utils/fileValidation.js";
+import { validateDocTypeMatch } from "../lib/scanner/document-validator.js";
 
 /**
  * POST /api/scanner/detect
@@ -62,6 +63,8 @@ export const detectDocumentController = async (req, res) => {
         cv.GaussianBlur(gray, blurred, new cv.Size(7, 7), 0);
         const edges = new cv.Mat();
         cv.Canny(blurred, edges, 30, 100);
+        const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(3, 3));
+        cv.dilate(edges, edges, kernel);
 
         const contours = new cv.MatVector();
         const hierarchy = new cv.Mat();
@@ -99,15 +102,15 @@ export const detectDocumentController = async (req, res) => {
             approx.delete();
           }
         }
-        gray.delete(); blurred.delete(); edges.delete(); contours.delete(); hierarchy.delete();
+        gray.delete(); blurred.delete(); edges.delete(); kernel.delete(); contours.delete(); hierarchy.delete();
 
-        if (bestPoints) {
+        if (bestPoints && bestPoints.length === 4) {
           mat.delete();
           return res.status(200).json({
             success: true,
             detected: true,
             confidence: 0.85,
-            points: bestPoints,
+            points: sortPoints(bestPoints),
           });
         }
       } catch (e) {
@@ -117,7 +120,7 @@ export const detectDocumentController = async (req, res) => {
 
     mat.delete();
 
-    if (cardResult) {
+    if (cardResult && cardResult.points) {
       const normPoints = cardResult.points.map((p) => ({
         x: p.x / DETECT_SIZE,
         y: p.y / DETECT_SIZE,
@@ -126,7 +129,7 @@ export const detectDocumentController = async (req, res) => {
         success: true,
         detected: true,
         confidence: cardResult.confidence || 0.8,
-        points: normPoints,
+        points: sortPoints(normPoints),
       });
     }
 
@@ -149,6 +152,10 @@ export const detectDocumentController = async (req, res) => {
 };
 
 export const scanDocumentController = async (req, res) => {
+  let mat = null;
+  let croppedMat = null;
+  let enhancedMat = null;
+
   try {
     if (!req.files || !req.files.image) {
       return res.status(400).json({ success: false, message: "No image uploaded" });
@@ -167,103 +174,145 @@ export const scanDocumentController = async (req, res) => {
     const ctx = canvas.getContext("2d");
     ctx.drawImage(img, 0, 0);
 
-    // 1. AI Detection
-    const detections = await detectObjects(canvas);
-    console.log("[Scanner] Detections count:", detections.length, "Detections:", JSON.stringify(detections, null, 2));
-
-    if (detections.length === 0) {
-      return res.status(404).json({ success: false, message: "No document detected" });
+    const cv = await getCV();
+    if (!cv) {
+      throw new Error("OpenCV engine is not ready");
     }
 
-    // 2. OpenCV Refinement
-    const cv = await getCV();
     const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const mat = new cv.Mat(canvas.height, canvas.width, cv.CV_8UC4);
+    mat = new cv.Mat(canvas.height, canvas.width, cv.CV_8UC4);
     mat.data.set(imgData.data);
 
-    const detection = detections[0];
-    const cardResult = await refineDetection(mat, detection, img.width, img.height);
+    let cardPoints = null;
+    let detection = null;
 
-    if (!cardResult) {
-      mat.delete();
-      return res.status(404).json({ success: false, message: "Could not refine borders" });
+    // 1. AI Detection (YOLO)
+    try {
+      const detections = await detectObjects(canvas);
+      console.log("[Scanner] Detections count:", detections ? detections.length : 0);
+      if (detections && detections.length > 0) {
+        detection = detections[0];
+
+        // Check document type mismatch if document_type_id was provided
+        if (req.body.document_type_id) {
+          const typeIdNum = parseInt(req.body.document_type_id);
+          if (!isNaN(typeIdNum)) {
+            const docType = await prisma.documenttype.findUnique({
+              where: { id: typeIdNum }
+            });
+            if (docType) {
+              const validation = validateDocTypeMatch(docType.name, detection.class, detection.confidence);
+              if (!validation.isValid) {
+                if (mat) try { mat.delete(); } catch (_) {}
+                return res.status(400).json({
+                  success: false,
+                  result: false,
+                  message: validation.message
+                });
+              }
+            }
+          }
+        }
+
+        const cardResult = await refineDetection(mat, detection, img.width, img.height);
+        if (cardResult && cardResult.points) {
+          cardPoints = cardResult.points;
+        }
+      }
+    } catch (e) {
+      console.warn("[Scanner] YOLO detection / refinement error:", e.message);
     }
 
-    // 3. Perspective Transform (Crop)
-    const dims = getCardDimensions(cardResult.points);
-    const croppedMat = await perspectiveTransform(mat, cardResult.points, dims.width, dims.height);
+    // 2. Pure OpenCV Fallback if YOLO returned 0 detections or refinement was null
+    if (!cardPoints && cv) {
+      try {
+        const gray = new cv.Mat();
+        cv.cvtColor(mat, gray, cv.COLOR_RGBA2GRAY);
+        const blurred = new cv.Mat();
+        cv.GaussianBlur(gray, blurred, new cv.Size(7, 7), 0);
+        const edges = new cv.Mat();
+        cv.Canny(blurred, edges, 30, 100);
+        const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(3, 3));
+        cv.dilate(edges, edges, kernel);
 
-    // 4. Enhancement
-    const enhancedMat = await enhanceDocument(croppedMat);
+        const contours = new cv.MatVector();
+        const hierarchy = new cv.Mat();
+        cv.findContours(edges, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
-    // 5. Output to Canvas
+        let maxArea = 0;
+        const minArea = img.width * img.height * 0.08;
+
+        for (let i = 0; i < contours.size(); i++) {
+          const cnt = contours.get(i);
+          const area = cv.contourArea(cnt);
+          if (area > maxArea && area > minArea) {
+            const perimeter = cv.arcLength(cnt, true);
+            const approx = new cv.Mat();
+            cv.approxPolyDP(cnt, approx, 0.02 * perimeter, true);
+            if (approx.rows === 4) {
+              cardPoints = [];
+              for (let j = 0; j < 4; j++) {
+                cardPoints.push({
+                  x: approx.data32S[j * 2],
+                  y: approx.data32S[j * 2 + 1],
+                });
+              }
+              maxArea = area;
+            } else {
+              const rect = cv.minAreaRect(cnt);
+              const vertices = cv.RotatedRect.points(rect);
+              cardPoints = vertices.map(v => ({ x: v.x, y: v.y }));
+              maxArea = area;
+            }
+            approx.delete();
+          }
+        }
+        gray.delete(); blurred.delete(); edges.delete(); kernel.delete(); contours.delete(); hierarchy.delete();
+      } catch (e) {
+        console.warn("[Scanner] OpenCV contour fallback error:", e.message);
+      }
+    }
+
+    // 3. Ultimate Fallback: Full frame document boundary
+    if (!cardPoints || cardPoints.length !== 4) {
+      cardPoints = [
+        { x: 0, y: 0 },
+        { x: img.width, y: 0 },
+        { x: img.width, y: img.height },
+        { x: 0, y: img.height },
+      ];
+    } else {
+      cardPoints = sortPoints(cardPoints);
+    }
+
+    // 4. Perspective Transform (Crop)
+    const dims = getCardDimensions(cardPoints);
+    croppedMat = await perspectiveTransform(mat, cardPoints, dims.width, dims.height);
+
+    // 5. Enhancement (Sharpness, Contrast, Denoise)
+    enhancedMat = await enhanceDocument(croppedMat);
+
+    // 6. Output to Canvas
     const outputCanvas = createCanvas(dims.width, dims.height);
     const outputCtx = outputCanvas.getContext("2d");
     const outputImgData = outputCtx.createImageData(enhancedMat.cols, enhancedMat.rows);
     outputImgData.data.set(enhancedMat.data);
     outputCtx.putImageData(outputImgData, 0, 0);
 
-    // AI/YOLO Verification for Images based on selected document type
-    const { document_type_id } = req.body;
-    if (document_type_id) {
-      const docType = await prisma.documenttype.findUnique({
-        where: { id: parseInt(document_type_id) }
-      });
-      if (docType) {
-        const typeName = docType.name.toLowerCase();
-        const isPassportSelected = typeName.includes("passport");
-        const isIdCardSelected = typeName.includes("card") || typeName.includes("id") || typeName.includes("identity") || typeName.includes("license");
-
-        if (isPassportSelected || isIdCardSelected) {
-          // Detect objects on the cropped canvas to verify its type
-          const croppedDetections = await detectObjects(outputCanvas);
-          console.log("[Scanner] Cropped Detections count:", croppedDetections.length, "Cropped Detections:", JSON.stringify(croppedDetections, null, 2));
-
-          let detectedClass = null;
-          if (croppedDetections.length > 0) {
-            detectedClass = croppedDetections[0].class;
-          } else {
-            // Fallback to original detection class if no detection inside the cropped canvas
-            detectedClass = detection.class;
-          }
-
-          const isCardDetected = detectedClass === "id_card" || detectedClass === "khmer_id";
-          const isDocDetected = detectedClass === "document" || detectedClass === "passport";
-
-          if (isPassportSelected && isCardDetected) {
-            mat.delete();
-            croppedMat.delete();
-            enhancedMat.delete();
-            return res.status(400).json({
-              success: false,
-              message: "លិខិតឆ្លងដែនមិនត្រឹមត្រូវ៖ ឯកសារនេះមើលទៅដូចជាកាតសម្គាល់ខ្លួន (ID Card) ទៅវិញទេ។ (Invalid Passport: This document looks like an ID card.)"
-            });
-          }
-
-          if (isIdCardSelected && isDocDetected) {
-            mat.delete();
-            croppedMat.delete();
-            enhancedMat.delete();
-            return res.status(400).json({
-              success: false,
-              message: "កាតសម្គាល់ខ្លួនមិនត្រឹមត្រូវ៖ ឯកសារនេះមើលទៅដូចជាក្រដាស/លិខិតឆ្លងដែន (Passport/Document) ទៅវិញទេ។ (Invalid ID Card: This document looks like a paper/passport.)"
-            });
-          }
-        }
-      }
-    }
-
     const buffer = outputCanvas.toBuffer("image/jpeg", { quality: 0.95 });
 
-    // Cleanup
-    mat.delete();
-    croppedMat.delete();
-    enhancedMat.delete();
+    // Cleanup OpenCV mats
+    if (mat) mat.delete();
+    if (croppedMat) croppedMat.delete();
+    if (enhancedMat) enhancedMat.delete();
 
     res.set("Content-Type", "image/jpeg");
-    res.send(buffer);
+    return res.send(buffer);
 
   } catch (error) {
+    if (mat) try { mat.delete(); } catch (_) {}
+    if (croppedMat) try { croppedMat.delete(); } catch (_) {}
+    if (enhancedMat) try { enhancedMat.delete(); } catch (_) {}
     console.error("[Scanner Controller] Error:", error);
     res.status(500).json({ success: false, message: error.message });
   }

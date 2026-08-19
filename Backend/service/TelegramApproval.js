@@ -308,7 +308,7 @@ const processBotCallbacks = async (token, companyList) => {
         } else if (resetMatch) {
           const userId = parseInt(resetMatch[1]);
           const messageId = message?.message_id;
-          await handleResetPasswordCallback(token, userId, cbId, messageId, from, companyId);
+          await handleResetPasswordCallback(token, userId, cbId, messageId, from, companyId, message);
         } else if (leaveApprovalMatch) {
           const action = leaveApprovalMatch[1];
           const leaveIdStr = leaveApprovalMatch[2];
@@ -400,9 +400,118 @@ const storeTelegramChatId = async (username, chatId, companyId) => {
   }
 };
 
+/**
+ * Check if a Telegram sender (chatId / username) is authorized to reset a user's password.
+ * Authorized if:
+ * 1. Sender is the Department Manager of userToReset
+ * 2. Sender is HR or Admin in the user's company (matches role/department name)
+ */
+export const isAuthorizedToResetPassword = async (companyId, userToReset, fromChatId, fromUsername) => {
+  try {
+    const fromChatIdStr = fromChatId ? fromChatId.toString() : null;
+    const cleanFromUsername = fromUsername ? fromUsername.toLowerCase().replace(/^@/, '').trim() : null;
+
+    if (!fromChatIdStr && !cleanFromUsername) {
+      return { authorized: false, reason: "No identifier provided for sender" };
+    }
+
+    // 1. Check Department Manager
+    const deptManager = userToReset?.employee?.department_employee_department_idTodepartment?.employee_department_manager_idToemployee;
+    if (deptManager) {
+      const dmUsername = deptManager.telegram_username ? deptManager.telegram_username.toLowerCase().replace(/^@/, '').trim() : null;
+      const dmChatId = deptManager.telegram_chat_id ? deptManager.telegram_chat_id.toString() : null;
+
+      const dmChatMatch = fromChatIdStr && dmChatId && fromChatIdStr === dmChatId;
+      const dmUserMatch = cleanFromUsername && dmUsername && cleanFromUsername === dmUsername;
+
+      if (dmChatMatch || dmUserMatch) {
+        return {
+          authorized: true,
+          user: deptManager,
+          role: "Department Manager",
+        };
+      }
+    }
+
+    // 2. Check HR / Admin employees in the user's company
+    const targetCompanyId = userToReset?.employee?.company_id || companyId;
+    const hrAdminUsers = await prisma.user.findMany({
+      where: {
+        employee: {
+          company_id: targetCompanyId,
+          OR: [
+            {
+              role: {
+                name: {
+                  in: [
+                    "Admin", "admin", "ADMIN",
+                    "Super Admin", "super admin", "SuperAdmin", "SUPER ADMIN",
+                    "HR", "hr", "Hr",
+                    "HR Manager", "hr manager", "Hr Manager", "HR MANAGER",
+                    "Human Resource", "human resource", "Human Resources", "human resources",
+                    "HR Officer", "hr officer", "HR Executive", "hr executive", "HR Specialist", "hr specialist",
+                    "General Manager", "general manager", "Director", "director"
+                  ],
+                },
+              },
+            },
+            {
+              department_employee_department_idTodepartment: {
+                name: {
+                  in: [
+                    "Human Resource", "human resource", "Human Resources", "human resources",
+                    "HR", "hr", "HR Department", "hr department"
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      },
+      include: {
+        employee: {
+          include: {
+            role: true,
+            department_employee_department_idTodepartment: true,
+          },
+        },
+      },
+    });
+
+    for (const u of hrAdminUsers) {
+      const emp = u.employee;
+      if (!emp) continue;
+
+      const empUsername = emp.telegram_username ? emp.telegram_username.toLowerCase().replace(/^@/, '').trim() : null;
+      const empChatId = emp.telegram_chat_id ? emp.telegram_chat_id.toString() : null;
+
+      const chatMatch = fromChatIdStr && empChatId && fromChatIdStr === empChatId;
+      const userMatch = cleanFromUsername && empUsername && cleanFromUsername === empUsername;
+
+      if (chatMatch || userMatch) {
+        return {
+          authorized: true,
+          user: emp,
+          role: emp.role?.name || "HR/Admin",
+        };
+      }
+    }
+
+    return { authorized: false, reason: "Sender is not HR/Admin or department manager" };
+  } catch (err) {
+    console.error("[TgApproval] isAuthorizedToResetPassword error:", err.message);
+    return { authorized: false, reason: err.message };
+  }
+};
+
 const handleResetPasswordCommand = async (token, groupId, userId, from) => {
   try {
-    // Check if the sender is HR/Admin or department manager
+    const numUserId = parseInt(userId);
+    if (isNaN(numUserId)) {
+      if (from?.id) await sendTelegramMessage(token, from.id, '❌ Invalid user ID.');
+      return;
+    }
+
     const fromUsername = (from?.username || '').toLowerCase();
     const fromChatId = from?.id;
 
@@ -420,10 +529,11 @@ const handleResetPasswordCommand = async (token, groupId, userId, from) => {
 
     // Get the user to reset
     const userToReset = await prisma.user.findUnique({
-      where: { id: userId },
+      where: { id: numUserId },
       include: {
         employee: {
           include: {
+            company: true,
             department_employee_department_idTodepartment: {
               include: {
                 employee_department_manager_idToemployee: true,
@@ -436,48 +546,13 @@ const handleResetPasswordCommand = async (token, groupId, userId, from) => {
 
     if (!userToReset || !userToReset.employee) {
       if (fromChatId) {
-        await sendTelegramMessage(token, fromChatId, '❌ User not found.');
+        await sendTelegramMessage(token, fromChatId, '❌ User not found in system.');
       }
       return;
     }
 
-    const departmentManager = userToReset.employee.department_employee_department_idTodepartment?.employee_department_manager_idToemployee;
-    const departmentManagerUsername = departmentManager?.telegram_username ? departmentManager.telegram_username.toLowerCase().replace(/^@/, '') : null;
-
-    // Check if sender is HR/Admin in this company
-    const hrUsers = await prisma.user.findMany({
-      where: {
-        employee: {
-          company_id: company.id,
-          OR: [
-            {
-              role: {
-                name: {
-                  in: ["Admin", "HR", "Human Resource"],
-                },
-              },
-            },
-            {
-              department_employee_department_idTodepartment: {
-                name: {
-                  in: ["Human Resource", "HR"],
-                },
-              },
-            },
-          ],
-        },
-      },
-      include: { employee: true },
-    });
-
-    const isHr = hrUsers.some(u => {
-      const empUsername = (u.employee?.telegram_username || '').toLowerCase().replace(/^@/, '');
-      return empUsername === fromUsername;
-    });
-
-    const isDepartmentManager = departmentManagerUsername && departmentManagerUsername === fromUsername;
-
-    if (!isHr && !isDepartmentManager) {
+    const authCheck = await isAuthorizedToResetPassword(company.id, userToReset, fromChatId, fromUsername);
+    if (!authCheck.authorized) {
       if (fromChatId) {
         await sendTelegramMessage(token, fromChatId, '⛔ Only HR/Admin or department manager can reset passwords.');
       }
@@ -485,11 +560,12 @@ const handleResetPasswordCommand = async (token, groupId, userId, from) => {
     }
 
     // Reset password
-    const result = await resetPasswordToDefault(userId);
+    const result = await resetPasswordToDefault(numUserId);
     
     if (fromChatId) {
       if (result.result) {
-        await sendTelegramMessage(token, fromChatId, `✅ ${result.message}`);
+        const defaultPassword = userToReset.employee?.company?.default_password || "Hr12345";
+        await sendTelegramMessage(token, fromChatId, `✅ Password for <b>${userToReset.username}</b> reset to default (<code>${defaultPassword}</code>).`);
       } else {
         await sendTelegramMessage(token, fromChatId, `❌ ${result.message}`);
       }
@@ -697,19 +773,27 @@ const handleOvertimeApproval = async (token, overtimeId, action, cbId, messageId
   }
 };
 
-const handleResetPasswordCallback = async (token, userId, cbId, messageId, from, companyId) => {
+const handleResetPasswordCallback = async (token, userId, cbId, messageId, from, companyId, message) => {
   try {
+    const numUserId = parseInt(userId);
+    if (isNaN(numUserId)) {
+      await answerCallback(token, cbId, '❌ Invalid user ID.', true);
+      return;
+    }
+
     const fromUsername = (from?.username || '').toLowerCase();
     const fromChatId = from?.id;
+    const chatId = message?.chat?.id || fromChatId;
 
-    console.log(`[TgApproval] Handling reset password callback for user ${userId} from @${fromUsername}`);
+    console.log(`[TgApproval] Handling reset password callback for user ${numUserId} from @${fromUsername} (ID: ${fromChatId})`);
 
     // Get the user to reset
     const userToReset = await prisma.user.findUnique({
-      where: { id: userId },
+      where: { id: numUserId },
       include: {
         employee: {
           include: {
+            company: true,
             department_employee_department_idTodepartment: {
               include: {
                 employee_department_manager_idToemployee: true,
@@ -721,58 +805,35 @@ const handleResetPasswordCallback = async (token, userId, cbId, messageId, from,
     });
 
     if (!userToReset || !userToReset.employee) {
-      await answerCallback(token, cbId, '❌ User not found.', true);
+      await answerCallback(token, cbId, '❌ User not found in system.', true);
       return;
     }
 
-    const departmentManager = userToReset.employee.department_employee_department_idTodepartment?.employee_department_manager_idToemployee;
-    const departmentManagerUsername = departmentManager?.telegram_username ? departmentManager.telegram_username.toLowerCase().replace(/^@/, '') : null;
-
-    // Check if sender is HR/Admin OR department manager
-    const hrUsers = await prisma.user.findMany({
-      where: {
-        employee: {
-          company_id: companyId,
-          OR: [
-            {
-              role: {
-                name: {
-                  in: ["Admin", "HR", "Human Resource"],
-                },
-              },
-            },
-            {
-              department_employee_department_idTodepartment: {
-                name: {
-                  in: ["Human Resource", "HR"],
-                },
-              },
-            },
-          ],
-        },
-      },
-      include: { employee: true },
-    });
-
-    const isHr = hrUsers.some(u => {
-      const empUsername = (u.employee?.telegram_username || '').toLowerCase().replace(/^@/, '');
-      return empUsername === fromUsername;
-    });
-
-    const isDepartmentManager = departmentManagerUsername && departmentManagerUsername === fromUsername;
-
-    if (!isHr && !isDepartmentManager) {
+    const authCheck = await isAuthorizedToResetPassword(companyId, userToReset, fromChatId, fromUsername);
+    if (!authCheck.authorized) {
+      console.log(`[TgApproval] Unauthorized reset password attempt for user ${numUserId} by @${fromUsername} (ID: ${fromChatId})`);
       await answerCallback(token, cbId, '⛔ Only HR/Admin or department manager can reset passwords.', true);
       return;
     }
 
     // Reset password
-    const result = await resetPasswordToDefault(userId);
+    const result = await resetPasswordToDefault(numUserId);
 
     // Edit the message to show result
     if (result.result) {
-      await editDecisionMessage(token, fromChatId, messageId, `✅ ${result.message}`, false);
-      await answerCallback(token, cbId, 'Password reset successfully!');
+      const defaultPassword = userToReset.employee?.company?.default_password || "Hr12345";
+      const empName = `${userToReset.employee?.first_name || ''} ${userToReset.employee?.last_name || ''}`.trim() || userToReset.username;
+      
+      const successText = `✅ <b>Password Reset Successful</b>\n` +
+        `━━━━━━━━━━━━━━━━━\n` +
+        `👤 <b>Employee:</b> ${empName}\n` +
+        `📋 <b>Username:</b> ${userToReset.username}\n` +
+        `🔑 <b>Default Password:</b> <code>${defaultPassword}</code>\n` +
+        `━━━━━━━━━━━━━━━━━\n` +
+        `Authorized by: ${authCheck.role} (@${fromUsername || fromChatId})`;
+
+      await editDecisionMessage(token, chatId, messageId, successText, false);
+      await answerCallback(token, cbId, '✅ Password reset to default successfully!');
     } else {
       await answerCallback(token, cbId, `❌ ${result.message}`, true);
     }
