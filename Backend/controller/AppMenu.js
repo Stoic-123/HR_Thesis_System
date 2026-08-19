@@ -77,9 +77,15 @@ export const updateAppMenuController = async (req, res) => {
       ? { id: parseInt(id), company_id: userCompanyId }
       : { id: parseInt(id) };
 
-    const existingMenu = await prisma.appmenu.findFirst({
+    let existingMenu = await prisma.appmenu.findFirst({
       where: whereClause,
     });
+
+    if (!existingMenu) {
+      existingMenu = await prisma.appmenu.findUnique({
+        where: { id: parseInt(id) },
+      });
+    }
 
     if (!existingMenu) {
       return res.status(404).json({ success: false, message: "Menu item not found" });
@@ -99,16 +105,21 @@ export const updateAppMenuController = async (req, res) => {
       }
     }
 
+    const updateData = {
+      ...(label !== undefined && { label }),
+      ...(color !== undefined && { color }),
+      ...(is_active !== undefined && { is_active: is_active === "true" || is_active === true }),
+      ...(order !== undefined && { order: parseInt(order) }),
+      updated_at: new Date(),
+    };
+
+    if (iconUrl !== undefined) {
+      updateData.icon_url = iconUrl;
+    }
+
     const updated = await prisma.appmenu.update({
-      where: { id: parseInt(id) },
-      data: {
-        ...(label !== undefined && { label }),
-        ...(color !== undefined && { color }),
-        ...(is_active !== undefined && { is_active: is_active === "true" || is_active === true }),
-        ...(order !== undefined && { order: parseInt(order) }),
-        ...(iconUrl && { icon_url: iconUrl }),
-        updated_at: new Date(),
-      },
+      where: { id: existingMenu.id },
+      data: updateData,
     });
 
     // Broadcast real-time update via Socket.io

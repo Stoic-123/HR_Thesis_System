@@ -235,15 +235,34 @@ const buildPayrollPeriodContext = async (payroll) => {
   const employeeId = payroll.employee_id;
   const baseSalary = toNumber(payroll.base_salary);
 
-  const [overtimeRecords, leaveRecords, lateRecords] = await Promise.all([
+  const [overtimeRecords, leaveRecords, lateRecords, approvedLateRequests] = await Promise.all([
     getApprovedOvertimeForPeriod(employeeId, startDate, endDate),
     getApprovedLeaveForPeriod(employeeId, startDate, endDate),
     getLateAttendanceForPeriod(employeeId, startDate, endDate),
+    prisma.laterequest.findMany({
+      where: {
+        employee_id: employeeId,
+        request_date: { gte: startDate, lte: endDate },
+        status: "approved",
+      },
+      select: { request_date: true, time_field: true, request_type: true },
+    }),
   ]);
 
+  const approvedDatesSet = new Set(
+    approvedLateRequests.map((r) => r.request_date.toISOString().split("T")[0])
+  );
+
+  // Only unapproved late records incur deductions
+  const unapprovedLateRecords = lateRecords.filter(
+    (record) => !approvedDatesSet.has(record.work_at.toISOString().split("T")[0])
+  );
+
   const lateDays = new Set(
-    lateRecords.map((record) => record.work_at.toISOString().split("T")[0]),
+    unapprovedLateRecords.map((record) => record.work_at.toISOString().split("T")[0]),
   ).size;
+
+  const approvedLateDays = approvedDatesSet.size;
 
   const leaveItems = leaveRecords.map((leave) => {
     const days = countLeaveDaysInPeriod(leave.start_date, leave.end_date, startDate, endDate);
@@ -266,6 +285,7 @@ const buildPayrollPeriodContext = async (payroll) => {
 
   return {
     lateDays,
+    approvedLateDays,
     leaveDays,
     leaveRecords: leaveItems,
     overtime: {

@@ -11,6 +11,7 @@ async function main() {
       telegram_group_id: true,
       telegram_attendance_group_id: true,
       telegram_leave_group_id: true,
+      telegram_late_group_id: true,
       telegram_overtime_group_id: true,
       telegram_announcement_group_id: true,
     },

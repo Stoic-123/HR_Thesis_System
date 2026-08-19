@@ -10,11 +10,24 @@ import {
   UserCheck,
   Users,
   Printer,
+  Eye,
+  FileText,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
+  User,
+  Sparkles,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import {
   Popover,
   PopoverContent,
@@ -32,6 +45,7 @@ import { cn } from "@/lib/utils";
 import {
   getAttendanceReport,
   type AttendanceReport,
+  type AttendanceRow,
 } from "@/services/attendance.services";
 import { getDepartments } from "@/services/department.services";
 import { getAllEmployees } from "@/services/employee.services";
@@ -121,6 +135,9 @@ const TimeAttendanceReportPage = () => {
   // Pagination states
   const [page, setPage] = useState<number>(1);
   const [limit, setLimit] = useState<number>(10);
+
+  // Selected row for Late/Early details modal
+  const [selectedRowForDetails, setSelectedRowForDetails] = useState<AttendanceRow | null>(null);
 
   const handleDateRangeSelect = (range: DateRange | undefined) => {
     setDateRange(range);
@@ -298,8 +315,23 @@ const TimeAttendanceReportPage = () => {
               }
             ];
 
-        const statusLabel = row.status === "present" ? "មកទាន់ពេល" : row.status === "late" ? "យឺតយ៉ាវ" : "ចេញមុន";
-        const statusColor = row.status === "present" ? "text-emerald" : row.status === "late" ? "text-amber" : "text-rose";
+        const statusLabel =
+          row.status === "present"
+            ? "មកទាន់ពេល"
+            : row.status === "late_approved"
+            ? "យឺត (បានអនុម័ត)"
+            : row.status === "early_approved"
+            ? "ចេញមុន (បានអនុម័ត)"
+            : row.status === "late"
+            ? "យឺតយ៉ាវ"
+            : "ចេញមុន";
+
+        const statusColor =
+          row.status === "present" || row.status === "late_approved" || row.status === "early_approved"
+            ? "text-emerald"
+            : row.status === "late"
+            ? "text-amber"
+            : "text-rose";
 
         return {
           cells: [
@@ -331,17 +363,27 @@ const TimeAttendanceReportPage = () => {
     present: {
       label: t("onTime"),
       dot: "bg-emerald-500",
-      className: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+      className: "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300",
     },
     late: {
       label: t("late"),
       dot: "bg-amber-500",
-      className: "bg-amber-50 text-amber-700 ring-amber-200",
+      className: "bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300",
+    },
+    late_approved: {
+      label: t("lateApproved") || "Late (Approved)",
+      dot: "bg-emerald-500",
+      className: "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300",
     },
     early: {
       label: t("early"),
       dot: "bg-rose-500",
-      className: "bg-rose-50 text-rose-700 ring-rose-200",
+      className: "bg-rose-50 text-rose-700 ring-rose-200 dark:bg-rose-950/40 dark:text-rose-300",
+    },
+    early_approved: {
+      label: t("earlyApproved") || "Early (Approved)",
+      dot: "bg-emerald-500",
+      className: "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300",
     },
   } as const;
 
@@ -539,7 +581,8 @@ const TimeAttendanceReportPage = () => {
                         </th>
                       </>
                     )}
-                    <th className="sticky top-0 bg-white/75 dark:bg-zinc-950/75 backdrop-blur-md z-10 py-3 pl-4 pr-6 text-right border-b border-border/50">{t("statusCol")}</th>
+                    <th className="sticky top-0 bg-white/75 dark:bg-zinc-950/75 backdrop-blur-md z-10 py-3 px-4 text-center border-b border-border/50">{t("statusCol")}</th>
+                    <th className="sticky top-0 bg-white/75 dark:bg-zinc-950/75 backdrop-blur-md z-10 py-3 pl-4 pr-6 text-center border-b border-border/50">{t("actionCol")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/30">
@@ -632,7 +675,7 @@ const TimeAttendanceReportPage = () => {
                           </>
                         )}
 
-                        <td className="py-3.5 pl-4 pr-6 text-right">
+                        <td className="py-3.5 px-4 text-center">
                           <Badge
                             className={`rounded-full px-3 ring-1 ${badge.className}`}
                           >
@@ -641,6 +684,18 @@ const TimeAttendanceReportPage = () => {
                             />
                             {badge.label}
                           </Badge>
+                        </td>
+
+                        <td className="py-3.5 pl-4 pr-6 text-center">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="size-8 p-0 rounded-xl text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all cursor-pointer"
+                            onClick={() => setSelectedRowForDetails(row)}
+                            title={t("viewDetails")}
+                          >
+                            <Eye className="size-4" />
+                          </Button>
                         </td>
                       </tr>
                     );
@@ -707,6 +762,236 @@ const TimeAttendanceReportPage = () => {
         )}
       </CardContent>
       </Card>
+
+      {/* Late & Early Request Details Modal */}
+      <Dialog
+        open={Boolean(selectedRowForDetails)}
+        onOpenChange={(open) => {
+          if (!open) setSelectedRowForDetails(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-[560px] rounded-3xl p-0 overflow-hidden border-border/60 bg-card shadow-2xl">
+          {selectedRowForDetails && (
+            <div className="flex flex-col">
+              {/* Modal Top Header */}
+              <div className="p-6 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-b border-border/50">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-center gap-3.5">
+                    <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-sm font-extrabold text-primary shadow-xs ring-1 ring-primary/20">
+                      {initials(selectedRowForDetails.employee)}
+                    </div>
+                    <div>
+                      <h2 className="text-base font-bold text-foreground leading-tight">
+                        {selectedRowForDetails.employee}
+                      </h2>
+                      <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5">
+                        <CalendarIcon className="size-3.5 text-muted-foreground/70" />
+                        {formatReportDate(selectedRowForDetails.date, locale)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <Badge
+                    className={cn(
+                      "rounded-full px-3 py-1 ring-1 text-xs font-semibold shrink-0",
+                      (STATUS_MAP[selectedRowForDetails.status] ?? STATUS_MAP.present).className
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "mr-1.5 inline-block size-1.5 rounded-full",
+                        (STATUS_MAP[selectedRowForDetails.status] ?? STATUS_MAP.present).dot
+                      )}
+                    />
+                    {(STATUS_MAP[selectedRowForDetails.status] ?? STATUS_MAP.present).label}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+                {/* Attendance Scans Summary */}
+                <div className="space-y-2.5">
+                  <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                    <Clock3 className="size-3.5 text-primary" />
+                    {t("attendanceScans")}
+                  </h3>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    {timeModes.length > 0 ? (
+                      timeModes.map((tm) => {
+                        const scan = selectedRowForDetails.scans?.[tm.id];
+                        return (
+                          <div
+                            key={tm.id}
+                            className="p-3 rounded-2xl bg-muted/30 border border-border/50 text-center"
+                          >
+                            <span className="text-[11px] font-semibold text-muted-foreground block truncate">
+                              {formatTimeModeName(tm.name)}
+                            </span>
+                            <span
+                              className={cn(
+                                "mt-1 block font-mono text-sm font-bold",
+                                scan ? (scan.is_late ? "text-red-500" : scan.is_early ? "text-rose-500" : "text-emerald-500") : "text-red-500/70"
+                              )}
+                            >
+                              {scan?.time || t("missed") || "Missed"}
+                            </span>
+                            {scan?.late_minutes && scan.late_minutes > 0 ? (
+                              <span className="text-[10px] font-semibold text-red-500 mt-0.5 block font-mono">
+                                ({formatLateMinutes(scan.late_minutes)})
+                              </span>
+                            ) : null}
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <>
+                        <div className="p-3 rounded-2xl bg-muted/30 border border-border/50 text-center col-span-1">
+                          <span className="text-[11px] font-semibold text-muted-foreground block">
+                            {t("checkInCol")}
+                          </span>
+                          <span className="mt-1 block font-mono text-sm font-bold text-emerald-500">
+                            {selectedRowForDetails.checkIn || t("missed")}
+                          </span>
+                        </div>
+                        <div className="p-3 rounded-2xl bg-muted/30 border border-border/50 text-center col-span-1">
+                          <span className="text-[11px] font-semibold text-muted-foreground block">
+                            {t("checkOutCol")}
+                          </span>
+                          <span className="mt-1 block font-mono text-sm font-bold text-rose-500">
+                            {selectedRowForDetails.checkOut || t("missed")}
+                          </span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Late & Early Requests Section */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                      <AlertCircle className="size-3.5 text-primary" />
+                      {t("requestsTitle")}
+                    </h3>
+                    {selectedRowForDetails.late_requests && selectedRowForDetails.late_requests.length > 0 && (
+                      <span className="text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                        {selectedRowForDetails.late_requests.length}
+                      </span>
+                    )}
+                  </div>
+
+                  {selectedRowForDetails.late_requests && selectedRowForDetails.late_requests.length > 0 ? (
+                    <div className="space-y-3">
+                      {selectedRowForDetails.late_requests.map((req) => {
+                        const isEarly = req.request_type === "EARLY";
+                        const isApproved = req.status === "approved";
+                        const isPending = req.status === "pending";
+                        const isRejected = req.status === "rejected";
+                        const isCancelled = req.status === "cancelled";
+
+                        return (
+                          <div
+                            key={req.id}
+                            className={cn(
+                              "p-4 rounded-2xl border transition-all space-y-3",
+                              isApproved
+                                ? "bg-emerald-500/5 border-emerald-200 dark:border-emerald-900/40"
+                                : isPending
+                                ? "bg-amber-500/5 border-amber-200 dark:border-amber-900/40"
+                                : isCancelled
+                                ? "bg-muted/40 border-border/70 opacity-80"
+                                : "bg-rose-500/5 border-rose-200 dark:border-rose-900/40"
+                            )}
+                          >
+                            {/* Request Header */}
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <Badge
+                                  className={cn(
+                                    "rounded-xl px-2.5 py-1 text-xs font-semibold border shadow-none",
+                                    isEarly
+                                      ? "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300"
+                                      : "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300"
+                                  )}
+                                >
+                                  {isEarly ? (
+                                    <>🏃‍♂️ {t("earlyRequest")}</>
+                                  ) : (
+                                    <>⏰ {t("lateRequest")}</>
+                                  )}
+                                </Badge>
+
+                                {req.scheduled_time && (
+                                  <span className="text-xs font-mono font-bold text-foreground/80 bg-background/80 px-2 py-0.5 rounded-lg border border-border/40">
+                                    {req.time_field || "Shift"}: {req.scheduled_time}
+                                  </span>
+                                )}
+                              </div>
+
+                              <Badge
+                                className={cn(
+                                  "rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 shadow-none",
+                                  isApproved && "bg-emerald-100/70 text-emerald-800 ring-emerald-300 dark:bg-emerald-950 dark:text-emerald-300",
+                                  isPending && "bg-amber-100/70 text-amber-800 ring-amber-300 dark:bg-amber-950 dark:text-amber-300",
+                                  isRejected && "bg-rose-100/70 text-rose-800 ring-rose-300 dark:bg-rose-950 dark:text-rose-300",
+                                  isCancelled && "bg-muted text-muted-foreground ring-border/80"
+                                )}
+                              >
+                                {isApproved && `✅ ${t("approved")}`}
+                                {isPending && `⏳ ${t("pending")}`}
+                                {isRejected && `❌ ${t("rejected")}`}
+                                {isCancelled && `🚫 ${t("cancelled") || "Cancelled"}`}
+                              </Badge>
+                            </div>
+
+                            {/* Reason Box */}
+                            <div className="p-3 bg-background/90 rounded-xl border border-border/50 text-xs text-foreground/90 space-y-1">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                                {t("reason")}
+                              </span>
+                              <p className="font-medium whitespace-pre-wrap leading-relaxed">
+                                {req.reason || "—"}
+                              </p>
+                            </div>
+
+                            {/* Meta details footer */}
+                            <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted-foreground pt-1 border-t border-border/30">
+                              <div className="flex items-center gap-1.5">
+                                <User className="size-3.5 text-muted-foreground/70" />
+                                <span>{t("approver")}:</span>
+                                <span className="font-semibold text-foreground">
+                                  {req.approver || (isPending ? "—" : "Manager")}
+                                </span>
+                              </div>
+
+                              {req.created_at && (
+                                <span className="font-mono text-[10px]">
+                                  {new Date(req.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center p-8 rounded-2xl bg-muted/20 border border-dashed border-border/60 text-center space-y-2">
+                      <div className="p-3 rounded-2xl bg-muted text-muted-foreground shadow-xs">
+                        <FileText className="size-6 text-muted-foreground/80" />
+                      </div>
+                      <p className="text-xs font-semibold text-muted-foreground">
+                        {t("noRequestsForDay")}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -20,7 +20,7 @@ dotenv.config();
 const generateToken = (id, username, company_id, token_version) => {
   const payload = { id, username, company_id, token_version };
   const token = jwt.sign(payload, process.env.JWT_SECRET, {
-    expiresIn: process.env.EXPIRED_AT || "2h",
+    expiresIn: process.env.EXPIRED_AT || "14d",
   });
   console.log("[Auth] Generated Token:", token);
   console.log("[Auth] JWT_SECRET used for signing:", process.env.JWT_SECRET);
@@ -118,7 +118,7 @@ export const employeeLoginController = async (req, res) => {
     );
     const isProduction = !!process.env.COOKIE_DOMAIN;
     const cookieOptions = {
-      maxAge: 24 * 60 * 60 * 1000, // 1 day
+      maxAge: 14 * 24 * 60 * 60 * 1000, // 14 days (2 weeks)
       httpOnly: true,
       secure: isProduction,
       sameSite: isProduction ? "none" : "lax",
@@ -274,7 +274,9 @@ export const updateUserProfileController = async (req, res) => {
       phone_number1, 
       phone_number2, 
       address, 
-      partner_name 
+      partner_name,
+      remove_profile,
+      remove_avatar,
     } = req.body;
     let profile_path = null;
 
@@ -340,17 +342,17 @@ export const updateUserProfileController = async (req, res) => {
     if (currentUser.employee_id && currentUser.employee) {
       const empUpdate = {};
 
-      // Only Admins can modify first_name, last_name, and profile_path directly
-      if (isAdmin) {
-        if (first_name !== undefined && first_name !== null && first_name.trim() !== "") {
-          empUpdate.first_name = first_name.trim();
-        }
-        if (last_name !== undefined && last_name !== null) {
-          empUpdate.last_name = last_name.trim();
-        }
-        if (profile_path) {
-          empUpdate.profile_path = profile_path;
-        }
+      if (remove_profile === "true" || remove_avatar === "true") {
+        empUpdate.profile_path = null;
+      } else if (profile_path) {
+        empUpdate.profile_path = profile_path;
+      }
+
+      if (first_name !== undefined && first_name !== null && first_name.trim() !== "") {
+        empUpdate.first_name = first_name.trim();
+      }
+      if (last_name !== undefined && last_name !== null) {
+        empUpdate.last_name = last_name.trim();
       }
 
       // Fields every employee can update: email, telegram_username, phone_number, address, gender

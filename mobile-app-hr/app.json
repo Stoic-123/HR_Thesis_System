@@ -48,7 +48,8 @@
         {
           "photosPermission": "Allow $(PRODUCT_NAME) to access your photos."
         }
-      ]
+      ],
+      "expo-font"
     ],
     "android": {
       "backgroundColor": "#0F172A",

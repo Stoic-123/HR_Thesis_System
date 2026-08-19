@@ -12,9 +12,10 @@ import prisma from '../lib/prisma.js';
 import { clockAttendance } from './Attendance.js';
 import { resetPasswordToDefault } from './Auth.js';
 import { sendTelegramMessage } from './Telegram.js';
-import { toICTDate } from '../utils/timezone.js';
+import { toICTDate, formatICTDate, formatICTTime } from '../utils/timezone.js';
 import { ApproveLeave, RejectLeave } from './Leave.js';
 import { approveOvertime, rejectOvertime } from './Overtime.js';
+import { createLateRequest, approveLateRequest, rejectLateRequest, cancelLateRequest, validateAndInferLateEarlyRequest } from './LateRequest.js';
 
 const TELEGRAM_API = 'https://api.telegram.org';
 
@@ -228,6 +229,7 @@ export const processTelegramCallbacks = async () => {
         telegram_group_id:  true,
         telegram_attendance_group_id: true,
         telegram_leave_group_id: true,
+        telegram_late_group_id: true,
         telegram_overtime_group_id: true,
         telegram_announcement_group_id: true,
       },
@@ -296,6 +298,7 @@ const processBotCallbacks = async (token, companyList) => {
         const resetMatch = cbData.match(/^resetpassword_(\d+)$/);
         const leaveApprovalMatch = cbData.match(/^(approve_leave|reject_leave)_(\[.*?\])$/);
         const overtimeApprovalMatch = cbData.match(/^(approve_overtime|reject_overtime)_(\d+)$/);
+        const lateApprovalMatch = cbData.match(/^(approve_late|reject_late)_(\d+)$/);
 
         if (approvalMatch) {
           const action = approvalMatch[1];
@@ -321,10 +324,16 @@ const processBotCallbacks = async (token, companyList) => {
           const messageId = message?.message_id;
           const chatId = message?.chat?.id;
           await handleOvertimeApproval(token, overtimeId, action, cbId, messageId, chatId, from, companyId);
+        } else if (lateApprovalMatch) {
+          const action = lateApprovalMatch[1];
+          const lateId = parseInt(lateApprovalMatch[2]);
+          const messageId = message?.message_id;
+          const chatId = message?.chat?.id;
+          await handleLateApproval(token, lateId, action, cbId, messageId, chatId, from, companyId);
         }
       }
 
-      // Handle message commands (reset password)
+      // Handle message commands (reset password, #late request)
       const msg = update.message;
       if (msg && msg.from) {
         const from = msg.from;
@@ -338,9 +347,21 @@ const processBotCallbacks = async (token, companyList) => {
 
         if (msg.text) {
           const text = msg.text.trim();
-          const match = text.match(/^\/resetpassword_(\d+)$/);
-          if (match) {
-            const userId = match[1];
+          const lateMatch = text.match(/^(?:#|\/)late(?:@\w+)?(?:\s+([\s\S]+))?$/i);
+          const earlyMatch = text.match(/^(?:#|\/)(?:early|ealry)(?:@\w+)?(?:\s+([\s\S]+))?$/i);
+          const cancelMatch = text.match(/^(?:#|\/)cancel(?:_(?:late|early))?(?:@\w+)?$/i);
+          const resetMatch = text.match(/^\/resetpassword_(\d+)$/);
+
+          if (lateMatch) {
+            const reason = lateMatch[1] ? lateMatch[1].trim() : "";
+            await handleLateEarlyRequestCommand(token, msg, from, reason, companyList, "LATE");
+          } else if (earlyMatch) {
+            const reason = earlyMatch[1] ? earlyMatch[1].trim() : "";
+            await handleLateEarlyRequestCommand(token, msg, from, reason, companyList, "EARLY");
+          } else if (cancelMatch) {
+            await handleCancelLateRequestCommand(token, msg, from, companyList);
+          } else if (resetMatch) {
+            const userId = resetMatch[1];
             await handleResetPasswordCommand(token, groupId, userId, from);
           } else if (text === '/start') {
             // Send welcome message
@@ -578,26 +599,44 @@ const handleResetPasswordCommand = async (token, groupId, userId, from) => {
   }
 };
 
-// Helper function to find employee by telegram username
-const findEmployeeByTelegramUsername = async (fromUsername, companyId) => {
-  if (!fromUsername) return null;
-  const normalizedUsername = fromUsername.replace(/^@/, '').toLowerCase();
+// Helper function to find employee by telegram username or chat ID
+const findEmployeeByTelegramUsername = async (fromUsername, companyId, fromChatId = null) => {
+  const cleanUsername = fromUsername ? fromUsername.replace(/^@/, '').toLowerCase().trim() : null;
+  const cleanChatId = fromChatId ? fromChatId.toString().trim() : null;
+  if (!cleanUsername && !cleanChatId) return null;
   
   const employees = await prisma.employee.findMany({
     where: {
       company_id: companyId,
-      telegram_username: { not: null },
+      is_active: 'active',
+      OR: [
+        { telegram_username: { not: null } },
+        { telegram_chat_id: { not: null } },
+      ],
     },
     include: {
       role: true,
-      department_employee_department_idTodepartment: true,
+      department_employee_department_idTodepartment: {
+        include: {
+          employee_department_manager_idToemployee: true,
+        },
+      },
     },
   });
   
-  return employees.find(emp => {
-    const empUsername = emp.telegram_username.replace(/^@/, '').toLowerCase();
-    return empUsername === normalizedUsername;
-  }) || null;
+  return (
+    employees.find((emp) => {
+      const empUsername = emp.telegram_username
+        ? emp.telegram_username.replace(/^@/, '').toLowerCase().trim()
+        : null;
+      const empChatId = emp.telegram_chat_id
+        ? emp.telegram_chat_id.toString().trim()
+        : null;
+      if (cleanUsername && empUsername && empUsername === cleanUsername) return true;
+      if (cleanChatId && empChatId && empChatId === cleanChatId) return true;
+      return false;
+    }) || null
+  );
 };
 
 // Function to handle leave approval/rejection callbacks
@@ -1025,3 +1064,457 @@ const handleApprovalAction = async (token, groupId, pendingId, action, cbId, mes
     }
   }
 };
+
+/**
+ * Handle #late and #early message command
+ */
+const handleLateEarlyRequestCommand = async (token, msg, from, reason, companyList, commandType = "LATE") => {
+  try {
+    const fromUsername = from?.username ? from.username.replace(/^@/, '').toLowerCase().trim() : null;
+    const fromChatId = from?.id ? from.id.toString().trim() : null;
+
+    console.log(`[TgApproval] Processing #${commandType.toLowerCase()} request from @${fromUsername} (ID: ${fromChatId}): "${reason}"`);
+
+    // 1. Find employee across the companies associated with this bot token
+    let employee = null;
+    let targetCompany = null;
+
+    for (const company of companyList) {
+      const found = await findEmployeeByTelegramUsername(fromUsername, company.id, fromChatId);
+      if (found) {
+        employee = found;
+        targetCompany = company;
+        break;
+      }
+    }
+
+    if (!employee || !targetCompany) {
+      const userDisplay = fromUsername ? `@${fromUsername}` : (from?.first_name || "User");
+      const notFoundMsg =
+        `⚠️ <b>រកមិនឃើញគណនីបុគ្គលិក / Employee Not Found</b>\n` +
+        `━━━━━━━━━━━━━━━━━━\n` +
+        `គណនី Telegram របស់អ្នក (<b>${userDisplay}</b>) មិនទាន់ត្រូវបានភ្ជាប់ក្នុងប្រព័ន្ធ HR នៅឡើយទេ។\n` +
+        `សូមភ្ជាប់ Telegram Username របស់អ្នកក្នុង Profile ប្រព័ន្ធ HR ដើម្បីស្នើសុំ។\n` +
+        `<i>Your Telegram account is not linked to any active employee profile.</i>`;
+
+      await sendTelegramMessage(token, msg.chat.id, notFoundMsg, {
+        reply_to_message_id: msg.message_id,
+      });
+      return;
+    }
+
+    // 2. Validate timing and auto-detect target shift
+    const validation = await validateAndInferLateEarlyRequest({
+      employee_id: employee.id,
+      company_id: targetCompany.id,
+      commandType,
+      requestDate: new Date(),
+    });
+
+    if (!validation.valid) {
+      const errorMsg =
+        `⚠️ <b>មិនអាចស្នើសុំបានទេ / Request Not Allowed</b>\n` +
+        `━━━━━━━━━━━━━━━━━━\n` +
+        `${validation.message}`;
+
+      await sendTelegramMessage(token, msg.chat.id, errorMsg, {
+        reply_to_message_id: msg.message_id,
+      });
+      return;
+    }
+
+    // 3. Identify hierarchy & who to mention as approver
+    const dept = employee.department_employee_department_idTodepartment;
+    const deptManager = dept?.employee_department_manager_idToemployee;
+    const isDeptManager = deptManager && deptManager.id === employee.id;
+    const roleName = (employee.role?.name || '').toLowerCase();
+    const isManagerRole = isDeptManager || roleName.includes('manager') || roleName.includes('director') || roleName.includes('lead');
+
+    let mentionLine = '';
+    let approverUsername = null;
+
+    if (isManagerRole) {
+      // Requester is a Manager -> MUST be approved by Admin / Super Admin
+      const adminUsers = await prisma.user.findMany({
+        where: {
+          employee: {
+            company_id: targetCompany.id,
+            role: {
+              name: {
+                in: [
+                  'Admin', 'admin', 'ADMIN',
+                  'Super Admin', 'super admin', 'SuperAdmin', 'SUPER ADMIN',
+                  'General Manager', 'general manager', 'Director', 'director'
+                ]
+              }
+            }
+          }
+        },
+        include: {
+          employee: true
+        }
+      });
+
+      const adminUsernames = adminUsers
+        .map(u => u.employee?.telegram_username?.replace(/^@/, '').trim())
+        .filter(Boolean);
+
+      if (adminUsernames.length > 0) {
+        mentionLine = adminUsernames.map(u => `@${u}`).join(' ') + ' (Admin)';
+        approverUsername = adminUsernames[0];
+      } else {
+        mentionLine = '👔 <b>Admin / Super Admin</b>';
+      }
+    } else {
+      // Regular staff -> Mention Department Manager (or HR if no manager)
+      if (deptManager) {
+        const rawMgrUsername = deptManager.telegram_username ? deptManager.telegram_username.replace(/^@/, '').trim() : null;
+        if (rawMgrUsername) {
+          mentionLine = `@${rawMgrUsername}`;
+          approverUsername = rawMgrUsername;
+        } else {
+          mentionLine = `${deptManager.first_name} ${deptManager.last_name} (Manager)`;
+        }
+      } else {
+        mentionLine = '👔 <b>HR / Admin</b>';
+      }
+    }
+
+    // 4. Create Request in database
+    const finalReason = reason ? reason.trim() : "មិនបានបញ្ជាក់មូលហេតុ / Not specified";
+    const isEarly = validation.request_type === "EARLY";
+
+    const createResult = await createLateRequest({
+      employee_id: employee.id,
+      company_id: targetCompany.id,
+      request_type: validation.request_type,
+      time_field: validation.time_field,
+      scheduled_time: validation.scheduled_time,
+      reason: finalReason,
+      request_date: new Date(),
+      manager_telegram_username: approverUsername,
+    });
+
+    if (!createResult.result || !createResult.data) {
+      await sendTelegramMessage(token, msg.chat.id, `❌ មានបញ្ហាក្នុងការបង្កើតសំណើ: ${createResult.message}`, {
+        reply_to_message_id: msg.message_id,
+      });
+      return;
+    }
+
+    const lateRequest = createResult.data;
+    const employeeFullName = `${employee.first_name} ${employee.last_name}`.trim();
+    const formattedDate = formatICTDate(lateRequest.request_date);
+    const formattedTime = formatICTTime(lateRequest.request_date);
+
+    // 5. Formulate request message
+    const titleKh = isEarly
+      ? `🏃‍♂️ <b>សំណើសុំចេញមុន / Early Leave Request (${validation.field_label}: ${validation.scheduled_time})</b>`
+      : `⏰ <b>សំណើសុំយឺត / Late Request (${validation.field_label}: ${validation.scheduled_time})</b>`;
+
+    const caption =
+      `${titleKh}\n` +
+      `━━━━━━━━━━━━━━━━━━\n` +
+      `👤 <b>បុគ្គលិក / Employee:</b> ${employeeFullName}\n` +
+      `🏢 <b>ផ្នែក / Department:</b> ${dept?.name || 'N/A'}\n` +
+      `🕐 <b>វេន / Shift:</b> ${validation.field_label} (${validation.scheduled_time})\n` +
+      `📅 <b>កាលបរិច្ឆេទ / Date:</b> ${formattedDate} (${formattedTime})\n` +
+      `💬 <b>មូលហេតុ / Reason:</b> ${finalReason}\n` +
+      `👔 <b>អ្នកអនុម័ត / Approver:</b> ${mentionLine}\n` +
+      `━━━━━━━━━━━━━━━━━━\n` +
+      `<i>សូមអ្នកគ្រប់គ្រងពិនិត្យ និងអនុម័តសំណើនេះ</i>`;
+
+    const inlineKeyboard = {
+      inline_keyboard: [
+        [
+          { text: "✅ អនុម័ត / Approve", callback_data: `approve_late_${lateRequest.id}` },
+          { text: "❌ បដិសេធ / Reject", callback_data: `reject_late_${lateRequest.id}` }
+        ]
+      ]
+    };
+
+    // 6. Target group selection
+    const activeGroupId = targetCompany.telegram_late_group_id || targetCompany.telegram_attendance_group_id || targetCompany.telegram_group_id;
+    const isGroupMessage = msg.chat.type === 'group' || msg.chat.type === 'supergroup';
+    const targetChatId = isGroupMessage ? msg.chat.id : (activeGroupId || msg.chat.id);
+
+    const tgRes = await sendTelegramMessage(token, targetChatId, caption, {
+      reply_markup: inlineKeyboard,
+      reply_to_message_id: (String(targetChatId) === String(msg.chat.id) ? msg.message_id : undefined)
+    });
+
+    if (tgRes?.result?.message_id) {
+      await prisma.laterequest.update({
+        where: { id: lateRequest.id },
+        data: {
+          telegram_message_id: tgRes.result.message_id,
+          telegram_chat_id: String(targetChatId),
+        }
+      });
+      console.log(`[TgApproval] Sent ${validation.request_type} request #${lateRequest.id} to chat ${targetChatId}, msg_id=${tgRes.result.message_id}`);
+    }
+
+    // If sent from private chat and dispatched to group, acknowledge in private chat too
+    if (!isGroupMessage && activeGroupId && String(activeGroupId) !== String(msg.chat.id)) {
+      const ackKh = isEarly ? "សំណើសុំចេញមុនរបស់អ្នក" : "សំណើសុំយឺតរបស់អ្នក";
+      await sendTelegramMessage(token, msg.chat.id, `✅ ${ackKh}ត្រូវបានបញ្ជូនទៅក្រុមអ្នកគ្រប់គ្រងហើយ / Your request has been sent for approval.`);
+    }
+
+  } catch (err) {
+    console.error("[TgApproval] handleLateEarlyRequestCommand error:", err.message);
+    await sendTelegramMessage(token, msg.chat.id, "❌ Error processing request.", {
+      reply_to_message_id: msg.message_id
+    });
+  }
+};
+
+/**
+ * Handle late / early approval / rejection callback
+ */
+const handleLateApproval = async (token, lateId, action, cbId, messageId, chatId, from, companyId) => {
+  try {
+    const fromUsername = (from?.username || '').toLowerCase();
+    const fromChatId = from?.id ? from.id.toString() : null;
+
+    console.log(`[TgApproval] Handling late ${action} for request ${lateId} from @${fromUsername} (ID: ${fromChatId})`);
+
+    const approverEmployee = await findEmployeeByTelegramUsername(fromUsername, companyId, fromChatId);
+    if (!approverEmployee) {
+      await answerCallback(token, cbId, 'You are not registered in the HR system with this Telegram account.', true);
+      return;
+    }
+
+    const lateRequest = await prisma.laterequest.findUnique({
+      where: { id: lateId },
+      include: {
+        employee: {
+          include: {
+            role: true,
+            department_employee_department_idTodepartment: {
+              include: {
+                employee_department_manager_idToemployee: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!lateRequest) {
+      await answerCallback(token, cbId, 'Request not found.', true);
+      return;
+    }
+
+    if (lateRequest.status !== 'pending') {
+      await answerCallback(token, cbId, `This request has already been ${lateRequest.status}.`, true);
+      return;
+    }
+
+    const isEarly = lateRequest.request_type === 'EARLY';
+    const typeLabelEn = isEarly ? 'early leave' : 'late';
+
+    // 1. Self-approval is strictly forbidden
+    const isSelfRequest = lateRequest.employee_id === approverEmployee.id;
+    if (isSelfRequest) {
+      await answerCallback(token, cbId, `⛔ You cannot approve your own ${typeLabelEn} request. It must be approved by an Admin / Manager.`, true);
+      return;
+    }
+
+    // 2. Role & Hierarchy checks
+    const approverRole = (approverEmployee.role?.name || '').toLowerCase();
+    const isApproverAdmin =
+      approverRole === 'admin' ||
+      approverRole === 'superadmin' ||
+      approverRole === 'super admin' ||
+      approverRole === 'director' ||
+      approverRole === 'general manager';
+
+    const isApproverHr =
+      approverRole.includes('hr') ||
+      (approverEmployee.department_employee_department_idTodepartment?.name || '').toLowerCase().includes('hr');
+
+    const reqDeptManager = lateRequest.employee.department_employee_department_idTodepartment?.employee_department_manager_idToemployee;
+    const isApproverDeptManager = reqDeptManager && reqDeptManager.id === approverEmployee.id;
+
+    // Check if requester is a manager
+    const requesterIsDeptManager = reqDeptManager && reqDeptManager.id === lateRequest.employee_id;
+    const requesterRole = (lateRequest.employee.role?.name || '').toLowerCase();
+    const requesterIsManager = requesterIsDeptManager || requesterRole.includes('manager') || requesterRole.includes('director') || requesterRole.includes('lead');
+
+    if (requesterIsManager) {
+      // If a manager requested late, ONLY Admin / Super Admin (or HR Manager) can approve
+      if (!isApproverAdmin && !isApproverHr) {
+        await answerCallback(token, cbId, `⛔ Only Admin / Super Admin can approve a manager's ${typeLabelEn} request.`, true);
+        return;
+      }
+    } else {
+      // Regular employee -> can be approved by Department Manager or HR/Admin
+      if (!isApproverDeptManager && !isApproverHr && !isApproverAdmin) {
+        await answerCallback(token, cbId, `⛔ Only the department manager or HR/Admin can approve/reject this ${typeLabelEn} request.`, true);
+        return;
+      }
+    }
+
+    // 3. Process approval / rejection
+    const isApprove = action === 'approve_late';
+    if (isApprove) {
+      await approveLateRequest(lateId, approverEmployee.id);
+    } else {
+      await rejectLateRequest(lateId, approverEmployee.id);
+    }
+
+    // 4. Edit message in Telegram
+    const employeeFullName = `${lateRequest.employee.first_name} ${lateRequest.employee.last_name}`.trim();
+    const approverFullName = `${approverEmployee.first_name} ${approverEmployee.last_name}`.trim();
+    const approverDisplay = fromUsername ? `@${fromUsername}` : approverFullName;
+    const statusKh = isApprove ? '✅ បានអនុម័ត / Approved' : '❌ បានបដិសេធ / Rejected';
+
+    const titleKh = isEarly
+      ? `🏃‍♂️ <b>សំណើសុំចេញមុន / Early Leave Request</b>`
+      : `⏰ <b>សំណើសុំយឺត / Late Request</b>`;
+
+    const shiftLine = lateRequest.time_field && lateRequest.scheduled_time
+      ? `🕐 <b>វេន / Shift:</b> ${lateRequest.time_field} (${lateRequest.scheduled_time})\n`
+      : '';
+
+    const newText =
+      `${titleKh}\n` +
+      `━━━━━━━━━━━━━━━━━━\n` +
+      `👤 <b>បុគ្គលិក / Employee:</b> ${employeeFullName}\n` +
+      `🏢 <b>ផ្នែក / Department:</b> ${lateRequest.employee.department_employee_department_idTodepartment?.name || 'N/A'}\n` +
+      shiftLine +
+      `📅 <b>កាលបរិច្ឆេទ / Date:</b> ${formatICTDate(lateRequest.request_date)} (${formatICTTime(lateRequest.request_date)})\n` +
+      `💬 <b>មូលហេតុ / Reason:</b> ${lateRequest.reason || 'N/A'}\n` +
+      `━━━━━━━━━━━━━━━━━━\n` +
+      `<b>ស្ថានភាព / Status:</b> ${statusKh}\n` +
+      `👔 <b>អនុម័តដោយ / Action By:</b> ${approverDisplay} (${approverFullName})`;
+
+    await editDecisionMessage(token, chatId, messageId, newText, false);
+    const toastKh = isEarly
+      ? (isApprove ? 'បានអនុម័តសំណើសុំចេញមុន ✅' : 'បានបដិសេធសំណើសុំចេញមុន ❌')
+      : (isApprove ? 'បានអនុម័តសំណើសុំយឺត ✅' : 'បានបដិសេធសំណើសុំយឺត ❌');
+    await answerCallback(token, cbId, toastKh);
+
+  } catch (err) {
+    console.error('[TgApproval] handleLateApproval error:', err.message);
+    await answerCallback(token, cbId, 'Error processing request.', true);
+  }
+};
+
+/**
+ * Handle /cancel_late, /cancel_early, /cancel command
+ */
+const handleCancelLateRequestCommand = async (token, msg, from, companyList) => {
+  try {
+    const fromUsername = from?.username ? from.username.replace(/^@/, '').toLowerCase().trim() : null;
+    const fromChatId = from?.id ? from.id.toString().trim() : null;
+
+    console.log(`[TgApproval] Processing cancel request from @${fromUsername} (ID: ${fromChatId})`);
+
+    let employee = null;
+    let targetCompany = null;
+
+    for (const company of companyList) {
+      const found = await findEmployeeByTelegramUsername(fromUsername, company.id, fromChatId);
+      if (found) {
+        employee = found;
+        targetCompany = company;
+        break;
+      }
+    }
+
+    if (!employee || !targetCompany) {
+      const userDisplay = fromUsername ? `@${fromUsername}` : (from?.first_name || "User");
+      await sendTelegramMessage(
+        token,
+        msg.chat.id,
+        `⚠️ <b>រកមិនឃើញគណនីបុគ្គលិក / Employee Not Found</b>\nគណនី Telegram (${userDisplay}) មិនទាន់បានភ្ជាប់ក្នុងប្រព័ន្ធ HR នៅឡើយទេ។`,
+        { reply_to_message_id: msg.message_id }
+      );
+      return;
+    }
+
+    // Find the latest pending late / early request for this employee
+    const pendingRequest = await prisma.laterequest.findFirst({
+      where: {
+        employee_id: employee.id,
+        company_id: targetCompany.id,
+        status: "pending",
+      },
+      orderBy: { created_at: "desc" },
+      include: {
+        employee: {
+          include: {
+            department_employee_department_idTodepartment: true,
+          },
+        },
+      },
+    });
+
+    if (!pendingRequest) {
+      await sendTelegramMessage(
+        token,
+        msg.chat.id,
+        `ℹ️ <b>មិនមានសំណើដែលត្រូវលុបចោលទេ / No Pending Request</b>\n` +
+        `━━━━━━━━━━━━━━━━━━\n` +
+        `អ្នកមិនមានសំណើសុំយឺត ឬសុំចេញមុនដែលកំពុងរង់ចាំការអនុម័តទេ។\n` +
+        `<i>You have no pending late or early leave requests to cancel.</i>`,
+        { reply_to_message_id: msg.message_id }
+      );
+      return;
+    }
+
+    // Cancel in database
+    const cancelRes = await cancelLateRequest(pendingRequest.id, employee.id);
+    if (!cancelRes.result) {
+      await sendTelegramMessage(token, msg.chat.id, `❌ ${cancelRes.message}`, {
+        reply_to_message_id: msg.message_id,
+      });
+      return;
+    }
+
+    const employeeFullName = `${employee.first_name} ${employee.last_name}`.trim();
+    const isEarly = pendingRequest.request_type === "EARLY";
+    const typeLabelKh = isEarly ? "សំណើសុំចេញមុន" : "សំណើសុំយឺត";
+
+    // Edit the existing Telegram message card in the group to remove buttons and show cancelled status
+    if (pendingRequest.telegram_message_id && pendingRequest.telegram_chat_id) {
+      const titleKh = isEarly
+        ? `🏃‍♂️ <b>សំណើសុំចេញមុន / Early Leave Request</b>`
+        : `⏰ <b>សំណើសុំយឺត / Late Request</b>`;
+
+      const shiftLine = pendingRequest.time_field && pendingRequest.scheduled_time
+        ? `🕐 <b>វេន / Shift:</b> ${pendingRequest.time_field} (${pendingRequest.scheduled_time})\n`
+        : '';
+
+      const cancelledText =
+        `${titleKh}\n` +
+        `━━━━━━━━━━━━━━━━━━\n` +
+        `👤 <b>បុគ្គលិក / Employee:</b> ${employeeFullName}\n` +
+        `🏢 <b>ផ្នែក / Department:</b> ${pendingRequest.employee.department_employee_department_idTodepartment?.name || 'N/A'}\n` +
+        shiftLine +
+        `📅 <b>កាលបរិច្ឆេទ / Date:</b> ${formatICTDate(pendingRequest.request_date)} (${formatICTTime(pendingRequest.request_date)})\n` +
+        `💬 <b>មូលហេតុ / Reason:</b> ${pendingRequest.reason || 'N/A'}\n` +
+        `━━━━━━━━━━━━━━━━━━\n` +
+        `<b>ស្ថានភាព / Status:</b> 🚫 <b>បានលុបចោលដោយបុគ្គលិក / Cancelled by Employee</b>`;
+
+      await editDecisionMessage(token, pendingRequest.telegram_chat_id, pendingRequest.telegram_message_id, cancelledText, false);
+    }
+
+    // Acknowledge to user
+    await sendTelegramMessage(
+      token,
+      msg.chat.id,
+      `✅ <b>${typeLabelKh} #${pendingRequest.id} ត្រូវបានលុបចោលដោយជោគជ័យ</b>\n` +
+      `<i>Your ${isEarly ? "early leave" : "late"} request has been successfully cancelled.</i>`,
+      { reply_to_message_id: msg.message_id }
+    );
+
+  } catch (err) {
+    console.error("[TgApproval] handleCancelLateRequestCommand error:", err.message);
+    await sendTelegramMessage(token, msg.chat.id, "❌ Error cancelling request.", {
+      reply_to_message_id: msg.message_id,
+    });
+  }
+};
+

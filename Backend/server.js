@@ -56,6 +56,7 @@ import notificationRoutes from "./routes/Notification.js";
 import announcementRoutes from "./routes/Announcement.js";
 import appMenuRoutes from "./routes/AppMenu.js";
 import recruitmentRoutes from "./routes/recruitment.routes.js";
+import lateRequestRoutes from "./routes/LateRequest.js";
 import http from "http";
 import { initSocket } from "./utils/socket.js";
 
@@ -91,11 +92,28 @@ app.use(
 );
 app.use(
   helmet({
+    contentSecurityPolicy: false,
     crossOriginResourcePolicy: { policy: "cross-origin" },
   }),
 );
 app.use(morgan("tiny"));
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+const swaggerUiOptions = {
+  customSiteTitle: "HR Management System API Docs",
+  customCss: ".swagger-ui .topbar { display: block; background-color: #0f172a; }",
+  swaggerOptions: {
+    persistAuthorization: true,
+  },
+};
+
+// Raw OpenAPI JSON spec for tooling/client generation
+app.get("/api/docs.json", (req, res) => {
+  res.setHeader("Content-Type", "application/json");
+  res.json(swaggerSpec);
+});
+
+app.use("/api/docs", swaggerUi.serveFiles(swaggerSpec, swaggerUiOptions), swaggerUi.setup(swaggerSpec, swaggerUiOptions));
+app.use("/api-docs", swaggerUi.serveFiles(swaggerSpec, swaggerUiOptions), swaggerUi.setup(swaggerSpec, swaggerUiOptions));
 
 app.use(
   fileUpload({
@@ -188,6 +206,7 @@ app.use("/api/asset", assetRoutes);
 app.use("/api/notification", notificationRoutes);
 app.use("/api/announcement", announcementRoutes);
 app.use("/api/app-menu", appMenuRoutes);
+app.use("/api/late-request", lateRequestRoutes);
 
 app.get("/", (req, res) => {
   res.send("HR System API is running");

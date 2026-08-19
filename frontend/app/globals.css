@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Bokor&family=Inter:wght@100..900&family=Kantumruy+Pro:ital,wght@0,100..700;1,100..700&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
@@ -49,6 +50,9 @@
 }
 
 :root {
+  --font-kantumruy: 'Kantumruy Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-bokor: 'Bokor', cursive;
+  --font-inter: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --background: #f5f5f7;
   --foreground: #1d1d1f;
   --card: #ffffff;
@@ -175,6 +179,9 @@
   }
   .dark * {
     scrollbar-color: rgba(100, 116, 139, 0.35) transparent;
+  }
+  body {
+    font-family: var(--font-kantumruy), 'Kantumruy Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
   button {
     @apply cursor-pointer;

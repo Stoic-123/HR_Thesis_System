@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Image, ScrollView, Pressable, StatusBar, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { COLORS } from '../constants/theme';
 import { mockEmployee, mockQuickAccess } from '../mockData/hrData';
@@ -9,6 +10,8 @@ import QuickAccessCard from '../components/QuickAccessCard';
 import useAuthStore from '../stores/useAuthStore';
 import useNotificationStore from '../stores/useNotificationStore';
 import { BASE_URL, appMenuService, authService } from '../services/api';
+
+const APP_MENUS_CACHE_KEY = '@hr_app_menus_cache';
 
 const resolveIconUrl = (iconUrl, defaultImage) => {
   if (!iconUrl) return defaultImage;
@@ -31,6 +34,23 @@ export default function HomeScreen({ theme, toggleTheme, navigateTo }) {
   const [quickAccessList, setQuickAccessList] = React.useState(mockQuickAccess);
   const [refreshing, setRefreshing] = React.useState(false);
 
+  // Load cached app menus from AsyncStorage on startup immediately
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const cached = await AsyncStorage.getItem(APP_MENUS_CACHE_KEY);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setQuickAccessList(parsed);
+          }
+        }
+      } catch (e) {
+        console.warn("[HomeScreen] Could not load cached app menus:", e);
+      }
+    })();
+  }, []);
+
   const fetchAllData = React.useCallback(async () => {
     try {
       await Promise.all([
@@ -38,7 +58,7 @@ export default function HomeScreen({ theme, toggleTheme, navigateTo }) {
         useNotificationStore.getState().fetchNotifications().catch(() => {}),
         (async () => {
           const res = await appMenuService.getMenus();
-          if (res.success && res.data?.length > 0) {
+          if (res.success && Array.isArray(res.data) && res.data.length > 0) {
             const dynamicMap = new Map(res.data.map(item => [item.menu_key, item]));
             const merged = mockQuickAccess
               .map(item => {
@@ -50,10 +70,19 @@ export default function HomeScreen({ theme, toggleTheme, navigateTo }) {
                   label: remote.label || item.label,
                   color: remote.color || item.color,
                   image: resolveIconUrl(remote.icon_url, item.image),
+                  order: remote.order ?? 99,
                 };
               })
               .filter(Boolean);
+
+            merged.sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
             setQuickAccessList(merged);
+
+            try {
+              await AsyncStorage.setItem(APP_MENUS_CACHE_KEY, JSON.stringify(merged));
+            } catch (saveErr) {
+              console.warn("[HomeScreen] Failed to cache app menus:", saveErr);
+            }
           }
         })(),
       ]);
@@ -96,20 +125,24 @@ export default function HomeScreen({ theme, toggleTheme, navigateTo }) {
 
           // 1. Menu item turned OFF
           if (updatedItem.is_active === false) {
-            return prevList.filter(item => item.id !== updatedItem.menu_key);
+            const filtered = prevList.filter(item => item.id !== updatedItem.menu_key);
+            AsyncStorage.setItem(APP_MENUS_CACHE_KEY, JSON.stringify(filtered)).catch(() => {});
+            return filtered;
           }
 
           // 2. Menu item turned ON (active)
           const exists = prevList.some(item => item.id === updatedItem.menu_key);
+          let updatedList;
 
           if (exists) {
-            return prevList.map(item => {
+            updatedList = prevList.map(item => {
               if (item.id === updatedItem.menu_key) {
                 return {
                   ...item,
                   label: updatedItem.label || item.label,
                   color: updatedItem.color || item.color,
                   image: resolveIconUrl(updatedItem.icon_url, item.image),
+                  order: updatedItem.order ?? item.order ?? 99,
                 };
               }
               return item;
@@ -121,12 +154,16 @@ export default function HomeScreen({ theme, toggleTheme, navigateTo }) {
               label: updatedItem.label || defaultItem?.label || updatedItem.menu_key,
               color: updatedItem.color || defaultItem?.color || 'blue',
               image: resolveIconUrl(updatedItem.icon_url, defaultItem?.image),
+              order: updatedItem.order ?? 99,
             };
 
             const fullList = [...prevList, newItem];
             const orderMap = new Map(mockQuickAccess.map((m, idx) => [m.id, idx]));
-            return fullList.sort((a, b) => (orderMap.get(a.id) ?? 99) - (orderMap.get(b.id) ?? 99));
+            updatedList = fullList.sort((a, b) => (orderMap.get(a.id) ?? 99) - (orderMap.get(b.id) ?? 99));
           }
+
+          AsyncStorage.setItem(APP_MENUS_CACHE_KEY, JSON.stringify(updatedList)).catch(() => {});
+          return updatedList;
         });
       }
       fetchAllData();

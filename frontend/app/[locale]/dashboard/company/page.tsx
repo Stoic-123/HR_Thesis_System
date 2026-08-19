@@ -88,6 +88,7 @@ export default function CompanyPage() {
     telegram_group_id: "",
     telegram_attendance_group_id: "",
     telegram_leave_group_id: "",
+    telegram_late_group_id: "",
     telegram_overtime_group_id: "",
     telegram_announcement_group_id: "",
     telegram_backup_group_id: "",
@@ -113,6 +114,7 @@ export default function CompanyPage() {
         telegram_group_id: company.telegram_group_id || "",
         telegram_attendance_group_id: company.telegram_attendance_group_id || "",
         telegram_leave_group_id: company.telegram_leave_group_id || "",
+        telegram_late_group_id: company.telegram_late_group_id || "",
         telegram_overtime_group_id: company.telegram_overtime_group_id || "",
         telegram_announcement_group_id: company.telegram_announcement_group_id || "",
         telegram_backup_group_id: company.telegram_backup_group_id || "",
@@ -218,6 +220,7 @@ export default function CompanyPage() {
     data.append("telegram_group_id", formData.telegram_group_id);
     data.append("telegram_attendance_group_id", formData.telegram_attendance_group_id);
     data.append("telegram_leave_group_id", formData.telegram_leave_group_id);
+    data.append("telegram_late_group_id", formData.telegram_late_group_id);
     data.append("telegram_overtime_group_id", formData.telegram_overtime_group_id);
     data.append("telegram_announcement_group_id", formData.telegram_announcement_group_id);
     data.append("telegram_backup_group_id", formData.telegram_backup_group_id);
@@ -493,6 +496,13 @@ export default function CompanyPage() {
                             <span className="text-[11px] font-bold text-gray-400 block uppercase tracking-wider">{t("leaveGroupIdLabel")}</span>
                             <div className="bg-white/90 border border-sky-100 rounded-xl px-3.5 py-2.5 font-mono text-xs text-gray-800 select-all shadow-sm">
                               {company.telegram_leave_group_id || <span className="text-gray-400 italic font-sans">{tc("notSet")}</span>}
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <span className="text-[11px] font-bold text-gray-400 block uppercase tracking-wider">{t("lateGroupIdLabel") || "LATE GROUP ID"}</span>
+                            <div className="bg-white/90 border border-sky-100 rounded-xl px-3.5 py-2.5 font-mono text-xs text-gray-800 select-all shadow-sm">
+                              {company.telegram_late_group_id || <span className="text-gray-400 italic font-sans">{tc("notSet")}</span>}
                             </div>
                           </div>
 
@@ -1006,6 +1016,16 @@ export default function CompanyPage() {
                               id="telegram_leave_group_id"
                               value={formData.telegram_leave_group_id}
                               onChange={(e) => setFormData({ ...formData, telegram_leave_group_id: e.target.value })}
+                              placeholder="e.g. -100123456789"
+                              className="h-10 rounded-xl border-sky-100/80 bg-white/70 focus:bg-white text-sm font-mono"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label htmlFor="telegram_late_group_id" className="text-xs font-semibold text-sky-800">{t("lateGroupIdLabel") || "Late Group ID"}</Label>
+                            <Input
+                              id="telegram_late_group_id"
+                              value={formData.telegram_late_group_id}
+                              onChange={(e) => setFormData({ ...formData, telegram_late_group_id: e.target.value })}
                               placeholder="e.g. -100123456789"
                               className="h-10 rounded-xl border-sky-100/80 bg-white/70 focus:bg-white text-sm font-mono"
                             />

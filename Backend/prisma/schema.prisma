@@ -190,6 +190,7 @@ model company {
   telegram_group_id  String?        @db.VarChar(255)
   telegram_attendance_group_id String?        @db.VarChar(255)
   telegram_leave_group_id      String?        @db.VarChar(255)
+  telegram_late_group_id       String?        @db.VarChar(255)
   telegram_overtime_group_id   String?        @db.VarChar(255)
   telegram_announcement_group_id String?      @db.VarChar(255)
   telegram_backup_group_id     String?        @db.VarChar(255)
@@ -226,6 +227,7 @@ model company {
   appmenu            appmenu[]
   jobposting         jobposting[]
   candidate          candidate[]
+  laterequest        laterequest[]
   @@index([name], map: "idx_company_name")
 }
 
@@ -327,6 +329,8 @@ model employee {
   leaveprofile                                  leaveprofile[]
   leaverecord_leaverecord_employee_idToemployee leaverecord[]                 @relation("leaverecord_employee_idToemployee")
   leaverecord_leaverecord_approved_byToemployee leaverecord[]                 @relation("leaverecord_approved_byToemployee")
+  laterequest_laterequest_employee_idToemployee laterequest[]                 @relation("laterequest_employee_idToemployee")
+  laterequest_laterequest_approved_byToemployee laterequest[]                 @relation("laterequest_approved_byToemployee")
   overtime_overtime_employee_idToemployee       overtime[]                    @relation("overtime_employee_idToemployee")
   overtime_overtime_approved_byToemployee       overtime[]                    @relation("overtime_approved_byToemployee")
   user                                          user[]
@@ -1026,5 +1030,40 @@ model candidate {
   @@index([job_posting_id], map: "idx_candidate_job")
   @@index([status], map: "idx_candidate_status")
   @@index([hired_employee_id], map: "idx_candidate_hired_employee")
+}
+
+model laterequest {
+  id                        Int                 @id @default(autoincrement())
+  company_id                Int
+  employee_id               Int
+  request_type              String              @default("LATE") @db.VarChar(20) // LATE or EARLY
+  time_field                String?             @db.VarChar(20) // time_in, lunch_in, lunch_out, time_out
+  scheduled_time            String?             @db.VarChar(10) // e.g. 08:00, 12:00, 13:00, 17:00
+  request_date              DateTime            @db.DateTime(0)
+  reason                    String?             @db.Text
+  status                    laterequest_status? @default(pending)
+  approved_by               Int?
+  telegram_message_id       Int?
+  telegram_chat_id          String?             @db.VarChar(255)
+  manager_telegram_username String?             @db.VarChar(255)
+  created_at                DateTime?           @default(now()) @db.DateTime(0)
+  updated_at                DateTime?           @default(now()) @db.DateTime(0)
+
+  company                   company             @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  employee                  employee            @relation("laterequest_employee_idToemployee", fields: [employee_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  approver                  employee?           @relation("laterequest_approved_byToemployee", fields: [approved_by], references: [id], onUpdate: NoAction)
+
+  @@index([company_id], map: "idx_laterequest_company")
+  @@index([employee_id], map: "idx_laterequest_employee")
+  @@index([employee_id, status], map: "idx_laterequest_emp_status")
+  @@index([status], map: "idx_laterequest_status")
+  @@index([request_date], map: "idx_laterequest_date")
+}
+
+enum laterequest_status {
+  pending
+  approved
+  rejected
+  cancelled
 }
 

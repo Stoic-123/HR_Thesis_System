@@ -6,6 +6,19 @@ export interface TimeModeColumn {
   remark?: string;
 }
 
+export interface LateEarlyRequest {
+  id: number;
+  request_type: "LATE" | "EARLY";
+  time_field?: string | null;
+  scheduled_time?: string | null;
+  request_date: string;
+  reason?: string | null;
+  status: "pending" | "approved" | "rejected" | "cancelled";
+  approved_by?: number | null;
+  approver?: string | null;
+  created_at?: string;
+}
+
 export interface AttendanceRow {
   employee_id: number;
   employee: string;
@@ -21,13 +34,16 @@ export interface AttendanceRow {
     early_minutes?: number;
     expected_time?: string;
   }>;
-  status: "present" | "late" | "early";
+  status: "present" | "late" | "early" | "late_approved" | "early_approved";
+  is_excused?: boolean;
+  late_requests?: LateEarlyRequest[];
 }
 
 export interface AttendanceSummary {
   totalCheckIns: number;
   onTimeRate: number;
   lateCount: number;
+  approvedLateCount?: number;
 }
 
 export interface AttendanceReport {

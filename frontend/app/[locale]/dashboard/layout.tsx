@@ -114,6 +114,7 @@ export default function DashboardLayout({
   const [editUsername, setEditUsername] = useState("");
   const [profileFile, setProfileFile] = useState<File | null>(null);
   const [profilePreview, setProfilePreview] = useState<string | null>(null);
+  const [isImageCleared, setIsImageCleared] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -144,6 +145,7 @@ export default function DashboardLayout({
       setEditUsername(user.username || "");
       setProfileFile(null);
       setProfilePreview(null);
+      setIsImageCleared(false);
     }
   }, [isEditProfileOpen, user]);
 
@@ -169,7 +171,9 @@ export default function DashboardLayout({
     formData.append("first_name", editFirstName);
     formData.append("last_name", editLastName);
     formData.append("username", editUsername);
-    if (profileFile) {
+    if (isImageCleared) {
+      formData.append("remove_profile", "true");
+    } else if (profileFile) {
       formData.append("profile_path", profileFile);
     }
     updateProfileMutation.mutate(formData);
@@ -444,7 +448,11 @@ export default function DashboardLayout({
                       >
                         <Avatar className="h-24 w-24 ring-4 ring-primary/20 shadow-md">
                           <AvatarImage
-                            src={profilePreview || (user?.employee?.profile_path ? `${apiBaseURL}${user.employee.profile_path}` : "")}
+                            src={
+                              isImageCleared
+                                ? ""
+                                : (profilePreview || (user?.employee?.profile_path ? (user.employee.profile_path.startsWith("http") ? user.employee.profile_path : `${apiBaseURL}${user.employee.profile_path}`) : ""))
+                            }
                             alt="Profile Upload"
                           />
                           <AvatarFallback className="bg-primary/10 text-2xl font-bold text-primary">
@@ -457,11 +465,12 @@ export default function DashboardLayout({
                         >
                           <Camera className="w-6 h-6 text-white" />
                         </div>
-                        {(profilePreview || profileFile || user?.employee?.profile_path) && (
+                        {!isImageCleared && (profilePreview || profileFile || user?.employee?.profile_path) && (
                           <button
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
+                              setIsImageCleared(true);
                               setProfileFile(null);
                               setProfilePreview(null);
                               if (fileInputRef.current) fileInputRef.current.value = "";
@@ -481,6 +490,7 @@ export default function DashboardLayout({
                         onChange={(e) => {
                           const file = e.target.files?.[0];
                           if (file) {
+                            setIsImageCleared(false);
                             setProfileFile(file);
                             setProfilePreview(URL.createObjectURL(file));
                           }
@@ -497,13 +507,14 @@ export default function DashboardLayout({
                           <Camera className="w-3.5 h-3.5 mr-1.5" />
                           {t("uploadPhoto")}
                         </Button>
-                        {(profilePreview || profileFile) && (
+                        {!isImageCleared && (profilePreview || profileFile || user?.employee?.profile_path) && (
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
                             className="rounded-xl text-xs text-rose-500 hover:text-rose-600 hover:bg-rose-50"
                             onClick={() => {
+                              setIsImageCleared(true);
                               setProfileFile(null);
                               setProfilePreview(null);
                               if (fileInputRef.current) fileInputRef.current.value = "";

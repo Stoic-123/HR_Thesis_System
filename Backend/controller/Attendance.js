@@ -371,6 +371,52 @@ export const getAttendanceReportController = async (req, res) => {
       orderBy: { work_at: "asc" },
     });
 
+    // Fetch all late / early requests matching company and date range
+    const lateRequestsWhere = {
+      company_id: parseInt(company_id),
+      request_date: { gte: start, lte: end },
+    };
+    if (whereClause.employee_id) {
+      lateRequestsWhere.employee_id = whereClause.employee_id;
+    }
+    if (whereClause.employee?.department_id) {
+      lateRequestsWhere.employee = { department_id: whereClause.employee.department_id };
+    }
+
+    const lateRequests = await prisma.laterequest.findMany({
+      where: lateRequestsWhere,
+      include: {
+        employee: {
+          select: { id: true, first_name: true, last_name: true },
+        },
+        approver: {
+          select: { id: true, first_name: true, last_name: true },
+        },
+      },
+      orderBy: { created_at: "asc" },
+    });
+
+    const lateRequestsMap = {};
+    for (const lr of lateRequests) {
+      const dateStr = formatICTDate(lr.request_date);
+      const key = `${lr.employee_id}_${dateStr}`;
+      if (!lateRequestsMap[key]) {
+        lateRequestsMap[key] = [];
+      }
+      lateRequestsMap[key].push({
+        id: lr.id,
+        request_type: lr.request_type || "LATE",
+        time_field: lr.time_field,
+        scheduled_time: lr.scheduled_time,
+        request_date: lr.request_date,
+        reason: lr.reason,
+        status: lr.status,
+        approved_by: lr.approved_by,
+        approver: lr.approver ? `${lr.approver.first_name} ${lr.approver.last_name}`.trim() : null,
+        created_at: lr.created_at,
+      });
+    }
+
     // Classify a time mode name into time_in / lunch_out / lunch_in / time_out
     const classifyTimeMode = (mode) => {
       const hay = `${mode?.name || ""} ${mode?.remark || ""}`.toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
@@ -487,14 +533,19 @@ export const getAttendanceReportController = async (req, res) => {
 
     // Build the rows array
     const rows = Object.values(employeeMap).map((entry) => {
+      const lateReqs = lateRequestsMap[`${entry.employee.id}_${entry.date}`] || [];
+      const hasApprovedLate = lateReqs.some((r) => r.request_type === "LATE" && r.status === "approved");
+      const hasApprovedEarly = lateReqs.some((r) => r.request_type === "EARLY" && r.status === "approved");
+
       let status;
       if (entry.status === "late" || entry.isLate) {
-        status = "late";
+        status = hasApprovedLate ? "late_approved" : "late";
       } else if (entry.isEarly) {
-        status = "early";
+        status = hasApprovedEarly ? "early_approved" : "early";
       } else {
         status = "present";
       }
+
       return {
         employee_id: entry.employee.id,
         employee: `${entry.employee.first_name} ${entry.employee.last_name}`,
@@ -503,13 +554,16 @@ export const getAttendanceReportController = async (req, res) => {
         checkOut: entry.timeOut || "Missed",
         scans: entry.scans,
         status,
+        is_excused: hasApprovedLate || hasApprovedEarly,
+        late_requests: lateReqs,
       };
     });
 
     // Compute summary stats over all filtered records
     const totalCheckIns = rows.length;
     const lateCount = rows.filter((r) => r.status === "late").length;
-    const presentCount = rows.filter((r) => r.status === "present").length;
+    const approvedLateCount = rows.filter((r) => r.status === "late_approved").length;
+    const presentCount = rows.filter((r) => r.status === "present" || r.status === "late_approved" || r.status === "early_approved").length;
     const onTimeRate = totalCheckIns > 0 ? Math.round((presentCount / totalCheckIns) * 100) : 0;
 
     // Apply pagination
@@ -532,6 +586,7 @@ export const getAttendanceReportController = async (req, res) => {
           totalCheckIns,
           onTimeRate,
           lateCount,
+          approvedLateCount,
         },
         rows: paginatedRows,
         pagination: {

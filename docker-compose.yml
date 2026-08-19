@@ -36,7 +36,7 @@ services:
     environment:
       DATABASE_URL: mysql://${DB_USER:-root}:${DB_PASSWORD:-}@db:3306/${DB_NAME:-hrms}
       JWT_SECRET: ${JWT_SECRET:-changeme_use_a_long_random_secret}
-      EXPIRED_AT: ${EXPIRED_AT:-2h}
+      EXPIRED_AT: ${EXPIRED_AT:-14d}
       SERVER_BASE_URL: ${SERVER_BASE_URL:-http://localhost:8080}
       OLLAMA_HOST: ${OLLAMA_HOST:-http://host.docker.internal:11434}
       AI_MODEL: ${AI_MODEL:-qwen2.5:1.5b}

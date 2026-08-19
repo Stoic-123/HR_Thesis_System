@@ -897,6 +897,16 @@ export const scannerService = {
       throw error;
     }
   },
+// App Menu Services (Dynamic Home Menu Configuration)
+export const appMenuService = {
+  getMenus: async () => {
+    try {
+      return await apiRequest("/api/app-menu");
+    } catch (error) {
+      console.warn("[AppMenu] getMenus error:", error);
+      return { success: false, data: [] };
+    }
+  },
 };
 
 export default {
@@ -912,4 +922,5 @@ export default {
   notificationService,
   documentService,
   scannerService,
+  appMenuService,
 };
