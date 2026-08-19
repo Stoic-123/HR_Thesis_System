@@ -897,6 +897,8 @@ export const scannerService = {
       throw error;
     }
   },
+};
+
 // App Menu Services (Dynamic Home Menu Configuration)
 export const appMenuService = {
   getMenus: async () => {
