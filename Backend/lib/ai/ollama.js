@@ -29,7 +29,9 @@ const callCloudApi = async (provider, model, apiKey, messages, onStream) => {
     body: JSON.stringify({
       model,
       messages,
-      stream: !!onStream
+      stream: !!onStream,
+      max_tokens: 2048,
+      temperature: 0.2
     })
   });
 
@@ -126,17 +128,19 @@ export const chatWithAI = async (messages, defaultModel = "qwen2.5:1.5b", onStre
       else if (provider === "openrouter") apiKey = process.env.OPENROUTER_API_KEY;
     }
 
-    if (provider !== "ollama") {
-      try {
-        if (!apiKey) {
-          throw new Error(`API Key / Token is required for provider: ${provider}. Please configure it in your Company settings.`);
-        }
-        console.log(`[AI Routing] Routing to Cloud API (${provider}) using model: ${model}`);
-        return await callCloudApi(provider, model, apiKey, messages, onStream);
-      } catch (cloudErr) {
-        console.warn(`[AI Routing] Cloud API (${provider}) failed: ${cloudErr.message}. Falling back to local Ollama...`);
-        // Fallback to local Ollama below
+    if (provider === "huggingface") {
+      // Auto-map deprecated / default local model names to active Hugging Face serverless models
+      if (!model || model === "qwen2.5:1.5b" || model === "Qwen/Qwen2.5-7B-Instruct") {
+        model = "Qwen/Qwen2.5-72B-Instruct";
       }
+    }
+
+    if (provider !== "ollama") {
+      if (!apiKey) {
+        throw new Error(`API Key / Token is required for provider: ${provider}. Please configure it in your Company settings.`);
+      }
+      console.log(`[AI Routing] Routing to Cloud API (${provider}) using model: ${model}`);
+      return await callCloudApi(provider, model, apiKey, messages, onStream);
     }
 
     // Fallback to local Ollama

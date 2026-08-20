@@ -23,8 +23,6 @@ import ProfileScreen from './src/screens/ProfileScreen';
 import AttendanceScreen from './src/screens/AttendanceScreen';
 import CheckInScreen from './src/screens/CheckInScreen';
 import PayrollScreen from './src/screens/PayrollScreen';
-import KpiDashboardScreen from './src/screens/KpiDashboardScreen';
-import EmployeeKpiEvaluationScreen from './src/screens/EmployeeKpiEvaluationScreen';
 import HolidayCalendarScreen from './src/screens/HolidayCalendarScreen';
 import AssetScreen from './src/screens/AssetScreen';
 import useAuthStore from './src/stores/useAuthStore';
@@ -180,14 +178,12 @@ export default function App() {
         return <NotificationScreen theme={theme} navigateTo={setCurrentScreen} />;
       case 'Profile':
         return <ProfileScreen theme={theme} navigateTo={setCurrentScreen} onLogout={handleLogout} />;
+      case 'ChangePassword':
+        return <ChangePasswordScreen theme={theme} navigateTo={setCurrentScreen} onPasswordChanged={() => setCurrentScreen('Profile')} />;
       case 'Attendance':
         return <AttendanceScreen theme={theme} navigateTo={setCurrentScreen} />;
       case 'Payroll':
         return <PayrollScreen theme={theme} navigateTo={setCurrentScreen} />;
-      case 'KpiDashboard':
-        return <KpiDashboardScreen theme={theme} navigateTo={handleNavigate} />;
-      case 'EmployeeKpiEvaluation':
-        return <EmployeeKpiEvaluationScreen theme={theme} navigateTo={handleNavigate} route={{ params: currentScreenParams }} />;
       case 'HolidayCalendar':
         return <HolidayCalendarScreen theme={theme} navigation={{ goBack: () => handleNavigate('Home') }} />;
       case 'Asset':
@@ -215,7 +211,7 @@ export default function App() {
       </Animated.View>
 
       {/* CUSTOM FLOATING FINGERPRINT NAVIGATION TAB BAR */}
-      {isAuthenticated && !isDefaultPassword && (
+      {isAuthenticated && !isDefaultPassword && currentScreen !== 'ChangePassword' && (
         <View 
           style={{
             flexDirection: 'row',

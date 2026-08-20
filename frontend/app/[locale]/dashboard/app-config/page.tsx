@@ -45,7 +45,10 @@ export default function AppConfigPage() {
       setIsLoading(true);
       const res = await api.get("/api/app-menu");
       if (res.data?.success) {
-        setMenus(res.data.data);
+        const filtered = (res.data.data || []).filter(
+          (m: AppMenuItem) => m.menu_key !== "performance" && m.menu_key !== "document-scanner"
+        );
+        setMenus(filtered);
       }
     } catch (err: any) {
       toast.error(err.response?.data?.message || t("saveError"));

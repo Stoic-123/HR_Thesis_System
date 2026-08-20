@@ -305,9 +305,10 @@ const processBotCallbacks = async (token, companyList) => {
           const pendingId = parseInt(approvalMatch[2]);
           const messageId = message?.message_id;
           const fromUsername = (from?.username || '').toLowerCase();
+          const fromChatId = from?.id ? String(from.id) : null;
           const attendanceGroupId = primaryCompany.telegram_attendance_group_id || primaryCompany.telegram_group_id;
 
-          await handleApprovalAction(token, attendanceGroupId, pendingId, action, cbId, messageId, fromUsername);
+          await handleApprovalAction(token, attendanceGroupId, pendingId, action, cbId, messageId, fromUsername, fromChatId);
         } else if (resetMatch) {
           const userId = parseInt(resetMatch[1]);
           const messageId = message?.message_id;
@@ -643,12 +644,13 @@ const findEmployeeByTelegramUsername = async (fromUsername, companyId, fromChatI
 const handleLeaveApproval = async (token, leaveIdStr, action, cbId, messageId, chatId, from, companyId) => {
   try {
     const fromUsername = (from?.username || '').toLowerCase();
+    const fromChatId = from?.id ? String(from.id) : null;
 
-    console.log(`[TgApproval] Handling leave ${action} for leave ${leaveIdStr} from @${fromUsername} (chat: ${chatId})`);
+    console.log(`[TgApproval] Handling leave ${action} for leave ${leaveIdStr} from @${fromUsername} (chat: ${chatId}, id: ${fromChatId})`);
 
-    const approverEmployee = await findEmployeeByTelegramUsername(fromUsername, companyId);
+    const approverEmployee = await findEmployeeByTelegramUsername(fromUsername, companyId, fromChatId);
     if (!approverEmployee) {
-      await answerCallback(token, cbId, 'You are not registered in the HR system with this Telegram username.', true);
+      await answerCallback(token, cbId, 'You are not registered in the HR system with this Telegram account.', true);
       return;
     }
 
@@ -736,12 +738,13 @@ const handleLeaveApproval = async (token, leaveIdStr, action, cbId, messageId, c
 const handleOvertimeApproval = async (token, overtimeId, action, cbId, messageId, chatId, from, companyId) => {
   try {
     const fromUsername = (from?.username || '').toLowerCase();
+    const fromChatId = from?.id ? String(from.id) : null;
 
-    console.log(`[TgApproval] Handling overtime ${action} for overtime ${overtimeId} from @${fromUsername} (chat: ${chatId})`);
+    console.log(`[TgApproval] Handling overtime ${action} for overtime ${overtimeId} from @${fromUsername} (chat: ${chatId}, id: ${fromChatId})`);
 
-    const approverEmployee = await findEmployeeByTelegramUsername(fromUsername, companyId);
+    const approverEmployee = await findEmployeeByTelegramUsername(fromUsername, companyId, fromChatId);
     if (!approverEmployee) {
-      await answerCallback(token, cbId, 'You are not registered in the HR system with this Telegram username.', true);
+      await answerCallback(token, cbId, 'You are not registered in the HR system with this Telegram account.', true);
       return;
     }
 
@@ -882,12 +885,12 @@ const handleResetPasswordCallback = async (token, userId, cbId, messageId, from,
   }
 };
 
-const handleApprovalAction = async (token, groupId, pendingId, action, cbId, messageId, fromUsername) => {
+const handleApprovalAction = async (token, groupId, pendingId, action, cbId, messageId, fromUsername, fromChatId = null) => {
   let pending;
   try {
     pending = await prisma.onlineattendancepending.findUnique({
       where:   { id: pendingId },
-      include: { employee: { select: { first_name: true, last_name: true } } },
+      include: { employee: { select: { first_name: true, last_name: true, company_id: true } } },
     });
   } catch (e) {
     console.error('[TgApproval] findUnique error:', e.message);
@@ -901,56 +904,55 @@ const handleApprovalAction = async (token, groupId, pendingId, action, cbId, mes
   }
 
   // ── Manager-only gate ────────────────────────────────────────────────────────
-  // Use stored username first; fall back to live DB lookup (covers old records
-  // where manager_telegram_username was NULL at submission time).
-  let managerUsername = pending.manager_telegram_username
-    ? pending.manager_telegram_username.toLowerCase()
-    : null;
+  let isAuthorized = false;
+  let managerDisplay = pending.manager_telegram_username || "Manager";
 
-  if (!managerUsername) {
-    // Live lookup: employee → department → manager → telegram_username
-    try {
-      const emp = await prisma.employee.findUnique({
-        where:  { id: pending.employee_id },
-        select: { department_id: true },
-      });
-      if (emp?.department_id) {
-        const dept = await prisma.department.findUnique({
-          where:  { id: emp.department_id },
+  try {
+    const emp = await prisma.employee.findUnique({
+      where:  { id: pending.employee_id },
+      select: {
+        department_employee_department_idTodepartment: {
           select: {
             employee_department_manager_idToemployee: {
-              select: { telegram_username: true },
+              select: {
+                id: true,
+                telegram_username: true,
+                telegram_chat_id: true,
+                first_name: true,
+                last_name: true,
+              },
             },
           },
-        });
-        const raw = dept?.employee_department_manager_idToemployee?.telegram_username;
-        if (raw) {
-          managerUsername = raw.replace(/^@/, '').toLowerCase();
-          // Back-fill the stored value so future callbacks are faster
-          await prisma.onlineattendancepending.update({
-            where: { id: pending.id },
-            data:  { manager_telegram_username: managerUsername },
-          });
-        }
+        },
+      },
+    });
+
+    const manager = emp?.department_employee_department_idTodepartment?.employee_department_manager_idToemployee;
+    if (manager) {
+      const mgrUsername = manager.telegram_username ? manager.telegram_username.replace(/^@/, '').toLowerCase().trim() : null;
+      const mgrChatId = manager.telegram_chat_id ? String(manager.telegram_chat_id).trim() : null;
+      managerDisplay = mgrUsername ? `@${mgrUsername}` : `${manager.first_name} ${manager.last_name}`;
+
+      const userMatch = fromUsername && mgrUsername && fromUsername === mgrUsername;
+      const chatMatch = fromChatId && mgrChatId && fromChatId === mgrChatId;
+
+      if (userMatch || chatMatch) {
+        isAuthorized = true;
       }
-    } catch (_) {}
+    } else if (pending.manager_telegram_username) {
+      const pendingMgrUsername = pending.manager_telegram_username.replace(/^@/, '').toLowerCase().trim();
+      if (fromUsername && pendingMgrUsername && fromUsername === pendingMgrUsername) {
+        isAuthorized = true;
+      }
+    }
+  } catch (err) {
+    console.error("[TgApproval] manager check error:", err.message);
   }
 
-  if (managerUsername) {
-    if (fromUsername !== managerUsername) {
-      await answerCallback(
-        token, cbId,
-        `⛔ អ្នកមិនមានសិទ្ធិ។ តែ @${managerUsername} ប៉ុណ្ណោះអាចចាត់ចែងបាន។`,
-        true
-      );
-      return;
-    }
-  }
-  // If no manager is configured at all, no one can act — block everyone
-  else {
+  if (!isAuthorized) {
     await answerCallback(
       token, cbId,
-      `⛔ នាយកដ្ឋាននេះមិនទាន់មានអ្នកគ្រប់គ្រង។ សូមកំណត់អ្នកគ្រប់គ្រងនាយកដ្ឋានជាមុនសិន។`,
+      `⛔ អ្នកមិនមានសិទ្ធិ។ តែ ${managerDisplay} ប៉ុណ្ណោះអាចចាត់ចែងបាន។`,
       true
     );
     return;

@@ -218,8 +218,6 @@ model company {
   payrollperiod      payrollperiod[]
   payroll            payroll[]
 
-  kpicycle           kpicycle[]
-  kpitemplate        kpitemplate[]
   assetcategory      assetcategory[]
   asset              asset[]
   assethistory       assethistory[]
@@ -340,8 +338,6 @@ model employee {
   base_salary                                   String?                       @default("0") @db.VarChar(500)
   payroll                                       payroll[]
 
-  employeekpi                  employeekpi[]
-  kpireview_kpireview_reviewer kpireview[]   @relation("kpireview_reviewer")
   asset                        asset[]
   assethistory                 assethistory[]
   assetrequest_requested_by    assetrequest[] @relation("assetrequest_requested_by")
@@ -729,124 +725,7 @@ enum employee_mother_life_status {
   deceased
 }
 
-model kpicycle {
-  id          Int           @id @default(autoincrement())
-  company_id  Int
-  name        String        @db.VarChar(255)
-  start_date  DateTime      @db.DateTime(0)
-  end_date    DateTime      @db.DateTime(0)
-  status      String        @default("draft") @db.VarChar(20) // draft, active, closed
-  created_at  DateTime?     @default(now()) @db.DateTime(0)
-  updated_at  DateTime?     @default(now()) @db.DateTime(0)
-  company     company       @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  employeekpi employeekpi[]
-  
-  @@index([company_id], map: "idx_kpicycle_company")
-}
 
-model kpitemplate {
-  id              Int               @id @default(autoincrement())
-  company_id      Int
-  name            String            @db.VarChar(255)
-  description     String?           @db.Text
-  created_at      DateTime?         @default(now()) @db.DateTime(0)
-  updated_at      DateTime?         @default(now()) @db.DateTime(0)
-  company         company           @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  kpitemplategoal kpitemplategoal[]
-  
-  @@index([company_id], map: "idx_kpitemplate_company")
-}
-
-model kpitemplategoal {
-  id           Int         @id @default(autoincrement())
-  template_id  Int
-  category     String      @db.VarChar(50)
-  title        String      @db.VarChar(255)
-  target_value Float
-  target_unit  String      @db.VarChar(20)
-  weight       Float
-  created_at   DateTime?   @default(now()) @db.DateTime(0)
-  updated_at   DateTime?   @default(now()) @db.DateTime(0)
-  kpitemplate  kpitemplate @relation(fields: [template_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  
-  @@index([template_id], map: "idx_kpitemplategoal_template")
-}
-
-model employeekpi {
-  id                Int         @id @default(autoincrement())
-  employee_id       Int
-  cycle_id          Int
-  total_score       Float?
-  rating            String?     @db.VarChar(50)
-  status            String      @default("active") @db.VarChar(20) // active, finalized
-  evaluation_status String      @default("pending_manager") @db.VarChar(50) // pending_manager, pending_hr, completed
-  created_at        DateTime?   @default(now()) @db.DateTime(0)
-  updated_at        DateTime?   @default(now()) @db.DateTime(0)
-  employee          employee    @relation(fields: [employee_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  kpicycle          kpicycle    @relation(fields: [cycle_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  kpigoal           kpigoal[]
-  kpireview         kpireview[]
-  
-  @@unique([employee_id, cycle_id], map: "unique_employee_cycle")
-  @@index([employee_id], map: "idx_employeekpi_employee")
-  @@index([cycle_id], map: "idx_employeekpi_cycle")
-}
-
-model kpigoal {
-  id               Int               @id @default(autoincrement())
-  employee_kpi_id  Int
-  category         String            @db.VarChar(50)
-  title            String            @db.VarChar(255)
-  target_value     Float
-  target_unit      String            @db.VarChar(20)
-  weight           Float
-  current_progress Float             @default(0)
-  manager_score    Float             @default(0)
-  hr_score         Float             @default(0)
-  created_at       DateTime?         @default(now()) @db.DateTime(0)
-  updated_at       DateTime?         @default(now()) @db.DateTime(0)
-  employeekpi      employeekpi       @relation(fields: [employee_kpi_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  kpigoalprogress  kpigoalprogress[]
-  
-  @@index([employee_kpi_id], map: "idx_kpigoal_employeekpi")
-}
-
-model kpireview {
-  id                       Int               @id @default(autoincrement())
-  employee_kpi_id          Int
-  reviewer_id              Int
-  quarter                  String            @db.VarChar(10) // Q1, Q2, Q3, Q4
-  overall_manager_comment  String?           @db.Text
-  overall_employee_comment String?           @db.Text
-  status                   String            @default("pending") @db.VarChar(20) // pending, completed
-  review_date              DateTime?         @db.DateTime(0)
-  created_at               DateTime?         @default(now()) @db.DateTime(0)
-  updated_at               DateTime?         @default(now()) @db.DateTime(0)
-  employeekpi              employeekpi       @relation(fields: [employee_kpi_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  reviewer                 employee          @relation("kpireview_reviewer", fields: [reviewer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  kpigoalprogress          kpigoalprogress[]
-  
-  @@unique([employee_kpi_id, quarter], map: "unique_employee_kpi_quarter")
-  @@index([employee_kpi_id], map: "idx_kpireview_employeekpi")
-  @@index([reviewer_id], map: "idx_kpireview_reviewer")
-}
-
-model kpigoalprogress {
-  id                  Int       @id @default(autoincrement())
-  review_id           Int
-  kpi_goal_id         Int
-  progress_percentage Float
-  manager_comment     String?   @db.Text
-  employee_comment    String?   @db.Text
-  created_at          DateTime? @default(now()) @db.DateTime(0)
-  updated_at          DateTime? @default(now()) @db.DateTime(0)
-  kpireview           kpireview @relation(fields: [review_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  kpigoal             kpigoal   @relation(fields: [kpi_goal_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  
-  @@unique([review_id, kpi_goal_id], map: "unique_review_goal")
-  @@index([review_id], map: "idx_kpigoalprogress_review")
-  @@index([kpi_goal_id], map: "idx_kpigoalprogress_goal")
-}
 
 enum asset_status {
   available

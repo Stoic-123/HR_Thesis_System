@@ -44,9 +44,23 @@ export const CreateNewLeave = async (
   photo_path = null,
 ) => {
   try {
-    // Validate dates: all must be in the future
+    const leaveType = await prisma.leavetype.findUnique({
+      where: { id: parseInt(leave_type_id) },
+    });
+    if (!leaveType) {
+      throw new Error("Leave type not found");
+    }
+
+    const isSickLeave = leaveType.code === "SL";
+
+    // Validate dates:
+    // Sick Leave: allowed today, future, or up to 7 days in the past
+    // Other Leaves: allowed today or future dates
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
     const parsedDates = dates.map(dateStr => {
       const [year, month, day] = dateStr.split('-').map(Number);
@@ -56,8 +70,14 @@ export const CreateNewLeave = async (
     });
 
     for (const date of parsedDates) {
-      if (date <= today) {
-        throw new Error("All leave dates must be future dates (cannot be today or earlier)");
+      if (isSickLeave) {
+        if (date < sevenDaysAgo) {
+          throw new Error("Sick leave cannot be requested for dates older than 7 days ago");
+        }
+      } else {
+        if (date < today) {
+          throw new Error("Leave dates must be today or in the future");
+        }
       }
     }
 
@@ -69,21 +89,15 @@ export const CreateNewLeave = async (
       },
     });
 
-    // Check each selected date against existing leaves
+    // Check each selected date against existing leaves using formatICTDate
     for (const selectedDate of parsedDates) {
+      const selectedDateStr = formatICTDate(selectedDate);
       for (const leave of existingLeaves) {
-        const existingStartStr = leave.start_date.toISOString().split('T')[0];
-        const [eStartYear, eStartMonth, eStartDay] = existingStartStr.split('-').map(Number);
-        const existingStart = new Date(eStartYear, eStartMonth - 1, eStartDay);
-        existingStart.setHours(0, 0, 0, 0);
+        const existingStartStr = formatICTDate(leave.start_date);
+        const existingEndStr = formatICTDate(leave.end_date);
 
-        const existingEndStr = leave.end_date.toISOString().split('T')[0];
-        const [eEndYear, eEndMonth, eEndDay] = existingEndStr.split('-').map(Number);
-        const existingEnd = new Date(eEndYear, eEndMonth - 1, eEndDay);
-        existingEnd.setHours(0, 0, 0, 0);
-
-        if (selectedDate >= existingStart && selectedDate <= existingEnd) {
-          throw new Error("You already have a leave request that overlaps with these dates");
+        if (selectedDateStr >= existingStartStr && selectedDateStr <= existingEndStr) {
+          throw new Error(`You already have a leave request that overlaps with ${selectedDateStr}`);
         }
       }
     }
@@ -99,10 +113,6 @@ export const CreateNewLeave = async (
         },
         company: true,
       },
-    });
-
-    const leaveType = await prisma.leavetype.findUnique({
-      where: { id: parseInt(leave_type_id) },
     });
 
     // Group dates into consecutive ranges

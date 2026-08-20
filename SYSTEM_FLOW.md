@@ -60,13 +60,13 @@ Automated financial calculations based on system data.
 
 ---
 
-## 6. KPI & Performance Monitoring
+## 6. Recruitment & Candidate Tracking
 
-Real-time analytics for management.
+Manage hiring pipelines and talent acquisition.
 
-- **Step 1: Data Aggregation**: The system continuously monitors attendance consistency, late arrivals, and leave frequencies.
-- **Step 2: Dashboard Generation**: Managers and HR view graphical charts tracking overall productivity and individual employee reliability.
-- **Step 3: Review**: Managers use this data when conducting performance reviews or approving time-off requests.
+- **Step 1: Job Posting**: HR creates and publishes open job requisitions with department, role, salary ranges, and requirements.
+- **Step 2: Candidate Pipeline**: Applicants submit resumes and HR tracks candidate stages (Applied, Screening, Interview, Offer, Hired, Rejected).
+- **Step 3: Direct Onboarding**: When a candidate is marked as "Hired", the system can automatically transition them into the employee directory.
 
 ---
 

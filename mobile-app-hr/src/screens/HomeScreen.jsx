@@ -374,8 +374,6 @@ export default function HomeScreen({ theme, toggleTheme, navigateTo }) {
                     navigateTo('Overtime');
                   } else if (item.id === 'payroll') {
                     navigateTo('Payroll');
-                  } else if (item.id === 'performance') {
-                    navigateTo('KpiDashboard');
                   } else if (item.id === 'calendar') {
                     navigateTo('HolidayCalendar');
                   } else if (item.id === 'asset') {

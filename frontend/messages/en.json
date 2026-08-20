@@ -53,6 +53,7 @@
     "gender": "Gender",
     "other": "Other",
     "refresh": "Refresh",
+    "details": "Details",
     "exportExcel": "Export Excel",
     "printPdf": "Print PDF"
   },
@@ -91,12 +92,6 @@
     "setting": "Setting",
     "appConfig": "App Configuration",
     "adminPanel": "Admin Panel",
-    "kpi": "Performance & Goals",
-    "kpiDashboard": "Dashboard",
-    "kpiCycles": "1. Review Period",
-    "kpiTemplates": "2. Standard Goals",
-    "kpiAssign": "3. Send to Staff",
-    "myKpi": "My Performance",
     "asset": "Asset",
     "assetDashboard": "Asset Dashboard",
     "assetInventory": "Inventory",
@@ -1029,29 +1024,6 @@
       "paid": "Paid"
     }
   },
-  "kpi": {
-    "title": "Performance & Goal Management",
-    "subtitle": "Overview of Performance Tracking, Goals, and Appraisals",
-    "tab1": "1. Review Period",
-    "tab2": "2. Standard Goals",
-    "tab3": "3. Send to Staff",
-    "tab4": "4. Grade Staff",
-    "step1Title": "Step 1: Set Review Period",
-    "step1Desc": "Create a monthly, quarterly, or yearly evaluation timeframe (e.g. August 2026).",
-    "step1Btn": "Create New Cycle",
-    "step2Title": "Step 2: Standard Goal Presets",
-    "step2Desc": "Create standard goal presets for job roles or departments.",
-    "step2Btn": "+ New Goal Preset",
-    "step3Title": "Step 3: Send Goals to Staff",
-    "step3Desc": "Send standard goal presets to staff for the selected review period.",
-    "step3Btn": "Deploy Goals to Staff",
-    "step4Title": "Step 4: Grade & Score Staff",
-    "step4Desc": "Review employee goal achievements and input final performance scores.",
-    "createCycle": "Create New KPI Cycle",
-    "createCycleDesc": "Define the timeline for the performance review cycle.",
-    "cycleNamePlaceholder": "e.g. 2026 Annual Performance",
-    "saveCycle": "Save Cycle"
-  },
   "announcement": {
     "title": "Announcements",
     "subtitle": "Broadcast updates, company newsletters, and targeted notifications in real-time.",
@@ -1163,13 +1135,6 @@
     "assetCategoriesDesc": "Manage category types like Laptops or Phones.",
     "repairAssetsDesc": "Assets currently undergoing maintenance or repairs.",
     "brokenAssetsDesc": "Assets that are damaged, broken, or retired."
-  },
-  "myKpi": {
-    "title": "My Performance",
-    "subtitle": "Track your goals, self-evaluation, and review history",
-    "myGoals": "My Goals",
-    "teamOverview": "Team KPI Overview",
-    "noGoals": "No KPI goals assigned for this cycle"
   },
   "notification": {
     "title": "Notifications",

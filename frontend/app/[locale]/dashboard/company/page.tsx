@@ -890,7 +890,7 @@ export default function CompanyPage() {
                             onValueChange={(val) => {
                               let defaultModel = 'qwen2.5:1.5b';
                               if (val === 'huggingface') {
-                                defaultModel = 'Qwen/Qwen2.5-7B-Instruct';
+                                defaultModel = 'Qwen/Qwen2.5-72B-Instruct';
                               } else if (val === 'openrouter') {
                                 defaultModel = 'openrouter/free';
                               }

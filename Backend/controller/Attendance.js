@@ -21,14 +21,74 @@ const parseTimeToMinutes = (timeStr) => {
   if (h < 0 || h > 23 || m < 0 || m > 59) return null;
   return h * 60 + m;
 };
-const inferTimeFieldFromTimeMode = (timeMode) => {
-  const hay = `${timeMode?.name || ""} ${timeMode?.remark || ""}`.toLowerCase();
-  const normalized = hay.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+const normalizeText = (text) =>
+  String(text || "")
+    .toLowerCase()
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 
-  if (normalized.includes("lunch out") || normalized.includes("lunchout") || normalized.includes("break out") || normalized.includes("lunch_out")) return "lunch_out";
-  if (normalized.includes("lunch in") || normalized.includes("lunchin") || normalized.includes("break in") || normalized.includes("lunch_in")) return "lunch_in";
-  if (normalized.includes("time out") || normalized.includes("timeout") || normalized.includes("check out") || normalized.includes("clock out") || normalized.includes("time_out")) return "time_out";
-  if (normalized.includes("time in") || normalized.includes("timein") || normalized.includes("check in") || normalized.includes("clock in") || normalized.includes("time_in")) return "time_in";
+const isLunchOutKeyword = (norm) =>
+  norm.includes("lunch out") ||
+  norm.includes("lunchout") ||
+  norm.includes("break out") ||
+  norm.includes("lunch_out") ||
+  norm.includes("ចេញបាយ") ||
+  norm.includes("ចេញញ៉ាំ") ||
+  norm.includes("សម្រាកថ្ងៃ");
+
+const isLunchInKeyword = (norm) =>
+  norm.includes("lunch in") ||
+  norm.includes("lunchin") ||
+  norm.includes("break in") ||
+  norm.includes("lunch_in") ||
+  norm.includes("ចូលបាយ") ||
+  norm.includes("ចូលពីបាយ") ||
+  norm.includes("ចូលរសៀល");
+
+const isTimeOutKeyword = (norm) =>
+  norm.includes("time out") ||
+  norm.includes("timeout") ||
+  norm.includes("check out") ||
+  norm.includes("checkout") ||
+  norm.includes("clock out") ||
+  norm.includes("clockout") ||
+  norm.includes("time_out") ||
+  norm.includes("ចេញធ្វើការ") ||
+  norm.includes("ចេញល្ងាច") ||
+  norm.includes("ចេញ");
+
+const isTimeInKeyword = (norm) =>
+  norm.includes("time in") ||
+  norm.includes("timein") ||
+  norm.includes("check in") ||
+  norm.includes("checkin") ||
+  norm.includes("clock in") ||
+  norm.includes("clockin") ||
+  norm.includes("time_in") ||
+  norm.includes("ចូលធ្វើការ") ||
+  norm.includes("ចូលព្រឹក") ||
+  norm.includes("ចូល");
+
+const inferTimeFieldFromTimeMode = (timeMode) => {
+  if (!timeMode) return null;
+
+  // Check explicit punch_type if set
+  if (timeMode.punch_type) {
+    const pt = String(timeMode.punch_type).toLowerCase();
+    if (pt === "time_in" || pt === "lunch_out" || pt === "lunch_in" || pt === "time_out") {
+      return pt;
+    }
+  }
+
+  const hay = `${timeMode?.name || ""} ${timeMode?.remark || ""}`;
+  const normalized = normalizeText(hay);
+
+  // Check lunch first to avoid generic "in" or "out" collision
+  if (isLunchOutKeyword(normalized)) return "lunch_out";
+  if (isLunchInKeyword(normalized)) return "lunch_in";
+  if (isTimeOutKeyword(normalized)) return "time_out";
+  if (isTimeInKeyword(normalized)) return "time_in";
 
   return null;
 };
@@ -39,26 +99,22 @@ const findTimeModeForField = async (company_id, timeField) => {
       where: { company_id: parseInt(company_id) },
     });
 
-    const matchingMode = modes.find((m) => {
-      const hay = `${m.name || ""} ${m.remark || ""}`.toLowerCase();
-      const normalized = hay.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+    // 1. Direct field inferrence
+    const matchingMode = modes.find((m) => inferTimeFieldFromTimeMode(m) === timeField);
+    if (matchingMode) return matchingMode;
 
-      if (timeField === "lunch_out") {
-        return normalized.includes("lunch out") || normalized.includes("lunchout") || normalized.includes("break out") || normalized.includes("lunch_out");
-      }
-      if (timeField === "lunch_in") {
-        return normalized.includes("lunch in") || normalized.includes("lunchin") || normalized.includes("break in") || normalized.includes("lunch_in");
-      }
-      if (timeField === "time_out") {
-        return normalized.includes("time out") || normalized.includes("timeout") || normalized.includes("check out") || normalized.includes("clock out") || normalized.includes("time_out");
-      }
-      if (timeField === "time_in") {
-        return normalized.includes("time in") || normalized.includes("timein") || normalized.includes("check in") || normalized.includes("clock in") || normalized.includes("time_in");
-      }
-      return false;
-    });
+    // 2. Index-based fallback if company has exactly 2 or 4 time modes
+    if (modes.length === 2) {
+      if (timeField === "time_in") return modes[0];
+      if (timeField === "time_out") return modes[1];
+    } else if (modes.length === 4) {
+      if (timeField === "time_in") return modes[0];
+      if (timeField === "lunch_out") return modes[1];
+      if (timeField === "lunch_in") return modes[2];
+      if (timeField === "time_out") return modes[3];
+    }
 
-    return matchingMode || null;
+    return modes[0] || null;
   } catch (error) {
     console.error("Error finding time mode for field:", error);
     return null;

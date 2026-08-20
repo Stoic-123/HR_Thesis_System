@@ -1,6 +1,7 @@
 import { chatWithAI } from "../lib/ai/ollama.js";
 import { getHRContext } from "../service/AI.js";
 import prisma from "../lib/prisma.js";
+import { formatICTDate, formatICTTime, toICTDate } from "../utils/timezone.js";
 
 /**
  * Strips any raw tool-call JSON blobs from AI response text before showing it to the user.
@@ -10,8 +11,11 @@ function sanitizeResponseText(text) {
   if (!text) return text;
   // Remove ```json ... ``` code blocks containing tool calls
   let sanitized = text.replace(/```json[\s\S]*?```/gi, '');
-  // Remove bare { "tool": ... } objects (greedy JSON object detection)
+  // Remove bare { "tool": ... } objects or unclosed {"tool": ...
+  sanitized = sanitized.replace(/\{\s*"tool"[\s\S]*$/g, '');
   sanitized = sanitized.replace(/\{\s*"tool"\s*:[\s\S]*?\}\s*\}?/g, '');
+  sanitized = sanitized.replace(/<tool_call>[\s\S]*?<\/tool_call>/gi, '');
+  sanitized = sanitized.replace(/<tool_call>[\s\S]*$/gi, '');
   // Remove any leftover markdown code fences
   sanitized = sanitized.replace(/```[\s\S]*?```/g, '');
   // Clean up extra blank lines created by removals
@@ -52,10 +56,19 @@ function buildEmployeeNameFilter(searchString) {
 const tools = {
   get_today_attendance: async (args, company_id, deptFilter) => {
     try {
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-      const todayEnd = new Date();
-      todayEnd.setHours(23, 59, 59, 999);
+      let targetDate = new Date();
+      if (args && (args.date || args.start_date || args.target_date)) {
+        const dStr = args.date || args.start_date || args.target_date;
+        const [y, m, d] = String(dStr).split('-').map(Number);
+        if (y && m && d) {
+          targetDate = new Date(y, m - 1, d);
+        }
+      }
+
+      const dayStart = new Date(targetDate);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(targetDate);
+      dayEnd.setHours(23, 59, 59, 999);
 
       const empWhere = {
         company_id: parseInt(company_id),
@@ -72,7 +85,7 @@ const tools = {
         prisma.attendancerecord.findMany({
           where: {
             employee: empWhere,
-            work_at: { gte: todayStart, lte: todayEnd },
+            work_at: { gte: dayStart, lte: dayEnd },
           },
           include: { employee: true },
         }),
@@ -80,8 +93,8 @@ const tools = {
           where: {
             employee_leaverecord_employee_idToemployee: empWhere,
             status: "approved",
-            start_date: { lte: todayEnd },
-            end_date: { gte: todayStart },
+            start_date: { lte: dayEnd },
+            end_date: { gte: dayStart },
           },
           include: {
             employee_leaverecord_employee_idToemployee: true,
@@ -107,10 +120,12 @@ const tools = {
         .filter((e) => !scannedEmpIds.has(e.id) && !onLeaveEmpIds.has(e.id))
         .map((e) => `- **${e.first_name} ${e.last_name}:** Absent / Not Scanned`);
 
-      const dateStr = todayStart.toISOString().split("T")[0];
-      let summaryText = `📊 **Today's Attendance Status (${dateStr})**:\n\n`;
+      const dateStr = formatICTDate(dayStart);
+      const isToday = formatICTDate(new Date()) === dateStr;
+      const titleLabel = isToday ? "Today's Attendance Status" : `Attendance Status for ${dateStr}`;
+      let summaryText = `📊 **${titleLabel}**:\n\n`;
 
-      summaryText += `✅ **Checked In (${checkedInList.length}):**\n` + (checkedInList.length > 0 ? checkedInList.join("\n") : "- None yet") + "\n\n";
+      summaryText += `✅ **Checked In (${checkedInList.length}):**\n` + (checkedInList.length > 0 ? checkedInList.join("\n") : "- None") + "\n\n";
       summaryText += `🏖️ **On Approved Leave (${onLeaveList.length}):**\n` + (onLeaveList.length > 0 ? onLeaveList.join("\n") : "- None") + "\n\n";
       summaryText += `❌ **Absent / Not Scanned (${absentList.length}):**\n` + (absentList.length > 0 ? absentList.join("\n") : "- None");
 
@@ -149,8 +164,8 @@ const tools = {
       const summaryText = records
         .map((r) => {
           const emp = r.employee_leaverecord_employee_idToemployee;
-          const start = r.start_date ? r.start_date.toISOString().split("T")[0] : "N/A";
-          const end = r.end_date ? r.end_date.toISOString().split("T")[0] : "N/A";
+          const start = r.start_date ? formatICTDate(r.start_date) : "N/A";
+          const end = r.end_date ? formatICTDate(r.end_date) : "N/A";
           return `- **${emp.first_name} ${emp.last_name}:** Applied for **${r.leavetype?.name || "Leave"}** from **${start}** to **${end}** (Reason: ${r.reason || "No reason specified"})`;
         })
         .join("\n");
@@ -365,7 +380,7 @@ const tools = {
         `* **Email:** ${employee.email || "N/A"}`,
         `* **Phone:** ${employee.phone_number1 || "N/A"}`,
         `* **Address:** ${employee.address || "N/A"}`,
-        `* **Joined Date:** ${employee.joined_at ? employee.joined_at.toISOString().split('T')[0] : "N/A"}`,
+        `* **Joined Date:** ${employee.joined_at ? formatICTDate(employee.joined_at) : "N/A"}`,
         `* **Relationship Status:** ${employee.relationship_status || "N/A"}`,
         `* **Children:** ${employee.total_children ?? "N/A"}`,
         `* **Status:** ${employee.is_active || "active"}`
@@ -469,8 +484,8 @@ const tools = {
       const displayRecords = records.slice(0, 25);
       const summaryText = displayRecords.map(r => {
         const emp = r.employee_leaverecord_employee_idToemployee;
-        const start = r.start_date.toISOString().split('T')[0];
-        const end = r.end_date.toISOString().split('T')[0];
+        const start = formatICTDate(r.start_date);
+        const end = formatICTDate(r.end_date);
         return `* **${emp.first_name} ${emp.last_name}** (ID: ${emp.id}): ${r.leavetype.name} from ${start} to ${end} (${r.status}, Reason: ${r.reason || 'None'})`;
       }).join("\n");
 
@@ -577,7 +592,7 @@ const tools = {
       // Safe limit of 25 for raw list to prevent prompt bloat
       const displayRecords = records.slice(0, 25);
       const summaryText = displayRecords.map(r => {
-        const dateStr = r.work_at.toISOString().split('T')[0];
+        const dateStr = formatICTDate(r.work_at);
         const timeStr = r.work_at.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
         return `* **${r.employee.first_name} ${r.employee.last_name}** (ID: ${r.employee.id}): ${dateStr} at ${timeStr} (Mode: ${r.timemode.name}, Status: ${r.status}, Late: ${r.is_late ? 'Yes' : 'No'})`;
       }).join("\n");
@@ -634,6 +649,15 @@ export const chatController = async (req, res) => {
     const deptFilter = isHrOrAdmin ? null : currentEmployee?.department_id;
     const context = await getHRContext(company_id, null);
     
+    // Exact system date variables in local Cambodia Time (UTC+7)
+    const nowICT = toICTDate(new Date());
+    const todayStr = formatICTDate(nowICT);
+    const yesterdayDate = new Date(new Date().getTime() - 24 * 60 * 60 * 1000);
+    const yesterdayStr = formatICTDate(yesterdayDate);
+    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const todayDayName = dayNames[nowICT.getUTCDay()];
+    const yesterdayDayName = dayNames[(nowICT.getUTCDay() + 6) % 7];
+
     // Customize Prompt Capabilities and Roles dynamically
     let roleDescription = isHrOrAdmin 
       ? "You are the HR System Master AI. You have full administrative access across the entire company."
@@ -641,7 +665,7 @@ export const chatController = async (req, res) => {
 
     let toolInstructions = isHrOrAdmin
       ? `Available tools:
-         - get_today_attendance {} (Use this for fetching today's scan/attendance list, checking who is absent, who is on leave, or who scanned today)
+         - get_today_attendance {"date": "YYYY-MM-DD"} (Use this for fetching attendance status for today (${todayStr}), yesterday (${yesterdayStr}), or any specific date. Returns checked-in, on-leave, and absent lists)
          - get_department_headcount {} (Use this for queries like 'Show department headcount', 'department employee count', or breakdown of headcount per department)
          - get_pending_leave_requests {} (Use this for fetching ALL pending leave applications/requests waiting for manager/HR approval across the company)
          - get_available_assets {} (Use this for queries like 'Available company assets', 'company assets', 'free hardware', or asset inventory status)
@@ -651,7 +675,7 @@ export const chatController = async (req, res) => {
          - get_attendance_records {"employee_name_or_id": "string", "start_date": "YYYY-MM-DD", "end_date": "YYYY-MM-DD", "is_late": boolean, "status": "string"} (Use this to search historical attendance logs. ALL parameters are optional. If employee_name_or_id is omitted or null, it will search across ALL active employees in the company. Perfect for queries like 'who was late this month', 'top late employees', or listing attendance logs)
          - get_company_leave_summary {} (Use this for company-wide queries, list of all leaves, comparisons, sorting, or queries like 'who has taken the most leaves', 'unpaid the most', or 'top leave users')`
       : `Available tools:
-         - get_today_attendance {} (Get list of scanned employees today in your department, plus on-leave and absent)
+         - get_today_attendance {"date": "YYYY-MM-DD"} (Get list of scanned employees in your department for today (${todayStr}), yesterday (${yesterdayStr}), or any specific date, plus on-leave and absent)
          - get_department_headcount {} (Get department employee headcount breakdown)
          - get_pending_leave_requests {} (Get list of pending leave applications waiting for approval in your department)
          - get_available_assets {} (Get list of available company assets)
@@ -664,8 +688,19 @@ export const chatController = async (req, res) => {
     const systemPrompt = `
       ${roleDescription}
       
+      CURRENT SYSTEM CALENDAR & TIME (Cambodia UTC+7):
+      - TODAY: ${todayStr} (${todayDayName})
+      - YESTERDAY: ${yesterdayStr} (${yesterdayDayName})
+      - CURRENT YEAR: ${nowICT.getUTCFullYear()}
+      - CURRENT TIME: ${formatICTTime(nowICT)}
+      
+      DATE INTERPRETATION RULES:
+      - TODAY ALWAYS means ${todayStr}.
+      - YESTERDAY ALWAYS means ${yesterdayStr}.
+      - CURRENT YEAR is strictly ${nowICT.getUTCFullYear()}. Never use 2023 or any outdated training date!
+      - When querying attendance for yesterday, pass {"date": "${yesterdayStr}"} to the tool.
+      
       CONTEXT:
-      - CURRENT DATE/TIME: ${new Date().toISOString()} (Use this for calculating date ranges like 'last 3 months', 'this month', or previous years relative to today)
       - EMPLOYEES: ${JSON.stringify(context.employees)}
       - DEPARTMENTS: ${JSON.stringify(context.departments)}
       - POSITIONS: ${JSON.stringify(context.positions)}
@@ -743,9 +778,8 @@ export const chatController = async (req, res) => {
     }
 
     // After stream completes, check if there is a JSON tool call or XML tool call embedded anywhere in the response
-    const embeddedJsonMatch = accumulatedText.match(/\{[\s\S]*"tool"[\s\S]*\}/);
-    const embeddedXmlMatch = accumulatedText.match(/<tool_call>[\s\S]*<\/tool_call>/);
-    if (embeddedJsonMatch || embeddedXmlMatch) {
+    const hasToolKeyword = accumulatedText.includes('"tool"') || accumulatedText.includes('"get_') || accumulatedText.includes('<tool_call>');
+    if (hasToolKeyword) {
       isToolCallDetected = true;
     }
 
@@ -782,6 +816,21 @@ export const chatController = async (req, res) => {
               }
             }
           }
+        }
+      }
+
+      // Regex fallback if JSON was truncated/unclosed (e.g. {"tool": "get_today_attendance", "args": {"date": "2026-08-19)
+      if (!toolCall || !toolCall.tool) {
+        const toolNameMatch = accumulatedText.match(/"tool"\s*:\s*"([^"]+)"/i);
+        if (toolNameMatch) {
+          const toolName = toolNameMatch[1];
+          const args = {};
+          const dateMatch = accumulatedText.match(/"(?:date|start_date|end_date)"\s*:\s*"([^"]+)"/i);
+          if (dateMatch) args.date = dateMatch[1];
+          const empMatch = accumulatedText.match(/"employee_name_or_id"\s*:\s*"([^"]+)"/i);
+          if (empMatch) args.employee_name_or_id = empMatch[1];
+          toolCall = { tool: toolName, args };
+          console.log("[Chatbot] Successfully parsed truncated JSON tool call:", toolCall);
         }
       }
 
@@ -925,21 +974,22 @@ export const chatController = async (req, res) => {
           : `⚠️ I'm sorry, I couldn't complete that action. ${result.message}`;
 
         // Feed the database result back to the AI model so it can synthesize a professional response
-        // NOTE: We do NOT include the raw tool call JSON as assistant context — it causes the model to regurgitate it.
         const summarizeMessages = [
-          ...messages,
-          { role: "system", content: `The system queried the database and got this result:
-            ---
-            ${displayMessage}
-            ---
-            Based ONLY on this data above, write a premium, professional HR response for the user.
-            Rules:
-            1. Respond naturally, politely, and clearly in plain text.
-            2. For rankings or lists, format beautifully with emojis (🥇, 🥈, 🥉) and clean bullet points.
-            3. Add a short professional "Summary" or "Recommendation" at the end.
-            4. NEVER output raw JSON, code blocks, tool syntax, or numbers you did not get from the data above.
-            5. Do NOT reference or describe how you retrieved the data. Just present the findings professionally.`
-          }
+          {
+            role: "system",
+            content: `You are the HR System AI Assistant. The database query has already been executed and returned the following exact real-time data:
+---
+${displayMessage}
+---
+TASK: Formulate a clear, direct, and professional answer to the user's question: "${message}".
+CRITICAL RULES:
+1. Do NOT call any tools or output any JSON, code, or tool syntax. All data is already provided above.
+2. Directly answer the question using clean bullet points and emojis (✅, 🏖️, ❌, 👤, 📊).
+3. Keep the response concise, executive, and helpful.
+4. Speak naturally and directly to the user without mentioning system internals or how data was retrieved.`
+          },
+          ...history.slice(-3),
+          { role: "user", content: message }
         ];
 
         try {

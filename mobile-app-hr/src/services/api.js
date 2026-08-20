@@ -693,48 +693,6 @@ export const overtimeService = {
   },
 };
 
-// KPI Services
-export const kpiService = {
-  getCycles: async () => {
-    try {
-      const response = await apiRequest(`/api/kpi/cycles`);
-      return response;
-    } catch (error) {
-      throw error;
-    }
-  },
-
-  getMyDashboard: async (cycleId) => {
-    try {
-      const response = await apiRequest(`/api/kpi/my-dashboard?cycle_id=${cycleId}`);
-      return response;
-    } catch (error) {
-      throw error;
-    }
-  },
-
-  getTeamDashboard: async (cycleId) => {
-    try {
-      const response = await apiRequest(`/api/kpi/team-dashboard?cycle_id=${cycleId}`);
-      return response;
-    } catch (error) {
-      throw error;
-    }
-  },
-
-  submitManagerScore: async (data) => {
-    try {
-      const response = await apiRequest(`/api/kpi/manager-score`, {
-        method: "POST",
-        body: data,
-      });
-      return response;
-    } catch (error) {
-      throw error;
-    }
-  },
-};
-
 // Notification Services
 export const notificationService = {
   getAll: async () => {
@@ -920,7 +878,6 @@ export default {
   dayOfWeekService,
   employeeWorkingProfileService,
   leaveService,
-  kpiService,
   notificationService,
   documentService,
   scannerService,

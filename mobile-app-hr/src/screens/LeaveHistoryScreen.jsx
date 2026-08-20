@@ -45,8 +45,8 @@ const displayDate = (str) => {
 };
 
 // ── Inline multiple-select calendar ────────────────────────────────────────────
-function InlineCalendar({ year, month, selectedDates, onSelect, isDark, leaveHistory, primaryColor }) {
-  const textMain = isDark ? '#F9FAFB' : '#1F2937';
+function InlineCalendar({ year, month, selectedDates, onSelect, isDark, leaveHistory = [], primaryColor = COLORS.orange, isSickLeave = false }) {
+  const textMain = isDark ? '#FFFFFF' : '#111827';
   const textSub  = isDark ? '#9CA3AF' : '#6B7280';
   const disabledColor = isDark ? '#555' : '#ccc';
 
@@ -65,6 +65,9 @@ function InlineCalendar({ year, month, selectedDates, onSelect, isDark, leaveHis
 
   // Get today's date without time for comparison
   const todayStr = fmtDate(new Date());
+  const sevenDaysAgoDate = new Date();
+  sevenDaysAgoDate.setDate(sevenDaysAgoDate.getDate() - 7);
+  const sevenDaysAgoStr = fmtDate(sevenDaysAgoDate);
 
   // Function to check if a date is already in leave history (pending or approved)
   const isDateAlreadyTaken = (dateStr) => {
@@ -95,7 +98,8 @@ function InlineCalendar({ year, month, selectedDates, onSelect, isDark, leaveHis
             const str       = day ? getStr(day) : null;
             const isToday   = str === todayStr;
             const isSel     = str && selectedDates.includes(str);
-            const isDisabled = str && (new Date(str) <= new Date(todayStr) || isDateAlreadyTaken(str));
+            const isPastDisallowed = isSickLeave ? (str < sevenDaysAgoStr) : (str < todayStr);
+            const isDisabled = str && (isPastDisallowed || isDateAlreadyTaken(str));
 
             return (
               <TouchableOpacity
@@ -925,6 +929,7 @@ export default function LeaveHistoryScreen({ theme, navigateTo }) {
               isDark={isDark}
               leaveHistory={leaveHistory}
               primaryColor={primaryColor}
+              isSickLeave={selectedLeaveType?.code === 'SL'}
             />
           </View>
         </View>

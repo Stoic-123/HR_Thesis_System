@@ -95,7 +95,6 @@ export const mockQuickAccess = [
   { id: "online-attendance", label: "Online Attendance", image: require('../../assets/online.png'), color: "blue" },
   { id: "leave", label: "Leave", image: require('../../assets/leave.png'), color: "orange" },
   { id: "overtime", label: "Overtime", image: require('../../assets/overtime.png'), color: "orange" },
-  { id: "performance", label: "Employee Performance", image: require('../../assets/performance.png'), color: "blue" },
   { id: "calendar", label: "Holiday Calendar", image: require('../../assets/calendar.png'), color: "blue" },
   { id: "asset", label: "Asset Management", image: require('../../assets/scanner.png'), color: "blue" },
 ];

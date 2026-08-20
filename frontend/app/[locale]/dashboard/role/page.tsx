@@ -30,7 +30,6 @@ const AVAILABLE_PERMISSIONS = [
   { path: "asset:approve", name: "Approve Asset Requests" },
   { path: "payroll:view", name: "View Payroll Records" },
   { path: "payroll:manage", name: "Generate & Manage Payroll" },
-  { path: "kpi:evaluate", name: "Evaluate Employee KPIs" },
   { path: "role:manage", name: "Manage Roles & Permissions" },
   { path: "employee:manage", name: "Manage Employees List" },
   { path: "department:manage", name: "Manage Departments" },

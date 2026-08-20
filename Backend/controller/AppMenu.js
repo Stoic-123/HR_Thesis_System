@@ -7,9 +7,8 @@ const DEFAULT_MENUS = [
   { menu_key: "online-attendance", label: "Online Attendance", color: "blue", order: 1 },
   { menu_key: "leave", label: "Leave", color: "orange", order: 2 },
   { menu_key: "overtime", label: "Overtime", color: "orange", order: 3 },
-  { menu_key: "performance", label: "Employee Performance", color: "blue", order: 4 },
-  { menu_key: "calendar", label: "Holiday Calendar", color: "blue", order: 5 },
-  { menu_key: "asset", label: "Asset Management", color: "blue", order: 6 },
+  { menu_key: "calendar", label: "Holiday Calendar", color: "blue", order: 4 },
+  { menu_key: "asset", label: "Asset Management", color: "blue", order: 5 },
 ];
 
 /**
@@ -18,28 +17,30 @@ const DEFAULT_MENUS = [
  */
 export const getAppMenusController = async (req, res) => {
   try {
-    let userCompanyId = req.user?.company_id || req.user?.employee?.company_id;
-
-    if (userCompanyId) {
-      const companyExists = await prisma.company.findUnique({
-        where: { id: userCompanyId },
-        select: { id: true },
-      });
-      if (!companyExists) {
-        const fallbackCompany = await prisma.company.findFirst({ select: { id: true } });
-        userCompanyId = fallbackCompany?.id;
-      }
-    } else {
-      const fallbackCompany = await prisma.company.findFirst({ select: { id: true } });
-      userCompanyId = fallbackCompany?.id;
-    }
+    const userCompanyId = req.user?.company_id || req.user?.employee?.company_id;
 
     if (!userCompanyId) {
       return res.status(200).json({ success: true, data: [] });
     }
 
+    const companyExists = await prisma.company.findUnique({
+      where: { id: userCompanyId },
+      select: { id: true },
+    });
+    if (!companyExists) {
+      return res.status(404).json({ success: false, message: "Company not found" });
+    }
+
+    // Clean up deprecated menu keys
+    await prisma.appmenu.deleteMany({
+      where: {
+        company_id: userCompanyId,
+        menu_key: { in: ["performance", "document-scanner"] },
+      },
+    }).catch(() => {});
+
     let menus = await prisma.appmenu.findMany({
-      where: { company_id: userCompanyId, NOT: { menu_key: "document-scanner" } },
+      where: { company_id: userCompanyId, NOT: { menu_key: { in: ["document-scanner", "performance"] } } },
       orderBy: { order: "asc" },
     });
 
@@ -51,7 +52,7 @@ export const getAppMenusController = async (req, res) => {
       }));
       await prisma.appmenu.createMany({ data: seedData });
       menus = await prisma.appmenu.findMany({
-        where: { company_id: userCompanyId, NOT: { menu_key: "document-scanner" } },
+        where: { company_id: userCompanyId, NOT: { menu_key: { in: ["document-scanner", "performance"] } } },
         orderBy: { order: "asc" },
       });
     }

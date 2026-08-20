@@ -25,7 +25,6 @@ import {
   Wrench,
   Banknote,
   CalendarClock,
-  Target,
   Laptop,
   Megaphone,
   UserPlus,
@@ -260,13 +259,6 @@ const menuItems: MenuItem[] = [
         permission: "payroll:manage",
       },
     ],
-  },
-  {
-    title: "KPI",
-    labelKey: "kpi",
-    icon: Target,
-    href: "/dashboard/kpi",
-    permission: "kpi:evaluate",
   },
   {
     title: "Asset",

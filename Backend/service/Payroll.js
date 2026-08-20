@@ -2,6 +2,7 @@ import prisma from "../lib/prisma.js";
 import fs from "fs";
 import path from "path";
 import { decrypt } from "../utils/crypto.js";
+import { formatICTDate } from "../utils/timezone.js";
 import {
   findPeriodById,
   listPeriods,
@@ -250,16 +251,16 @@ const buildPayrollPeriodContext = async (payroll) => {
   ]);
 
   const approvedDatesSet = new Set(
-    approvedLateRequests.map((r) => r.request_date.toISOString().split("T")[0])
+    approvedLateRequests.map((r) => formatICTDate(r.request_date))
   );
 
   // Only unapproved late records incur deductions
   const unapprovedLateRecords = lateRecords.filter(
-    (record) => !approvedDatesSet.has(record.work_at.toISOString().split("T")[0])
+    (record) => !approvedDatesSet.has(formatICTDate(record.work_at))
   );
 
   const lateDays = new Set(
-    unapprovedLateRecords.map((record) => record.work_at.toISOString().split("T")[0]),
+    unapprovedLateRecords.map((record) => formatICTDate(record.work_at)),
   ).size;
 
   const approvedLateDays = approvedDatesSet.size;
