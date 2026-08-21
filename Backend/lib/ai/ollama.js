@@ -15,6 +15,8 @@ const callCloudApi = async (provider, model, apiKey, messages, onStream) => {
       "HTTP-Referer": "http://localhost:3000",
       "X-Title": "HR System"
     };
+  } else if (provider === "gemini") {
+    url = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
   } else {
     throw new Error(`Unsupported AI provider: ${provider}`);
   }
@@ -126,12 +128,33 @@ export const chatWithAI = async (messages, defaultModel = "qwen2.5:1.5b", onStre
     if (!apiKey) {
       if (provider === "huggingface") apiKey = process.env.HF_API_KEY || process.env.HF_TOKEN;
       else if (provider === "openrouter") apiKey = process.env.OPENROUTER_API_KEY;
+      else if (provider === "gemini") apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
     }
 
     if (provider === "huggingface") {
       // Auto-map deprecated / default local model names to active Hugging Face serverless models
       if (!model || model === "qwen2.5:1.5b" || model === "Qwen/Qwen2.5-7B-Instruct") {
         model = "Qwen/Qwen2.5-72B-Instruct";
+      }
+    } else if (provider === "gemini") {
+      // Auto-map deprecated, slow, or default model names to ultra-fast active Gemini Flash Lite
+      if (
+        !model ||
+        model === "qwen2.5:1.5b" ||
+        model.includes("Qwen") ||
+        model === "default" ||
+        model.includes("2.5") ||
+        model.includes("2.0") ||
+        model.includes("1.5") ||
+        model === "gemini-3.6-flash"
+      ) {
+        model = "gemini-3.5-flash-lite";
+      }
+      if (model.startsWith("google/")) {
+        model = model.replace("google/", "");
+      }
+      if (model.startsWith("models/")) {
+        model = model.replace("models/", "");
       }
     }
 

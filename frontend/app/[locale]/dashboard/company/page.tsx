@@ -571,6 +571,7 @@ export default function CompanyPage() {
                         <span className="text-[11px] font-bold text-gray-400 block uppercase tracking-wider">{t("aiProviderLabel")}</span>
                         <div className="bg-white/90 border border-indigo-50/50 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 shadow-sm">
                           {company.ai_provider === 'ollama' && t("aiLocalOption")}
+                          {company.ai_provider === 'gemini' && t("aiGeminiOption")}
                           {company.ai_provider === 'huggingface' && t("aiHuggingFaceOption")}
                           {company.ai_provider === 'openrouter' && t("aiOpenrouterOption")}
                           {!company.ai_provider && t("aiLocalOption")}
@@ -889,7 +890,9 @@ export default function CompanyPage() {
                             value={formData.ai_provider}
                             onValueChange={(val) => {
                               let defaultModel = 'qwen2.5:1.5b';
-                              if (val === 'huggingface') {
+                              if (val === 'gemini') {
+                                defaultModel = 'gemini-3.5-flash-lite';
+                              } else if (val === 'huggingface') {
                                 defaultModel = 'Qwen/Qwen2.5-72B-Instruct';
                               } else if (val === 'openrouter') {
                                 defaultModel = 'openrouter/free';
@@ -902,6 +905,7 @@ export default function CompanyPage() {
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="ollama">{t("aiLocalOption")}</SelectItem>
+                              <SelectItem value="gemini">{t("aiGeminiOption")}</SelectItem>
                               <SelectItem value="huggingface">{t("aiHuggingFaceOption")}</SelectItem>
                               <SelectItem value="openrouter">{t("aiOpenrouterOption")}</SelectItem>
                             </SelectContent>

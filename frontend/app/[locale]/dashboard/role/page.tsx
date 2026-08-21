@@ -24,6 +24,7 @@ import { toast } from "sonner";
 const AVAILABLE_PERMISSIONS = [
   { path: "app:web_login", name: "Web Dashboard Access" },
   { path: "app:mobile_login", name: "Mobile App Access" },
+  { path: "announcement:manage", name: "Manage Announcements" },
   { path: "recruitment:manage", name: "Manage Recruitment & Candidates" },
   { path: "leave:approve", name: "Approve Leave Requests" },
   { path: "overtime:approve", name: "Approve Overtime Requests" },

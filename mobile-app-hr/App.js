@@ -25,8 +25,11 @@ import CheckInScreen from './src/screens/CheckInScreen';
 import PayrollScreen from './src/screens/PayrollScreen';
 import HolidayCalendarScreen from './src/screens/HolidayCalendarScreen';
 import AssetScreen from './src/screens/AssetScreen';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import useAuthStore from './src/stores/useAuthStore';
 import useNotificationStore from './src/stores/useNotificationStore';
+
+const THEME_STORAGE_KEY = '@app_theme_preference';
 // Helper Component for Animated Tab Item
 function TabItem({ onPress, icon, iconOutline, label, isActive, isDark, extraStyle = {} }) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -90,11 +93,17 @@ export default function App() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(10)).current;
 
-  // Initialize auth on mount and hide native splash screen when ready
+  // Initialize auth & saved theme on mount and hide native splash screen when ready
   useEffect(() => {
     const init = async () => {
       try {
-        await initialize();
+        const [savedTheme] = await Promise.all([
+          AsyncStorage.getItem(THEME_STORAGE_KEY).catch(() => null),
+          initialize().catch(() => {}),
+        ]);
+        if (savedTheme === 'light' || savedTheme === 'dark') {
+          setTheme(savedTheme);
+        }
       } catch (e) {
         console.error('Initialization error:', e);
       } finally {
@@ -148,7 +157,13 @@ export default function App() {
   };
 
   const toggleTheme = () => {
-    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+    setTheme(prev => {
+      const next = prev === 'dark' ? 'light' : 'dark';
+      AsyncStorage.setItem(THEME_STORAGE_KEY, next).catch(err => {
+        console.warn('Failed to save theme preference:', err);
+      });
+      return next;
+    });
   };
 
   const isDark = theme === 'dark';
@@ -160,7 +175,7 @@ export default function App() {
     }
 
     if (isDefaultPassword) {
-      return <ChangePasswordScreen onPasswordChanged={() => {}} />;
+      return <ChangePasswordScreen theme={theme} onPasswordChanged={() => {}} />;
     }
     
     switch (currentScreen) {

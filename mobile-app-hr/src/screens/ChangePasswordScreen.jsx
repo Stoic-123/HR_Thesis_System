@@ -13,7 +13,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons, Feather, Ionicons } from '@expo/vector-icons';
+import { MaterialCommunityIcons, Feather, Ionicons, MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { COLORS } from '../constants/theme';
 import useAuthStore from '../stores/useAuthStore';
@@ -32,18 +32,18 @@ export default function ChangePasswordScreen({ onPasswordChanged, navigateTo, th
 
   // Animations
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
-  const slideAnim = React.useRef(new Animated.Value(20)).current;
+  const slideAnim = React.useRef(new Animated.Value(15)).current;
 
   React.useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 400,
+        duration: 350,
         useNativeDriver: true,
       }),
       Animated.timing(slideAnim, {
         toValue: 0,
-        duration: 400,
+        duration: 350,
         useNativeDriver: true,
       }),
     ]).start();
@@ -56,18 +56,28 @@ export default function ChangePasswordScreen({ onPasswordChanged, navigateTo, th
   };
 
   const handleChangePassword = async () => {
-    if (!currentPassword.trim() || !newPassword.trim() || !confirmPassword.trim()) {
-      Alert.alert('Validation Error', 'Please fill in all password fields.');
+    if (!currentPassword.trim()) {
+      Alert.alert('Validation Error', 'Please enter your current password.');
       return;
     }
 
-    if (newPassword !== confirmPassword) {
-      Alert.alert('Validation Error', 'New password and confirm password do not match.');
+    if (!newPassword.trim()) {
+      Alert.alert('Validation Error', 'Please enter a new password.');
       return;
     }
 
     if (newPassword.length < 6) {
       Alert.alert('Validation Error', 'New password must be at least 6 characters.');
+      return;
+    }
+
+    if (!confirmPassword.trim()) {
+      Alert.alert('Validation Error', 'Please confirm your new password.');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      Alert.alert('Validation Error', 'New password and confirm password do not match.');
       return;
     }
 
@@ -95,160 +105,180 @@ export default function ChangePasswordScreen({ onPasswordChanged, navigateTo, th
           },
         ]);
       } else {
-        Alert.alert('Error', response?.message || 'Failed to change password');
+        const errorMsg = typeof response?.message === 'string' ? response.message : 'Failed to change password.';
+        Alert.alert('Error', errorMsg);
       }
     } catch (error) {
-      Alert.alert(
-        'Change Password Failed',
-        error?.message || 'An error occurred while changing your password'
-      );
+      const displayMsg = typeof error?.message === 'string' ? error.message : 'An error occurred while changing your password.';
+      Alert.alert('Change Password Failed', displayMsg);
     }
   };
 
   return (
     <View 
       className="flex-1"
-      style={{ backgroundColor: isDark ? '#0D0F15' : '#F4F6F9' }}
+      style={{ backgroundColor: isDark ? COLORS.dark.bg : COLORS.light.bg }}
     >
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+      <StatusBar barStyle="light-content" backgroundColor={primaryColor} />
 
-      {/* HEADER BAR */}
-      <SafeAreaView edges={['top']} style={{ backgroundColor: isDark ? '#0D0F15' : '#F4F6F9' }}>
-        <View className="px-5 pt-2 pb-3 flex-row items-center justify-between">
-          {!isDefaultPassword ? (
-            <TouchableOpacity 
-              onPress={handleBack}
-              className="w-10 h-10 rounded-2xl items-center justify-center border active:scale-95 transition-transform"
-              style={{ 
-                backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#FFFFFF',
-                borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#E2E8F0',
-              }}
-              hitSlop={8}
-            >
-              <Feather name="chevron-left" size={22} color={isDark ? '#F1F5F9' : '#0F172A'} />
-            </TouchableOpacity>
-          ) : (
-            <View className="w-10 h-10" />
-          )}
+      {/* ── 1. SIGNATURE CURVED PRIMARY HEADER ──────────────────────── */}
+      <View 
+        style={{ 
+          backgroundColor: primaryColor,
+          paddingBottom: 55,
+          paddingHorizontal: 20,
+          borderBottomLeftRadius: 36,
+          borderBottomRightRadius: 36,
+          elevation: 8,
+          shadowColor: primaryColor,
+          shadowOffset: { width: 0, height: 6 },
+          shadowOpacity: 0.25,
+          shadowRadius: 10,
+        }}
+      >
+        <SafeAreaView edges={['top']}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 8, paddingBottom: 12 }}>
+            {!isDefaultPassword ? (
+              <TouchableOpacity 
+                onPress={handleBack} 
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+                activeOpacity={0.8}
+              >
+                <MaterialIcons name="arrow-back-ios" size={18} color="#FFFFFF" style={{ marginLeft: 6 }} />
+              </TouchableOpacity>
+            ) : (
+              <View style={{ width: 40, height: 40 }} />
+            )}
 
-          <View className="items-center">
-            <Text 
-              className="text-base font-extrabold tracking-tight"
-              style={{ color: isDark ? '#F8FAFC' : '#0F172A' }}
-            >
+            <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '800', letterSpacing: -0.3 }}>
               Security Settings
             </Text>
-            <Text 
-              className="text-[11px] font-semibold"
-              style={{ color: isDark ? '#64748B' : '#94A3B8' }}
-            >
-              Change Account Password
-            </Text>
-          </View>
 
-          <View className="w-10 h-10 items-center justify-center">
             <View 
-              className="w-8 h-8 rounded-xl items-center justify-center"
-              style={{ backgroundColor: `${primaryColor}18` }}
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
             >
-              <Feather name="shield" size={15} color={primaryColor} />
+              <Feather name="shield" size={18} color="#FFFFFF" />
             </View>
           </View>
-        </View>
-      </SafeAreaView>
+        </SafeAreaView>
+      </View>
 
+      {/* ── 2. SCROLLABLE FORM CONTENT ──────────────────────────────── */}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
       >
         <ScrollView
-          contentContainerStyle={{ flexGrow: 1, paddingBottom: 60 }}
+          style={{ marginTop: -40 }}
+          contentContainerStyle={{ paddingBottom: 60 }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
           <Animated.View
             style={{
-              flex: 1,
-              paddingHorizontal: 20,
-              paddingTop: 10,
+              paddingHorizontal: 16,
               opacity: fadeAnim,
               transform: [{ translateY: slideAnim }],
             }}
           >
-            {/* HERO INFO CARD */}
+            {/* HERO SECURITY CARD */}
             <View 
-              className="p-5 rounded-[26px] border shadow-sm mb-5"
               style={{
-                backgroundColor: isDark ? '#151821' : '#FFFFFF',
-                borderColor: isDark ? 'rgba(255,255,255,0.07)' : '#E2E8F0',
+                backgroundColor: isDark ? COLORS.dark.card : COLORS.light.card,
+                borderColor: isDark ? COLORS.dark.border : COLORS.light.border,
+                borderWidth: 1,
+                borderRadius: 24,
+                paddingVertical: 20,
+                paddingHorizontal: 18,
+                marginHorizontal: 0,
+                elevation: 3,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.08,
+                shadowRadius: 8,
+                marginBottom: 16,
               }}
             >
-              <View className="flex-row items-center mb-3">
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <View 
-                  className="w-12 h-12 rounded-2xl items-center justify-center mr-3.5 border"
-                  style={{ 
-                    backgroundColor: `${primaryColor}14`,
-                    borderColor: `${primaryColor}30`
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 22,
+                    backgroundColor: `${primaryColor}15`,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginRight: 14,
                   }}
                 >
-                  <Feather name="lock" size={22} color={primaryColor} />
+                  <Feather name="lock" size={20} color={primaryColor} />
                 </View>
-                <View className="flex-1">
-                  <Text 
-                    className="text-base font-extrabold tracking-tight"
-                    style={{ color: isDark ? '#F8FAFC' : '#0F172A' }}
-                  >
-                    {isDefaultPassword ? 'Default Password Detected' : 'Update Credentials'}
+                <View style={{ flex: 1 }}>
+                  <Text style={{
+                    fontSize: 16,
+                    fontWeight: '800',
+                    color: isDark ? COLORS.dark.text : COLORS.light.text,
+                    letterSpacing: -0.3,
+                  }}>
+                    {isDefaultPassword ? 'Default Password Detected' : 'Update Password'}
                   </Text>
-                  <Text 
-                    className="text-xs font-semibold mt-0.5"
-                    style={{ color: isDark ? '#94A3B8' : '#64748B' }}
-                  >
+                  <Text style={{
+                    fontSize: 12,
+                    color: isDark ? '#9CA3AF' : '#6B7280',
+                    marginTop: 2,
+                  }}>
                     {isDefaultPassword 
                       ? 'Please choose a secure new password to continue.' 
-                      : 'Ensure your new password has at least 6 characters.'}
+                      : 'Set a new password with at least 6 characters.'}
                   </Text>
                 </View>
-              </View>
-
-              <View 
-                className="px-3.5 py-2 rounded-xl flex-row items-center border"
-                style={{ 
-                  backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F8FAFC',
-                  borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#E2E8F0'
-                }}
-              >
-                <Ionicons name="information-circle-outline" size={15} color={primaryColor} />
-                <Text 
-                  className="text-[11px] font-medium ml-2 flex-1"
-                  style={{ color: isDark ? '#94A3B8' : '#64748B' }}
-                >
-                  Use a strong mix of letters, numbers, and symbols for best security.
-                </Text>
               </View>
             </View>
 
             {/* FORM CARD */}
             <View 
-              className="p-5 rounded-[26px] border shadow-sm space-y-4"
               style={{
-                backgroundColor: isDark ? '#151821' : '#FFFFFF',
-                borderColor: isDark ? 'rgba(255,255,255,0.07)' : '#E2E8F0',
+                backgroundColor: isDark ? COLORS.dark.card : COLORS.light.card,
+                borderColor: isDark ? COLORS.dark.border : COLORS.light.border,
+                borderWidth: 1,
+                borderRadius: 24,
+                padding: 18,
+                elevation: 2,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.05,
+                shadowRadius: 4,
               }}
             >
               {/* Current Password Field */}
-              <View>
-                <Text 
-                  className="text-xs font-bold mb-1.5 px-0.5"
-                  style={{ color: isDark ? '#94A3B8' : '#64748B' }}
-                >
+              <View style={{ marginBottom: 14 }}>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: isDark ? COLORS.dark.text : COLORS.light.text, marginBottom: 6, paddingHorizontal: 2 }}>
                   Current Password
                 </Text>
                 <View 
-                  className="flex-row items-center px-3.5 py-3 rounded-2xl border"
-                  style={{ 
-                    backgroundColor: isDark ? '#1C202B' : '#F8FAFC',
-                    borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#E2E8F0'
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingHorizontal: 14,
+                    paddingVertical: Platform.OS === 'ios' ? 12 : 6,
+                    borderRadius: 14,
+                    backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#F9FAFB',
+                    borderWidth: 1,
+                    borderColor: isDark ? COLORS.dark.border : '#E5E7EB',
                   }}
                 >
                   <Feather name="key" size={16} color={primaryColor} />
@@ -256,12 +286,17 @@ export default function ChangePasswordScreen({ onPasswordChanged, navigateTo, th
                     value={currentPassword}
                     onChangeText={setCurrentPassword}
                     placeholder="Enter current password"
-                    placeholderTextColor={isDark ? '#475569' : '#94A3B8'}
+                    placeholderTextColor={isDark ? '#6B7280' : '#9CA3AF'}
                     secureTextEntry={!showCurrentPassword}
                     autoCapitalize="none"
                     autoCorrect={false}
-                    className="flex-1 ml-2.5 text-xs font-bold"
-                    style={{ color: isDark ? '#F1F5F9' : '#0F172A' }}
+                    style={{
+                      flex: 1,
+                      marginLeft: 10,
+                      fontSize: 13,
+                      fontWeight: '600',
+                      color: isDark ? COLORS.dark.text : COLORS.light.text,
+                    }}
                   />
                   <TouchableOpacity
                     onPress={() => setShowCurrentPassword(!showCurrentPassword)}
@@ -270,25 +305,27 @@ export default function ChangePasswordScreen({ onPasswordChanged, navigateTo, th
                     <MaterialCommunityIcons
                       name={showCurrentPassword ? 'eye-off-outline' : 'eye-outline'}
                       size={18}
-                      color={isDark ? '#94A3B8' : '#64748B'}
+                      color={isDark ? '#9CA3AF' : '#6B7280'}
                     />
                   </TouchableOpacity>
                 </View>
               </View>
 
               {/* New Password Field */}
-              <View className="mt-3">
-                <Text 
-                  className="text-xs font-bold mb-1.5 px-0.5"
-                  style={{ color: isDark ? '#94A3B8' : '#64748B' }}
-                >
+              <View style={{ marginBottom: 14 }}>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: isDark ? COLORS.dark.text : COLORS.light.text, marginBottom: 6, paddingHorizontal: 2 }}>
                   New Password
                 </Text>
                 <View 
-                  className="flex-row items-center px-3.5 py-3 rounded-2xl border"
-                  style={{ 
-                    backgroundColor: isDark ? '#1C202B' : '#F8FAFC',
-                    borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#E2E8F0'
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingHorizontal: 14,
+                    paddingVertical: Platform.OS === 'ios' ? 12 : 6,
+                    borderRadius: 14,
+                    backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#F9FAFB',
+                    borderWidth: 1,
+                    borderColor: isDark ? COLORS.dark.border : '#E5E7EB',
                   }}
                 >
                   <Feather name="lock" size={16} color={primaryColor} />
@@ -296,12 +333,17 @@ export default function ChangePasswordScreen({ onPasswordChanged, navigateTo, th
                     value={newPassword}
                     onChangeText={setNewPassword}
                     placeholder="Enter new password (min. 6 chars)"
-                    placeholderTextColor={isDark ? '#475569' : '#94A3B8'}
+                    placeholderTextColor={isDark ? '#6B7280' : '#9CA3AF'}
                     secureTextEntry={!showNewPassword}
                     autoCapitalize="none"
                     autoCorrect={false}
-                    className="flex-1 ml-2.5 text-xs font-bold"
-                    style={{ color: isDark ? '#F1F5F9' : '#0F172A' }}
+                    style={{
+                      flex: 1,
+                      marginLeft: 10,
+                      fontSize: 13,
+                      fontWeight: '600',
+                      color: isDark ? COLORS.dark.text : COLORS.light.text,
+                    }}
                   />
                   <TouchableOpacity
                     onPress={() => setShowNewPassword(!showNewPassword)}
@@ -310,25 +352,27 @@ export default function ChangePasswordScreen({ onPasswordChanged, navigateTo, th
                     <MaterialCommunityIcons
                       name={showNewPassword ? 'eye-off-outline' : 'eye-outline'}
                       size={18}
-                      color={isDark ? '#94A3B8' : '#64748B'}
+                      color={isDark ? '#9CA3AF' : '#6B7280'}
                     />
                   </TouchableOpacity>
                 </View>
               </View>
 
               {/* Confirm Password Field */}
-              <View className="mt-3">
-                <Text 
-                  className="text-xs font-bold mb-1.5 px-0.5"
-                  style={{ color: isDark ? '#94A3B8' : '#64748B' }}
-                >
+              <View style={{ marginBottom: 20 }}>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: isDark ? COLORS.dark.text : COLORS.light.text, marginBottom: 6, paddingHorizontal: 2 }}>
                   Confirm New Password
                 </Text>
                 <View 
-                  className="flex-row items-center px-3.5 py-3 rounded-2xl border"
-                  style={{ 
-                    backgroundColor: isDark ? '#1C202B' : '#F8FAFC',
-                    borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#E2E8F0'
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingHorizontal: 14,
+                    paddingVertical: Platform.OS === 'ios' ? 12 : 6,
+                    borderRadius: 14,
+                    backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#F9FAFB',
+                    borderWidth: 1,
+                    borderColor: isDark ? COLORS.dark.border : '#E5E7EB',
                   }}
                 >
                   <Feather name="check-circle" size={16} color={primaryColor} />
@@ -336,12 +380,17 @@ export default function ChangePasswordScreen({ onPasswordChanged, navigateTo, th
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
                     placeholder="Confirm new password"
-                    placeholderTextColor={isDark ? '#475569' : '#94A3B8'}
+                    placeholderTextColor={isDark ? '#6B7280' : '#9CA3AF'}
                     secureTextEntry={!showConfirmPassword}
                     autoCapitalize="none"
                     autoCorrect={false}
-                    className="flex-1 ml-2.5 text-xs font-bold"
-                    style={{ color: isDark ? '#F1F5F9' : '#0F172A' }}
+                    style={{
+                      flex: 1,
+                      marginLeft: 10,
+                      fontSize: 13,
+                      fontWeight: '600',
+                      color: isDark ? COLORS.dark.text : COLORS.light.text,
+                    }}
                   />
                   <TouchableOpacity
                     onPress={() => setShowConfirmPassword(!showConfirmPassword)}
@@ -350,7 +399,7 @@ export default function ChangePasswordScreen({ onPasswordChanged, navigateTo, th
                     <MaterialCommunityIcons
                       name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
                       size={18}
-                      color={isDark ? '#94A3B8' : '#64748B'}
+                      color={isDark ? '#9CA3AF' : '#6B7280'}
                     />
                   </TouchableOpacity>
                 </View>
@@ -360,19 +409,29 @@ export default function ChangePasswordScreen({ onPasswordChanged, navigateTo, th
               <TouchableOpacity
                 onPress={handleChangePassword}
                 disabled={isLoading || !currentPassword.trim() || !newPassword.trim() || !confirmPassword.trim()}
-                className="mt-6 py-4 rounded-2xl items-center justify-center shadow-md flex-row active:scale-[0.98] transition-transform"
                 style={{
                   backgroundColor: primaryColor,
-                  opacity: (isLoading || !currentPassword.trim() || !newPassword.trim() || !confirmPassword.trim()) ? 0.5 : 1,
+                  paddingVertical: 14,
+                  borderRadius: 16,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexDirection: 'row',
+                  opacity: (isLoading || !currentPassword.trim() || !newPassword.trim() || !confirmPassword.trim()) ? 0.6 : 1,
+                  elevation: 2,
+                  shadowColor: primaryColor,
+                  shadowOffset: { width: 0, height: 3 },
+                  shadowOpacity: 0.2,
+                  shadowRadius: 5,
                 }}
+                activeOpacity={0.85}
               >
                 {isLoading ? (
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
                   <>
                     <Feather name="check" size={16} color="#FFFFFF" />
-                    <Text className="text-white text-xs font-black ml-2 uppercase tracking-wider">
-                      Save New Password
+                    <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 13, marginLeft: 6, letterSpacing: 0.3 }}>
+                      SAVE NEW PASSWORD
                     </Text>
                   </>
                 )}
@@ -380,11 +439,8 @@ export default function ChangePasswordScreen({ onPasswordChanged, navigateTo, th
             </View>
 
             {/* SYSTEM FOOTER */}
-            <View className="mt-8 items-center">
-              <Text 
-                className="text-[11px] font-semibold tracking-wider"
-                style={{ color: isDark ? '#475569' : '#94A3B8' }}
-              >
+            <View style={{ marginTop: 24, alignItems: 'center' }}>
+              <Text style={{ fontSize: 11, fontWeight: '600', color: isDark ? '#6B7280' : '#9CA3AF' }}>
                 HR Management System • Sarana
               </Text>
             </View>

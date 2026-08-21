@@ -63,6 +63,7 @@ const menuItems: MenuItem[] = [
     labelKey: "announcements",
     icon: Megaphone,
     href: "/dashboard/announcement",
+    permission: "announcement:manage",
   },
   {
     title: "Organization",
@@ -495,7 +496,7 @@ export function Sidebar({ collapsed = false }: { collapsed?: boolean }) {
 
   const filteredMenuItems = useMemo(() => {
     const userPermissions = user?.employee?.permissions || [];
-    const isSuperAdmin = userPermissions.includes("*");
+    const isSuperAdmin = userPermissions.includes("*") || user?.employee?.role?.toLowerCase() === "admin";
 
     return menuItems
       .map((item) => {

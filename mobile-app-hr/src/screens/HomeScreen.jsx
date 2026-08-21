@@ -9,7 +9,7 @@ import CircularGauge from '../components/CircularGauge';
 import QuickAccessCard from '../components/QuickAccessCard';
 import useAuthStore from '../stores/useAuthStore';
 import useNotificationStore from '../stores/useNotificationStore';
-import { BASE_URL, appMenuService, authService } from '../services/api';
+import { BASE_URL, appMenuService, authService, attendanceService, leaveService } from '../services/api';
 
 const APP_MENUS_CACHE_KEY = '@hr_app_menus_cache';
 
@@ -33,6 +33,9 @@ export default function HomeScreen({ theme, toggleTheme, navigateTo }) {
   const [greeting, setGreeting] = React.useState('Good morning,');
   const [quickAccessList, setQuickAccessList] = React.useState(mockQuickAccess);
   const [refreshing, setRefreshing] = React.useState(false);
+  const [hoursToday, setHoursToday] = React.useState(0);
+  const [leaveBalance, setLeaveBalance] = React.useState(0);
+  const [totalLeaveDays, setTotalLeaveDays] = React.useState(25);
 
   // Load cached app menus from AsyncStorage on startup immediately
   React.useEffect(() => {
@@ -53,9 +56,38 @@ export default function HomeScreen({ theme, toggleTheme, navigateTo }) {
 
   const fetchAllData = React.useCallback(async () => {
     try {
+      const todayStr = new Date().toISOString().split('T')[0];
       await Promise.all([
         authService.getProfile().catch(() => {}),
         useNotificationStore.getState().fetchNotifications().catch(() => {}),
+        (async () => {
+          try {
+            const leaveRes = await leaveService.getLeaveSummary();
+            if (leaveRes && leaveRes.result) {
+              setLeaveBalance(typeof leaveRes.leaveBalance === 'number' ? leaveRes.leaveBalance : 0);
+              setTotalLeaveDays(typeof leaveRes.totalLeave === 'number' && leaveRes.totalLeave > 0 ? leaveRes.totalLeave : 25);
+            }
+          } catch (err) {
+            console.log('[HomeScreen] Leave summary error:', err);
+          }
+        })(),
+        (async () => {
+          try {
+            const attRes = await attendanceService.getRecords({ date: todayStr });
+            const records = Array.isArray(attRes?.data) ? attRes.data : [];
+            if (records.length > 0) {
+              const firstScan = new Date(records[0].work_at);
+              const lastScan = records.length > 1 ? new Date(records[records.length - 1].work_at) : new Date();
+              const diffMs = Math.max(0, lastScan - firstScan);
+              const hours = Math.min(8, Math.round((diffMs / (1000 * 60 * 60)) * 10) / 10);
+              setHoursToday(hours);
+            } else {
+              setHoursToday(0);
+            }
+          } catch (err) {
+            console.log('[HomeScreen] Attendance records error:', err);
+          }
+        })(),
         (async () => {
           const res = await appMenuService.getMenus();
           if (res.success && Array.isArray(res.data) && res.data.length > 0) {
@@ -328,8 +360,8 @@ export default function HomeScreen({ theme, toggleTheme, navigateTo }) {
         >
           {/* Hours Gauge */}
           <CircularGauge 
-            value={mockEmployee.hoursToday}
-            max={mockEmployee.hoursTarget}
+            value={hoursToday}
+            max={8}
             label="Hours Today"
             sublabel="/8h"
             color={primaryColor}
@@ -338,11 +370,11 @@ export default function HomeScreen({ theme, toggleTheme, navigateTo }) {
           
           {/* Leave Balance Gauge */}
           <CircularGauge 
-            value={mockEmployee.leaveBalance}
-            max={25} // standard total leave
+            value={leaveBalance}
+            max={totalLeaveDays}
             label="Leave Balance"
             sublabel="days"
-            color={secondaryColor} // Company secondary color
+            color={secondaryColor}
             theme={theme}
           />
         </View>

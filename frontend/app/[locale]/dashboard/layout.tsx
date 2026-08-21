@@ -59,11 +59,12 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useTranslations } from "next-intl";
 
 const routePermissions = [
+  { path: "/dashboard/announcement", permission: "announcement:manage" },
   { path: "/dashboard/company", permission: "employee:manage" },
   { path: "/dashboard/department", permission: "department:manage" },
   { path: "/dashboard/position", permission: "department:manage" },
   { path: "/dashboard/employee", permission: "employee:manage" },
-  { path: "/dashboard/recruitment", permission: "employee:manage" },
+  { path: "/dashboard/recruitment", permission: "recruitment:manage" },
   { path: "/dashboard/user", permission: "role:manage" },
   { path: "/dashboard/role", permission: "role:manage" },
   { path: "/dashboard/time-attendance/report", permission: "leave:approve" },
@@ -211,7 +212,8 @@ export default function DashboardLayout({
 
   const isAuthorized =
     !matchingRoute ||
-    user?.employee?.role === "Admin" ||
+    user?.employee?.role?.toLowerCase() === "admin" ||
+    user?.employee?.permissions?.includes("*") ||
     user?.employee?.permissions?.includes(matchingRoute.permission);
 
   console.log("RBAC Guard Status:", {

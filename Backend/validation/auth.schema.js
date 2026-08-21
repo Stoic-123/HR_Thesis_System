@@ -12,10 +12,7 @@ export const changePasswordSchema = z.object({
     current_password: z.string().min(1, "Current password is required"),
     new_password: z
       .string()
-      .min(8, "New password must be at least 8 characters")
-      .regex(/[a-zA-Z]/, "New password must contain at least one letter")
-      .regex(/[0-9]/, "New password must contain at least one number")
-      .regex(/[^a-zA-Z0-9]/, "New password must contain at least one symbol"),
+      .min(6, "New password must be at least 6 characters"),
     confirm_password: z.string().min(1, "Confirm password is required"),
   }).refine((data) => data.new_password === data.confirm_password, {
     message: "New passwords do not match",

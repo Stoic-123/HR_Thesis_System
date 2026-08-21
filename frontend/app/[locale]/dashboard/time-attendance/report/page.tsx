@@ -276,11 +276,12 @@ const TimeAttendanceReportPage = () => {
         { kh: "ស្ថានភាព", en: "Status", align: "center" }
       ],
       tableRows: rows.map(row => {
+        const isTodayOrFuture = row.date >= toISODate(new Date());
         const scansCells = timeModes.length > 0
           ? timeModes.map(tm => {
               const scan = row.scans?.[tm.id];
-              let scanText = "Missed";
-              let colorClass = "text-rose";
+              let scanText = isTodayOrFuture ? "—" : "Missed";
+              let colorClass = isTodayOrFuture ? "text-muted" : "text-rose";
               if (scan) {
                 if (scan.late_minutes && scan.late_minutes > 0) {
                   scanText = `${scan.time} <span style="font-size: 7.5pt; font-weight: normal; color: #ef4444;">(${formatLateMinutes(scan.late_minutes)})</span>`;
@@ -304,13 +305,13 @@ const TimeAttendanceReportPage = () => {
               {
                 text: (row.checkIn && row.checkIn !== "--:--" && row.checkIn !== "Missed")
                   ? `<span class="text-emerald font-mono">${row.checkIn}</span>`
-                  : `<span class="text-rose font-mono">Missed</span>`,
+                  : `<span class="${isTodayOrFuture ? 'text-muted' : 'text-rose'} font-mono">${isTodayOrFuture ? '—' : 'Missed'}</span>`,
                 align: "center" as const
               },
               {
                 text: (row.checkOut && row.checkOut !== "--:--" && row.checkOut !== "Missed")
                   ? `<span class="text-rose font-mono">${row.checkOut}</span>`
-                  : `<span class="text-rose font-mono">Missed</span>`,
+                  : `<span class="${isTodayOrFuture ? 'text-muted' : 'text-rose'} font-mono">${isTodayOrFuture ? '—' : 'Missed'}</span>`,
                 align: "center" as const
               }
             ];
@@ -412,8 +413,16 @@ const TimeAttendanceReportPage = () => {
     {
       title: locale === "km" ? "អវត្តមាន/ខកខាន" : "Missed Scans",
       value: loading ? "…" : String(rows.reduce((acc, r) => {
+        const isTodayOrFuture = r.date >= toISODate(new Date());
+        if (isTodayOrFuture) return acc;
         if (!r.scans) return acc;
-        return acc + Object.values(r.scans).filter((s: any) => !s || !s.time || s.time === "--:--").length;
+        if (timeModes.length > 0) {
+          return acc + timeModes.filter(tm => !r.scans?.[tm.id] || !r.scans[tm.id].time || r.scans[tm.id].time === "--:--" || r.scans[tm.id].time === "Missed").length;
+        }
+        let missing = 0;
+        if (!r.checkIn || r.checkIn === "--:--" || r.checkIn === "Missed") missing++;
+        if (!r.checkOut || r.checkOut === "--:--" || r.checkOut === "Missed") missing++;
+        return acc + missing;
       }, 0)),
       icon: Clock3,
       iconBg: "bg-rose-100 text-rose-600 dark:bg-rose-950 dark:text-rose-400",
@@ -612,8 +621,9 @@ const TimeAttendanceReportPage = () => {
                         {timeModes.length > 0 ? (
                           timeModes.map((tm) => {
                             const scan = row.scans?.[tm.id];
-                            let scanText = t("missed") || "Missed";
-                            let textClass = "text-red-500 font-semibold";
+                            const isTodayOrFuture = row.date >= toISODate(new Date());
+                            let scanText = isTodayOrFuture ? "—" : (t("missed") || "Missed");
+                            let textClass = isTodayOrFuture ? "text-muted-foreground/60 font-medium" : "text-red-500 font-semibold";
                             
                             if (scan) {
                               if (scan.late_minutes && scan.late_minutes > 0) {
@@ -637,7 +647,7 @@ const TimeAttendanceReportPage = () => {
                             return (
                               <td key={tm.id} className="py-3.5 px-4">
                                 <span className={cn("inline-flex items-center gap-1.5 font-mono text-sm tabular-nums", textClass)}>
-                                  <Clock3 className="size-3.5 shrink-0" />
+                                  <Clock3 className={cn("size-3.5 shrink-0", isTodayOrFuture && !scan ? "text-muted-foreground/40" : "")} />
                                   {scanText}
                                 </span>
                               </td>
@@ -647,9 +657,9 @@ const TimeAttendanceReportPage = () => {
                           <>
                             <td className="py-3.5 px-4">
                               {(!row.checkIn || row.checkIn === "--:--" || row.checkIn === "Missed") ? (
-                                <span className="inline-flex items-center gap-1.5 font-mono text-sm tabular-nums text-red-500 font-semibold">
-                                  <Clock3 className="size-3.5 text-red-500" />
-                                  {t("missed") || "Missed"}
+                                <span className={cn("inline-flex items-center gap-1.5 font-mono text-sm tabular-nums", row.date >= toISODate(new Date()) ? "text-muted-foreground/60 font-medium" : "text-red-500 font-semibold")}>
+                                  <Clock3 className={cn("size-3.5", row.date >= toISODate(new Date()) ? "text-muted-foreground/40" : "text-red-500")} />
+                                  {row.date >= toISODate(new Date()) ? "—" : (t("missed") || "Missed")}
                                 </span>
                               ) : (
                                 <span className="inline-flex items-center gap-1.5 font-mono text-sm tabular-nums text-emerald-500 font-medium">
@@ -661,9 +671,9 @@ const TimeAttendanceReportPage = () => {
 
                             <td className="py-3.5 px-4">
                               {(!row.checkOut || row.checkOut === "--:--" || row.checkOut === "Missed") ? (
-                                <span className="inline-flex items-center gap-1.5 font-mono text-sm tabular-nums text-red-500 font-semibold">
-                                  <Clock3 className="size-3.5 text-red-500" />
-                                  {t("missed") || "Missed"}
+                                <span className={cn("inline-flex items-center gap-1.5 font-mono text-sm tabular-nums", row.date >= toISODate(new Date()) ? "text-muted-foreground/60 font-medium" : "text-red-500 font-semibold")}>
+                                  <Clock3 className={cn("size-3.5", row.date >= toISODate(new Date()) ? "text-muted-foreground/40" : "text-red-500")} />
+                                  {row.date >= toISODate(new Date()) ? "—" : (t("missed") || "Missed")}
                                 </span>
                               ) : (
                                 <span className="inline-flex items-center gap-1.5 font-mono text-sm tabular-nums text-rose-400 font-medium">
@@ -821,6 +831,7 @@ const TimeAttendanceReportPage = () => {
                     {timeModes.length > 0 ? (
                       timeModes.map((tm) => {
                         const scan = selectedRowForDetails.scans?.[tm.id];
+                        const isTodayOrFuture = selectedRowForDetails.date >= toISODate(new Date());
                         return (
                           <div
                             key={tm.id}
@@ -832,10 +843,10 @@ const TimeAttendanceReportPage = () => {
                             <span
                               className={cn(
                                 "mt-1 block font-mono text-sm font-bold",
-                                scan ? (scan.is_late ? "text-red-500" : scan.is_early ? "text-rose-500" : "text-emerald-500") : "text-red-500/70"
+                                scan ? (scan.is_late ? "text-red-500" : scan.is_early ? "text-rose-500" : "text-emerald-500") : (isTodayOrFuture ? "text-muted-foreground/60" : "text-red-500/70")
                               )}
                             >
-                              {scan?.time || t("missed") || "Missed"}
+                              {scan?.time || (isTodayOrFuture ? "—" : (t("missed") || "Missed"))}
                             </span>
                             {scan?.late_minutes && scan.late_minutes > 0 ? (
                               <span className="text-[10px] font-semibold text-red-500 mt-0.5 block font-mono">
@@ -851,16 +862,16 @@ const TimeAttendanceReportPage = () => {
                           <span className="text-[11px] font-semibold text-muted-foreground block">
                             {t("checkInCol")}
                           </span>
-                          <span className="mt-1 block font-mono text-sm font-bold text-emerald-500">
-                            {selectedRowForDetails.checkIn || t("missed")}
+                          <span className={cn("mt-1 block font-mono text-sm font-bold", selectedRowForDetails.checkIn && selectedRowForDetails.checkIn !== "Missed" && selectedRowForDetails.checkIn !== "--:--" ? "text-emerald-500" : (selectedRowForDetails.date >= toISODate(new Date()) ? "text-muted-foreground/60" : "text-red-500"))}>
+                            {(selectedRowForDetails.checkIn && selectedRowForDetails.checkIn !== "Missed" && selectedRowForDetails.checkIn !== "--:--") ? selectedRowForDetails.checkIn : (selectedRowForDetails.date >= toISODate(new Date()) ? "—" : t("missed"))}
                           </span>
                         </div>
                         <div className="p-3 rounded-2xl bg-muted/30 border border-border/50 text-center col-span-1">
                           <span className="text-[11px] font-semibold text-muted-foreground block">
                             {t("checkOutCol")}
                           </span>
-                          <span className="mt-1 block font-mono text-sm font-bold text-rose-500">
-                            {selectedRowForDetails.checkOut || t("missed")}
+                          <span className={cn("mt-1 block font-mono text-sm font-bold", selectedRowForDetails.checkOut && selectedRowForDetails.checkOut !== "Missed" && selectedRowForDetails.checkOut !== "--:--" ? "text-rose-500" : (selectedRowForDetails.date >= toISODate(new Date()) ? "text-muted-foreground/60" : "text-red-500"))}>
+                            {(selectedRowForDetails.checkOut && selectedRowForDetails.checkOut !== "Missed" && selectedRowForDetails.checkOut !== "--:--") ? selectedRowForDetails.checkOut : (selectedRowForDetails.date >= toISODate(new Date()) ? "—" : t("missed"))}
                           </span>
                         </div>
                       </>

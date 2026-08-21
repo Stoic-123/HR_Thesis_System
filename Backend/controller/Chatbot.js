@@ -730,6 +730,7 @@ export const chatController = async (req, res) => {
          - Render all dates in a simple, friendly calendar format (e.g. YYYY-MM-DD).
       
       ACTION AND QUERY RULES:
+      0. GREETINGS & CASUAL CONVERSATION: If the user says hello, hi, hey, good morning, how are you, thank you, or asks general questions about your identity or what you can do, DO NOT call any tool. Respond directly, politely, and warmly as the HR Assistant.
       1. ANY question about attendance, late arrivals, leave records, employee profiles, or who was absent/late REQUIRES a tool call. You MUST call the tool. NEVER answer these from memory or make up numbers.
       2. To call a tool, output ONLY a raw JSON object and NOTHING else: {"tool": "tool_name", "args": {...}}. No introduction, no explanation, no text before or after.
       3. NEVER invent, estimate, or guess attendance counts, leave counts, or any HR data. If you do not have real data from a tool, say you need to look it up and call the tool.

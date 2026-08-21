@@ -93,11 +93,23 @@ export const apiRequest = async (endpoint, options = {}) => {
       // 401 = token expired or invalid — clear local auth state and
       // redirect the user back to the login screen automatically.
       if (response.status === 401) {
-        const err = new TokenExpiredError(data.message || "Session expired. Please log in again.");
+        const err = new TokenExpiredError(data?.message || "Session expired. Please log in again.");
         triggerForceLogout();
         throw err;
       }
-      throw new Error(data.message || "Request failed");
+
+      let errorMsg = "Request failed";
+      if (typeof data?.message === 'string' && data.message.trim()) {
+        errorMsg = data.message;
+      } else if (Array.isArray(data?.errors) && data.errors.length > 0 && data.errors[0]?.message) {
+        errorMsg = data.errors[0].message;
+      } else if (Array.isArray(data) && data.length > 0 && data[0]?.message) {
+        errorMsg = data[0].message;
+      } else if (typeof data?.error === 'string' && data.error.trim()) {
+        errorMsg = data.error;
+      }
+
+      throw new Error(errorMsg);
     }
 
     return data;

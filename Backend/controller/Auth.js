@@ -177,7 +177,38 @@ export const changePasswordController = async (req, res) => {
       new_password
     );
 
-    res.status(200).json(changePasswordResult);
+    if (!changePasswordResult.result) {
+      return res.status(400).json(changePasswordResult);
+    }
+
+    // Generate fresh token with the incremented token_version
+    const updatedUser = await prisma.user.findUnique({
+      where: { id: user_id },
+    });
+
+    const newToken = generateToken(
+      updatedUser.id,
+      updatedUser.username,
+      req.user.company_id,
+      updatedUser.token_version
+    );
+
+    const isProduction = !!process.env.COOKIE_DOMAIN;
+    const cookieOptions = {
+      maxAge: 14 * 24 * 60 * 60 * 1000, // 14 days
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
+    };
+    if (isProduction && process.env.COOKIE_DOMAIN) {
+      cookieOptions.domain = process.env.COOKIE_DOMAIN;
+    }
+    res.cookie("auth_token", newToken, cookieOptions);
+
+    res.status(200).json({
+      ...changePasswordResult,
+      token: newToken,
+    });
   } catch (error) {
     console.error(error.message);
     res.status(500).json({ result: false, message: error.message });

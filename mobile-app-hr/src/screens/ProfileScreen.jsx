@@ -17,7 +17,7 @@ import {
   Linking,
   StatusBar
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons, MaterialCommunityIcons, Feather, Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
@@ -31,7 +31,8 @@ import { BASE_URL, authService, documentService, scannerService } from '../servi
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function ProfileScreen({ theme, navigateTo, onLogout }) {
-  const { user } = useAuthStore();
+  const insets = useSafeAreaInsets();
+  const { user, updateProfile, fetchProfile } = useAuthStore();
   const primaryColor = user?.employee?.company?.primary_color || COLORS.orange;
   const isDark = theme === 'dark';
 
@@ -123,7 +124,7 @@ export default function ProfileScreen({ theme, navigateTo, onLogout }) {
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      await authService.getProfile().catch(() => {});
+      if (fetchProfile) await fetchProfile().catch(() => {});
       await loadDocumentsData();
     } catch (e) {
       console.log(e);
@@ -162,7 +163,7 @@ export default function ProfileScreen({ theme, navigateTo, onLogout }) {
         gender: editGender,
       };
 
-      const res = await authService.updateProfile(payload);
+      const res = updateProfile ? await updateProfile(payload) : await authService.updateProfile(payload);
       if (res?.result) {
         if (Platform.OS !== 'web') {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
@@ -462,57 +463,69 @@ export default function ProfileScreen({ theme, navigateTo, onLogout }) {
   return (
     <View 
       className="flex-1"
-      style={{ backgroundColor: isDark ? '#0D0F15' : '#F4F6F9' }}
+      style={{ backgroundColor: isDark ? COLORS.dark.bg : COLORS.light.bg }}
     >
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+      <StatusBar barStyle="light-content" backgroundColor={primaryColor} />
 
-      {/* SLEEK INTEGRATED HEADER */}
-      <SafeAreaView edges={['top']} style={{ backgroundColor: isDark ? '#0D0F15' : '#F4F6F9' }}>
-        <View className="px-5 pt-2 pb-3 flex-row items-center justify-between">
-          <TouchableOpacity 
-            onPress={() => navigateTo('Home')} 
-            className="w-10 h-10 rounded-2xl items-center justify-center border active:scale-95 transition-transform"
-            style={{ 
-              backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#FFFFFF',
-              borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#E2E8F0',
-            }}
-            hitSlop={8}
-          >
-            <Feather name="chevron-left" size={22} color={isDark ? '#F1F5F9' : '#0F172A'} />
-          </TouchableOpacity>
-
-          <View className="items-center">
-            <Text 
-              className="text-base font-extrabold tracking-tight"
-              style={{ color: isDark ? '#F8FAFC' : '#0F172A' }}
+      {/* ── 1. SIGNATURE CURVED PRIMARY HEADER ──────────────────────── */}
+      <View 
+        style={{ 
+          backgroundColor: primaryColor,
+          paddingBottom: 55,
+          paddingHorizontal: 20,
+          borderBottomLeftRadius: 36,
+          borderBottomRightRadius: 36,
+          elevation: 8,
+          shadowColor: primaryColor,
+          shadowOffset: { width: 0, height: 6 },
+          shadowOpacity: 0.25,
+          shadowRadius: 10,
+        }}
+      >
+        <SafeAreaView edges={['top']}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 8, paddingBottom: 12 }}>
+            <TouchableOpacity 
+              onPress={() => navigateTo('Home')} 
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+              activeOpacity={0.8}
             >
+              <MaterialIcons name="arrow-back-ios" size={18} color="#FFFFFF" style={{ marginLeft: 6 }} />
+            </TouchableOpacity>
+
+            <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '800', letterSpacing: -0.3 }}>
               Employee Profile
             </Text>
-            <Text 
-              className="text-[11px] font-semibold"
-              style={{ color: isDark ? '#64748B' : '#94A3B8' }}
+
+            <TouchableOpacity 
+              onPress={handleOpenEdit}
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+              activeOpacity={0.8}
             >
-              Personal & Work Record
-            </Text>
+              <Feather name="edit-2" size={17} color="#FFFFFF" />
+            </TouchableOpacity>
           </View>
+        </SafeAreaView>
+      </View>
 
-          <TouchableOpacity 
-            onPress={handleOpenEdit}
-            className="w-10 h-10 rounded-2xl items-center justify-center border active:scale-95 transition-transform"
-            style={{ 
-              backgroundColor: isDark ? `${primaryColor}18` : `${primaryColor}12`,
-              borderColor: `${primaryColor}35`,
-            }}
-            hitSlop={8}
-          >
-            <Feather name="edit-3" size={17} color={primaryColor} />
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-
+      {/* ── 2. MAIN SCROLLABLE CONTENT ───────────────────────────────── */}
       <ScrollView 
         className="flex-1" 
         showsVerticalScrollIndicator={false}
+        style={{ marginTop: -40 }}
         contentContainerStyle={{ paddingBottom: 130 }}
         refreshControl={
           <RefreshControl
@@ -523,161 +536,118 @@ export default function ProfileScreen({ theme, navigateTo, onLogout }) {
           />
         }
       >
-        {/* HERO USER PROFILE CARD */}
+        {/* HERO PROFILE CARD */}
         <View 
-          className="mx-4 mt-2 p-6 rounded-[28px] items-center border shadow-sm"
           style={{
-            backgroundColor: isDark ? '#151821' : '#FFFFFF',
-            borderColor: isDark ? 'rgba(255,255,255,0.07)' : '#E2E8F0',
+            backgroundColor: isDark ? COLORS.dark.card : COLORS.light.card,
+            borderColor: isDark ? COLORS.dark.border : COLORS.light.border,
+            borderWidth: 1,
+            borderRadius: 24,
+            paddingVertical: 22,
+            paddingHorizontal: 20,
+            alignItems: 'center',
+            marginHorizontal: 16,
+            elevation: 3,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.08,
+            shadowRadius: 8,
           }}
         >
-          {/* Avatar with layered glowing ring */}
-          <View className="relative items-center justify-center">
-            <View 
-              className="p-1 rounded-full border-2"
-              style={{ 
-                borderColor: `${primaryColor}55`,
-                backgroundColor: `${primaryColor}10` 
-              }}
-            >
-              <Image 
-                source={{ uri: profileImageUrl }}
-                className="w-24 h-24 rounded-full"
-              />
-            </View>
-
-            {/* Verified Badge */}
-            <View 
-              className="absolute -bottom-1 -right-1 p-1.5 rounded-full border-2 shadow-sm"
-              style={{ 
-                backgroundColor: primaryColor,
-                borderColor: isDark ? '#151821' : '#FFFFFF' 
-              }}
-            >
-              <Ionicons name="checkmark" size={12} color="#FFFFFF" />
-            </View>
+          {/* Avatar with clean border */}
+          <View style={{
+            padding: 3,
+            borderRadius: 48,
+            backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : '#FFFFFF',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 4,
+            elevation: 2,
+            marginBottom: 10
+          }}>
+            <Image 
+              source={{ uri: profileImageUrl }}
+              style={{ width: 84, height: 84, borderRadius: 42 }}
+            />
           </View>
 
           {/* Full Name */}
-          <Text 
-            className="text-xl font-black mt-3.5 text-center tracking-tight" 
-            style={{ color: isDark ? '#F8FAFC' : '#0F172A' }}
-          >
+          <Text style={{
+            fontSize: 20,
+            fontWeight: '800',
+            color: isDark ? COLORS.dark.text : COLORS.light.text,
+            letterSpacing: -0.3,
+            textAlign: 'center'
+          }}>
             {`${user?.employee?.first_name || ''} ${user?.employee?.last_name || ''}`.trim() || user?.username || 'Employee Name'}
           </Text>
 
-          {/* Position Name */}
-          <Text 
-            className="text-xs font-semibold mt-1 text-center" 
-            style={{ color: isDark ? '#94A3B8' : '#64748B' }}
-          >
-            {positionName}
+          {/* Position & Department */}
+          <Text style={{
+            fontSize: 13,
+            fontWeight: '600',
+            color: isDark ? '#9CA3AF' : '#6B7280',
+            marginTop: 4,
+            textAlign: 'center'
+          }}>
+            {positionName} {user?.employee?.department ? `• ${user.employee.department}` : ''}
           </Text>
 
-          {/* Clean Meta Badges */}
-          <View className="flex-row flex-wrap items-center justify-center gap-2 mt-3.5">
-            {/* Department Badge */}
-            <View 
-              className="px-3 py-1.5 rounded-full border flex-row items-center"
-              style={{ 
-                backgroundColor: `${primaryColor}14`,
-                borderColor: `${primaryColor}30`
-              }}
-            >
-              <Feather name="layers" size={11} color={primaryColor} />
-              <Text className="text-[11px] font-bold ml-1.5" style={{ color: primaryColor }}>
-                {user?.employee?.department || 'General'}
-              </Text>
-            </View>
-
-            {/* Employee ID Badge */}
-            <View 
-              className="px-3 py-1.5 rounded-full border flex-row items-center"
-              style={{ 
-                backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F1F5F9',
-                borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#E2E8F0'
-              }}
-            >
-              <Ionicons name="card-outline" size={11} color={isDark ? '#94A3B8' : '#64748B'} />
-              <Text 
-                className="text-[11px] font-bold ml-1.5 tracking-wider" 
-                style={{ color: isDark ? '#E2E8F0' : '#334155' }}
-              >
-                {`#EMP${user?.employee?.id ? String(user?.employee?.id).padStart(5, '0') : '00000'}`}
-              </Text>
-            </View>
-
-            {/* Role Badge (rendered only if distinct from position) */}
-            {isRoleDistinct && (
-              <View 
-                className="px-3 py-1.5 rounded-full border flex-row items-center"
-                style={{ 
-                  backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F1F5F9',
-                  borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#E2E8F0'
-                }}
-              >
-                <Feather name="user" size={11} color={isDark ? '#94A3B8' : '#64748B'} />
-                <Text 
-                  className="text-[11px] font-bold ml-1.5" 
-                  style={{ color: isDark ? '#E2E8F0' : '#334155' }}
-                >
-                  {roleName}
-                </Text>
-              </View>
-            )}
-          </View>
-
-          {/* Minimalist HR Security Note */}
-          <View 
-            className="mt-4 px-3.5 py-1.5 rounded-full flex-row items-center border"
-            style={{ 
-              backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
-              borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#E2E8F0'
-            }}
-          >
-            <Feather name="shield" size={11} color={isDark ? '#64748B' : '#94A3B8'} />
-            <Text 
-              className="text-[10px] ml-1.5 font-medium"
-              style={{ color: isDark ? '#64748B' : '#94A3B8' }}
-            >
-              Official credentials managed by HR Admin
+          {/* Minimalist Employee Tag */}
+          <View style={{
+            marginTop: 10,
+            backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F3F4F6',
+            paddingHorizontal: 12,
+            paddingVertical: 4,
+            borderRadius: 12,
+          }}>
+            <Text style={{
+              fontSize: 11,
+              fontWeight: '700',
+              color: isDark ? '#D1D5DB' : '#4B5563',
+              letterSpacing: 0.5,
+            }}>
+              {`#EMP${user?.employee?.id ? String(user?.employee?.id).padStart(5, '0') : '00000'}`}
             </Text>
           </View>
         </View>
 
         {/* SECTION 1: PERSONAL & CONTACT DETAILS */}
-        <View className="mx-4 mt-5">
-          <View className="flex-row items-center justify-between mb-2.5 px-1">
-            <View className="flex-row items-center">
-              <View className="w-1.5 h-4 rounded-full mr-2" style={{ backgroundColor: primaryColor }} />
-              <Text 
-                className="text-xs font-extrabold uppercase tracking-wider"
-                style={{ color: isDark ? '#94A3B8' : '#64748B' }}
-              >
-                Personal Details
-              </Text>
-            </View>
+        <View style={{ marginHorizontal: 16, marginTop: 20 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, paddingHorizontal: 4 }}>
+            <Text style={{
+              fontSize: 13,
+              fontWeight: '700',
+              color: isDark ? COLORS.dark.text : COLORS.light.text,
+            }}>
+              Personal Details
+            </Text>
 
             <TouchableOpacity 
               onPress={handleOpenEdit}
-              className="flex-row items-center px-3 py-1 rounded-full border active:opacity-75"
-              style={{ 
-                backgroundColor: `${primaryColor}12`,
-                borderColor: `${primaryColor}30`
-              }}
+              style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 4, paddingHorizontal: 8 }}
+              activeOpacity={0.7}
             >
-              <Feather name="edit-2" size={11} color={primaryColor} />
-              <Text className="text-[11px] font-bold ml-1" style={{ color: primaryColor }}>
+              <Feather name="edit-2" size={12} color={primaryColor} />
+              <Text style={{ fontSize: 12, fontWeight: '700', color: primaryColor, marginLeft: 4 }}>
                 Edit
               </Text>
             </TouchableOpacity>
           </View>
 
           <View 
-            className="rounded-[24px] overflow-hidden border shadow-sm"
             style={{
-              backgroundColor: isDark ? '#151821' : '#FFFFFF',
-              borderColor: isDark ? 'rgba(255,255,255,0.07)' : '#E2E8F0',
+              backgroundColor: isDark ? COLORS.dark.card : COLORS.light.card,
+              borderColor: isDark ? COLORS.dark.border : COLORS.light.border,
+              borderWidth: 1,
+              borderRadius: 20,
+              overflow: 'hidden',
+              elevation: 2,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.05,
+              shadowRadius: 4,
             }}
           >
             {[
@@ -686,8 +656,7 @@ export default function ProfileScreen({ theme, navigateTo, onLogout }) {
                 val: user?.employee?.email || 'Not configured', 
                 icon: 'mail',
                 iconType: 'feather',
-                iconColor: '#3B82F6',
-                iconBg: '#3B82F618'
+                iconColor: primaryColor,
               },
               { 
                 label: 'Telegram Username', 
@@ -695,7 +664,6 @@ export default function ProfileScreen({ theme, navigateTo, onLogout }) {
                 icon: 'paper-plane-outline',
                 iconType: 'ionicons',
                 iconColor: '#0EA5E9',
-                iconBg: '#0EA5E918'
               },
               { 
                 label: 'Phone Number', 
@@ -703,7 +671,6 @@ export default function ProfileScreen({ theme, navigateTo, onLogout }) {
                 icon: 'phone',
                 iconType: 'feather',
                 iconColor: '#10B981',
-                iconBg: '#10B98118'
               },
               { 
                 label: 'Residential Address', 
@@ -711,7 +678,6 @@ export default function ProfileScreen({ theme, navigateTo, onLogout }) {
                 icon: 'map-pin',
                 iconType: 'feather',
                 iconColor: '#F59E0B',
-                iconBg: '#F59E0B18'
               },
               { 
                 label: 'Gender', 
@@ -719,146 +685,222 @@ export default function ProfileScreen({ theme, navigateTo, onLogout }) {
                 icon: 'person-outline',
                 iconType: 'ionicons',
                 iconColor: '#8B5CF6',
-                iconBg: '#8B5CF618'
               },
             ].map((item, idx, arr) => (
               <TouchableOpacity 
                 key={idx}
                 onPress={handleOpenEdit}
                 activeOpacity={0.7}
-                className="flex-row items-center p-3.5"
                 style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  paddingVertical: 14,
+                  paddingHorizontal: 16,
                   borderBottomWidth: idx < arr.length - 1 ? 1 : 0,
-                  borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : '#F1F5F9',
+                  borderBottomColor: isDark ? COLORS.dark.border : COLORS.light.border,
                 }}
               >
                 <View 
-                  className="w-10 h-10 rounded-2xl items-center justify-center mr-3.5"
-                  style={{ backgroundColor: item.iconBg }}
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 18,
+                    backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F3F4F6',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginRight: 14
+                  }}
                 >
                   {item.iconType === 'ionicons' ? (
-                    <Ionicons name={item.icon} size={18} color={item.iconColor} />
+                    <Ionicons name={item.icon} size={17} color={item.iconColor} />
                   ) : (
-                    <Feather name={item.icon} size={17} color={item.iconColor} />
+                    <Feather name={item.icon} size={16} color={item.iconColor} />
                   )}
                 </View>
 
-                <View className="flex-1 mr-2">
-                  <Text 
-                    className="text-[10px] uppercase font-bold tracking-widest" 
-                    style={{ color: isDark ? '#64748B' : '#94A3B8' }}
-                  >
+                <View style={{ flex: 1, marginRight: 8 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: isDark ? '#9CA3AF' : '#6B7280' }}>
                     {item.label}
                   </Text>
                   <Text 
-                    className="text-xs font-bold mt-0.5" 
-                    style={{ color: isDark ? '#F1F5F9' : '#1E293B' }}
+                    style={{ fontSize: 13, fontWeight: '700', color: isDark ? COLORS.dark.text : COLORS.light.text, marginTop: 2 }}
                     numberOfLines={2}
                   >
                     {item.val}
                   </Text>
                 </View>
 
-                <Feather name="chevron-right" size={16} color={isDark ? '#475569' : '#CBD5E1'} />
+                <Feather name="chevron-right" size={16} color={isDark ? '#64748B' : '#94A3B8'} />
               </TouchableOpacity>
             ))}
           </View>
         </View>
 
-        {/* SECTION 2: DOCUMENTS & ATTACHMENTS */}
-        <View className="mx-4 mt-6">
-          <View className="flex-row items-center justify-between mb-2.5 px-1">
-            <View className="flex-row items-center flex-1 mr-2">
-              <View className="w-1.5 h-4 rounded-full mr-2" style={{ backgroundColor: primaryColor }} />
-              <Text 
-                className="text-xs font-extrabold uppercase tracking-wider"
-                style={{ color: isDark ? '#94A3B8' : '#64748B' }}
+        {/* SECTION 2: EMPLOYMENT INFORMATION */}
+        <View style={{ marginHorizontal: 16, marginTop: 20 }}>
+          <View style={{ marginBottom: 8, paddingHorizontal: 4 }}>
+            <Text style={{
+              fontSize: 13,
+              fontWeight: '700',
+              color: isDark ? COLORS.dark.text : COLORS.light.text,
+            }}>
+              Employment Details
+            </Text>
+          </View>
+
+          <View 
+            style={{
+              backgroundColor: isDark ? COLORS.dark.card : COLORS.light.card,
+              borderColor: isDark ? COLORS.dark.border : COLORS.light.border,
+              borderWidth: 1,
+              borderRadius: 20,
+              overflow: 'hidden',
+              elevation: 2,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.05,
+              shadowRadius: 4,
+            }}
+          >
+            {[
+              { 
+                label: 'Position', 
+                val: positionName, 
+                icon: 'briefcase',
+              },
+              { 
+                label: 'Department', 
+                val: user?.employee?.department || 'General', 
+                icon: 'layers',
+              },
+              { 
+                label: 'Role / Access Level', 
+                val: roleName || 'Standard Employee', 
+                icon: 'user-check',
+              },
+              { 
+                label: 'Joined Date', 
+                val: formatDate(user?.employee?.joined_at || user?.employee?.created_at), 
+                icon: 'calendar',
+              },
+            ].map((item, idx, arr) => (
+              <View 
+                key={idx}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  paddingVertical: 14,
+                  paddingHorizontal: 16,
+                  borderBottomWidth: idx < arr.length - 1 ? 1 : 0,
+                  borderBottomColor: isDark ? COLORS.dark.border : COLORS.light.border,
+                }}
               >
+                <View 
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 18,
+                    backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F3F4F6',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginRight: 14
+                  }}
+                >
+                  <Feather name={item.icon} size={16} color={primaryColor} />
+                </View>
+
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: isDark ? '#9CA3AF' : '#6B7280' }}>
+                    {item.label}
+                  </Text>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: isDark ? COLORS.dark.text : COLORS.light.text, marginTop: 2 }}>
+                    {item.val}
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* SECTION 3: DOCUMENTS */}
+        <View style={{ marginHorizontal: 16, marginTop: 20 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, paddingHorizontal: 4 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={{
+                fontSize: 13,
+                fontWeight: '700',
+                color: isDark ? COLORS.dark.text : COLORS.light.text,
+              }}>
                 Documents
               </Text>
               <View 
-                className="ml-2 px-2 py-0.5 rounded-full"
-                style={{ backgroundColor: `${primaryColor}20` }}
+                style={{ 
+                  marginLeft: 8, 
+                  backgroundColor: `${primaryColor}18`, 
+                  paddingHorizontal: 8, 
+                  paddingVertical: 2, 
+                  borderRadius: 10 
+                }}
               >
-                <Text className="text-[10px] font-black" style={{ color: primaryColor }}>
-                  {documents.length} {documents.length === 1 ? 'Doc' : 'Docs'}
+                <Text style={{ fontSize: 11, fontWeight: '700', color: primaryColor }}>
+                  {documents.length}
                 </Text>
               </View>
             </View>
 
             <TouchableOpacity 
               onPress={() => setUploadModalVisible(true)}
-              className="flex-row items-center px-3.5 py-1.5 rounded-full shadow-sm active:scale-95 transition-transform"
-              style={{ backgroundColor: primaryColor }}
+              style={{ 
+                flexDirection: 'row', 
+                alignItems: 'center', 
+                backgroundColor: primaryColor,
+                paddingHorizontal: 12,
+                paddingVertical: 5,
+                borderRadius: 14,
+              }}
               activeOpacity={0.85}
             >
               <Feather name="plus" size={13} color="#FFFFFF" />
-              <Text className="text-white text-xs font-extrabold ml-1">Upload</Text>
+              <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700', marginLeft: 4 }}>
+                Upload
+              </Text>
             </TouchableOpacity>
           </View>
 
-          {/* Document Content Card */}
+          {/* Document List Card */}
           <View 
-            className="rounded-[24px] p-4 border shadow-sm"
             style={{
-              backgroundColor: isDark ? '#151821' : '#FFFFFF',
-              borderColor: isDark ? 'rgba(255,255,255,0.07)' : '#E2E8F0',
+              backgroundColor: isDark ? COLORS.dark.card : COLORS.light.card,
+              borderColor: isDark ? COLORS.dark.border : COLORS.light.border,
+              borderWidth: 1,
+              borderRadius: 20,
+              padding: 12,
+              elevation: 2,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.05,
+              shadowRadius: 4,
             }}
           >
             {loadingDocs ? (
-              <View className="py-8 items-center justify-center">
+              <View style={{ paddingVertical: 24, alignItems: 'center', justifyContent: 'center' }}>
                 <ActivityIndicator size="small" color={primaryColor} />
-                <Text 
-                  className="text-xs mt-2.5 font-semibold"
-                  style={{ color: isDark ? '#94A3B8' : '#64748B' }}
-                >
+                <Text style={{ fontSize: 12, marginTop: 8, fontWeight: '600', color: isDark ? '#9CA3AF' : '#6B7280' }}>
                   Loading documents...
                 </Text>
               </View>
             ) : documents.length === 0 ? (
-              /* Elevated Empty State */
-              <View className="py-6 items-center justify-center">
-                <View 
-                  className="w-16 h-16 rounded-[22px] items-center justify-center mb-3.5 border"
-                  style={{ 
-                    backgroundColor: `${primaryColor}12`,
-                    borderColor: `${primaryColor}30`
-                  }}
-                >
-                  <Ionicons name="document-text-outline" size={30} color={primaryColor} />
-                </View>
-
-                <Text 
-                  className="text-sm font-extrabold text-center tracking-tight"
-                  style={{ color: isDark ? '#F1F5F9' : '#0F172A' }}
-                >
+              <View style={{ paddingVertical: 20, alignItems: 'center', justifyContent: 'center' }}>
+                <MaterialCommunityIcons name="file-document-outline" size={36} color={isDark ? '#4B5563' : '#9CA3AF'} />
+                <Text style={{ fontSize: 13, fontWeight: '700', color: isDark ? COLORS.dark.text : COLORS.light.text, marginTop: 8 }}>
                   No Documents Uploaded
                 </Text>
-
-                <Text 
-                  className="text-xs text-center mt-1 px-4 leading-relaxed"
-                  style={{ color: isDark ? '#94A3B8' : '#64748B' }}
-                >
-                  Upload your National ID, Passport, Driver License, or Certificates to keep your HR file complete.
+                <Text style={{ fontSize: 11, color: isDark ? '#9CA3AF' : '#6B7280', marginTop: 4, textAlign: 'center', paddingHorizontal: 16 }}>
+                  Upload National ID, Passport, or Certificate to keep your record up to date.
                 </Text>
-
-                <TouchableOpacity 
-                  onPress={() => setUploadModalVisible(true)}
-                  className="mt-4 px-5 py-2.5 rounded-full flex-row items-center border active:scale-95 transition-transform"
-                  style={{ 
-                    borderColor: `${primaryColor}40`,
-                    backgroundColor: `${primaryColor}14`
-                  }}
-                >
-                  <Feather name="upload-cloud" size={15} color={primaryColor} />
-                  <Text className="text-xs font-bold ml-2" style={{ color: primaryColor }}>
-                    Upload Document Now
-                  </Text>
-                </TouchableOpacity>
               </View>
             ) : (
-              /* Documents List */
-              <View className="gap-2.5">
+              <View style={{ gap: 8 }}>
                 {documents.map((doc, idx) => {
                   const typeName = doc.documenttype?.name || doc.document_type_name || 'Personal Document';
                   const isPdf = isPdfFile(doc.document_path);
@@ -866,58 +908,59 @@ export default function ProfileScreen({ theme, navigateTo, onLogout }) {
                   return (
                     <View 
                       key={doc.id || idx}
-                      className="p-3.5 rounded-2xl flex-row items-center border"
                       style={{
-                        backgroundColor: isDark ? '#1C202B' : '#F8FAFC',
-                        borderColor: isDark ? 'rgba(255,255,255,0.06)' : '#E2E8F0',
+                        padding: 12,
+                        borderRadius: 14,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#F9FAFB',
+                        borderWidth: 1,
+                        borderColor: isDark ? COLORS.dark.border : '#F3F4F6',
                       }}
                     >
                       {/* Document Icon */}
                       <View 
-                        className="w-11 h-11 rounded-2xl items-center justify-center mr-3"
-                        style={{ 
-                          backgroundColor: isPdf ? '#EF444415' : `${primaryColor}15` 
+                        style={{
+                          width: 38,
+                          height: 38,
+                          borderRadius: 12,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          marginRight: 12,
+                          backgroundColor: isPdf ? '#FEE2E2' : `${primaryColor}15` 
                         }}
                       >
                         <MaterialCommunityIcons 
                           name={isPdf ? 'file-pdf-box' : 'file-image-outline'} 
-                          size={24} 
+                          size={22} 
                           color={isPdf ? '#EF4444' : primaryColor} 
                         />
                       </View>
 
                       {/* Info */}
-                      <View className="flex-1 mr-2">
-                        <View className="flex-row items-center gap-1.5">
-                          <Text 
-                            className="text-xs font-bold flex-1"
-                            style={{ color: isDark ? '#F1F5F9' : '#0F172A' }}
-                            numberOfLines={1}
-                          >
-                            {typeName}
-                          </Text>
-                          {isPdf && (
-                            <View className="bg-red-500/10 px-1.5 py-0.5 rounded-md border border-red-500/20">
-                              <Text className="text-[9px] font-black text-red-500">PDF</Text>
-                            </View>
-                          )}
-                        </View>
+                      <View style={{ flex: 1, marginRight: 8 }}>
                         <Text 
-                          className="text-[10px] mt-0.5 font-medium"
-                          style={{ color: isDark ? '#64748B' : '#94A3B8' }}
+                          style={{ fontSize: 12, fontWeight: '700', color: isDark ? COLORS.dark.text : COLORS.light.text }}
+                          numberOfLines={1}
                         >
+                          {typeName}
+                        </Text>
+                        <Text style={{ fontSize: 10, color: isDark ? '#9CA3AF' : '#6B7280', marginTop: 2 }}>
                           Uploaded: {formatDate(doc.uploaded_at || doc.created_at)}
                         </Text>
                       </View>
 
                       {/* Action Buttons */}
-                      <View className="flex-row items-center gap-1.5">
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                         <TouchableOpacity 
                           onPress={() => handleViewDocument(doc)}
-                          className="w-8 h-8 rounded-xl items-center justify-center border active:opacity-75"
-                          style={{ 
-                            backgroundColor: `${primaryColor}14`,
-                            borderColor: `${primaryColor}30`
+                          style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: 10,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: `${primaryColor}15`,
                           }}
                           hitSlop={6}
                         >
@@ -926,7 +969,14 @@ export default function ProfileScreen({ theme, navigateTo, onLogout }) {
 
                         <TouchableOpacity 
                           onPress={() => handleDeleteDocument(doc.id, typeName)}
-                          className="w-8 h-8 rounded-xl items-center justify-center bg-red-500/10 border border-red-500/20 active:opacity-75"
+                          style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: 10,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: '#FEE2E2',
+                          }}
                           hitSlop={6}
                         >
                           <Feather name="trash-2" size={13} color="#EF4444" />
@@ -940,53 +990,67 @@ export default function ProfileScreen({ theme, navigateTo, onLogout }) {
           </View>
         </View>
 
-        {/* SECTION 3: ACCOUNT & SECURITY */}
-        <View className="mx-4 mt-6">
-          <View className="flex-row items-center mb-2.5 px-1">
-            <View className="w-1.5 h-4 rounded-full mr-2" style={{ backgroundColor: primaryColor }} />
-            <Text 
-              className="text-xs font-extrabold uppercase tracking-wider"
-              style={{ color: isDark ? '#94A3B8' : '#64748B' }}
-            >
-              Account Security
+        {/* SECTION 4: SECURITY & LOGOUT */}
+        <View style={{ marginHorizontal: 16, marginTop: 20 }}>
+          <View style={{ marginBottom: 8, paddingHorizontal: 4 }}>
+            <Text style={{
+              fontSize: 13,
+              fontWeight: '700',
+              color: isDark ? COLORS.dark.text : COLORS.light.text,
+            }}>
+              Security
             </Text>
           </View>
 
           <View 
-            className="rounded-[24px] overflow-hidden border shadow-sm"
             style={{
-              backgroundColor: isDark ? '#151821' : '#FFFFFF',
-              borderColor: isDark ? 'rgba(255,255,255,0.07)' : '#E2E8F0',
+              backgroundColor: isDark ? COLORS.dark.card : COLORS.light.card,
+              borderColor: isDark ? COLORS.dark.border : COLORS.light.border,
+              borderWidth: 1,
+              borderRadius: 20,
+              overflow: 'hidden',
+              elevation: 2,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.05,
+              shadowRadius: 4,
             }}
           >
             <TouchableOpacity 
               onPress={() => navigateTo('ChangePassword')}
               activeOpacity={0.7}
-              className="flex-row items-center justify-between p-4"
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingVertical: 14,
+                paddingHorizontal: 16,
+              }}
             >
-              <View className="flex-row items-center flex-1 mr-2">
+              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}>
                 <View 
-                  className="w-10 h-10 rounded-2xl items-center justify-center mr-3.5"
-                  style={{ backgroundColor: `${primaryColor}18` }}
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 18,
+                    backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F3F4F6',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginRight: 14
+                  }}
                 >
-                  <Feather name="lock" size={17} color={primaryColor} />
+                  <Feather name="lock" size={16} color={primaryColor} />
                 </View>
-                <View className="flex-1">
-                  <Text 
-                    className="text-xs font-extrabold" 
-                    style={{ color: isDark ? '#F1F5F9' : '#0F172A' }}
-                  >
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: isDark ? COLORS.dark.text : COLORS.light.text }}>
                     Change Password
                   </Text>
-                  <Text 
-                    className="text-[11px] mt-0.5 font-medium" 
-                    style={{ color: isDark ? '#64748B' : '#94A3B8' }}
-                  >
-                    Update your account login credentials
+                  <Text style={{ fontSize: 11, color: isDark ? '#9CA3AF' : '#6B7280', marginTop: 2 }}>
+                    Update your account login password
                   </Text>
                 </View>
               </View>
-              <Feather name="chevron-right" size={16} color={isDark ? '#475569' : '#CBD5E1'} />
+              <Feather name="chevron-right" size={16} color={isDark ? '#64748B' : '#94A3B8'} />
             </TouchableOpacity>
           </View>
         </View>
@@ -994,17 +1058,23 @@ export default function ProfileScreen({ theme, navigateTo, onLogout }) {
         {/* LOGOUT BUTTON */}
         <TouchableOpacity 
           onPress={handleLogoutPress}
-          className="mx-4 mt-6 py-4 rounded-[22px] items-center justify-center border active:scale-[0.98] transition-transform"
           style={{
-            borderColor: '#EF444430',
-            backgroundColor: isDark ? 'rgba(239, 68, 68, 0.08)' : '#FEF2F2',
+            marginHorizontal: 16,
+            marginTop: 24,
+            paddingVertical: 14,
+            borderRadius: 18,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: isDark ? 'rgba(239, 68, 68, 0.12)' : '#FEF2F2',
+            borderWidth: 1,
+            borderColor: '#FCA5A5',
           }}
           activeOpacity={0.85}
         >
-          <View className="flex-row items-center">
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Feather name="log-out" size={16} color="#EF4444" />
-            <Text className="text-red-500 font-extrabold text-xs ml-2 uppercase tracking-wider">
-              Sign Out Account
+            <Text style={{ color: '#EF4444', fontWeight: '800', fontSize: 13, marginLeft: 8 }}>
+              Sign Out
             </Text>
           </View>
         </TouchableOpacity>
@@ -1023,61 +1093,74 @@ export default function ProfileScreen({ theme, navigateTo, onLogout }) {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={{ flex: 1 }}
         >
-          <View className="flex-1 justify-end bg-black/70">
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' }}>
             <View 
-              className="rounded-t-[32px] p-5 max-h-[85%] border-t"
               style={{ 
-                backgroundColor: isDark ? '#151821' : '#FFFFFF',
-                borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#E2E8F0'
+                backgroundColor: isDark ? COLORS.dark.card : '#FFFFFF',
+                borderTopLeftRadius: 28,
+                borderTopRightRadius: 28,
+                padding: 20,
+                maxHeight: '85%',
+                borderTopWidth: 1,
+                borderColor: isDark ? COLORS.dark.border : '#E2E8F0',
               }}
             >
               {/* Drag Handle */}
-              <View className="w-12 h-1.5 rounded-full self-center mb-3" style={{ backgroundColor: isDark ? '#334155' : '#CBD5E1' }} />
+              <View style={{ width: 44, height: 5, borderRadius: 3, backgroundColor: isDark ? '#475569' : '#CBD5E1', alignSelf: 'center', marginBottom: 16 }} />
 
               {/* Modal Header */}
-              <View className="flex-row items-center justify-between pb-3 border-b" style={{ borderBottomColor: isDark ? 'rgba(255,255,255,0.06)' : '#E2E8F0' }}>
-                <View className="flex-row items-center">
-                  <View className="w-8 h-8 rounded-xl items-center justify-center mr-2.5" style={{ backgroundColor: `${primaryColor}18` }}>
-                    <Feather name="edit-3" size={15} color={primaryColor} />
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: isDark ? COLORS.dark.border : '#F1F5F9' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{ width: 34, height: 34, borderRadius: 12, backgroundColor: `${primaryColor}18`, alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
+                    <Feather name="edit-3" size={16} color={primaryColor} />
                   </View>
-                  <Text className="text-base font-black tracking-tight" style={{ color: isDark ? '#F8FAFC' : '#0F172A' }}>
+                  <Text style={{ fontSize: 16, fontWeight: '800', color: isDark ? COLORS.dark.text : COLORS.light.text }}>
                     Edit Profile Details
                   </Text>
                 </View>
                 <TouchableOpacity 
                   onPress={() => !isSavingProfile && setEditModalVisible(false)}
-                  className="w-8 h-8 rounded-full items-center justify-center"
-                  style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9' }}
+                  style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}
                 >
                   <Feather name="x" size={16} color={isDark ? '#94A3B8' : '#64748B'} />
                 </TouchableOpacity>
               </View>
 
               {/* Form Content */}
-              <ScrollView showsVerticalScrollIndicator={false} className="mt-3">
+              <ScrollView showsVerticalScrollIndicator={false} style={{ marginTop: 12 }}>
                 <View 
-                  className="p-3 rounded-2xl mb-4 flex-row items-center border"
                   style={{ 
-                    backgroundColor: `${primaryColor}10`,
-                    borderColor: `${primaryColor}25`
+                    padding: 12,
+                    borderRadius: 14,
+                    marginBottom: 16,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: `${primaryColor}12`,
+                    borderWidth: 1,
+                    borderColor: `${primaryColor}30`,
                   }}
                 >
                   <Feather name="info" size={15} color={primaryColor} />
-                  <Text className="text-[11px] font-medium ml-2 flex-1 leading-tight" style={{ color: primaryColor }}>
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: primaryColor, marginLeft: 8, flex: 1, lineHeight: 16 }}>
                     Contact information and gender can be updated here. Name and avatar changes require HR Admin approval.
                   </Text>
                 </View>
 
                 {/* Email Input */}
-                <View className="mb-3.5">
-                  <Text className="text-xs font-bold mb-1.5" style={{ color: isDark ? '#94A3B8' : '#64748B' }}>
+                <View style={{ marginBottom: 14 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: isDark ? COLORS.dark.text : COLORS.light.text, marginBottom: 6 }}>
                     Email Address
                   </Text>
                   <View 
-                    className="flex-row items-center px-3.5 py-3 rounded-2xl border"
                     style={{ 
-                      backgroundColor: isDark ? '#1C202B' : '#F8FAFC',
-                      borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#E2E8F0'
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingHorizontal: 14,
+                      paddingVertical: Platform.OS === 'ios' ? 12 : 6,
+                      borderRadius: 14,
+                      backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#F9FAFB',
+                      borderWidth: 1,
+                      borderColor: isDark ? COLORS.dark.border : '#E2E8F0',
                     }}
                   >
                     <Feather name="mail" size={16} color={primaryColor} />
@@ -1085,51 +1168,59 @@ export default function ProfileScreen({ theme, navigateTo, onLogout }) {
                       value={editEmail}
                       onChangeText={setEditEmail}
                       placeholder="e.g. employee@company.com"
-                      placeholderTextColor={isDark ? '#475569' : '#94A3B8'}
+                      placeholderTextColor={isDark ? '#6B7280' : '#94A3B8'}
                       keyboardType="email-address"
                       autoCapitalize="none"
-                      className="flex-1 ml-2.5 text-xs font-bold"
-                      style={{ color: isDark ? '#F1F5F9' : '#0F172A' }}
+                      style={{ flex: 1, marginLeft: 10, fontSize: 13, fontWeight: '600', color: isDark ? COLORS.dark.text : COLORS.light.text }}
                     />
                   </View>
                 </View>
 
                 {/* Telegram Username Input */}
-                <View className="mb-3.5">
-                  <Text className="text-xs font-bold mb-1.5" style={{ color: isDark ? '#94A3B8' : '#64748B' }}>
+                <View style={{ marginBottom: 14 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: isDark ? COLORS.dark.text : COLORS.light.text, marginBottom: 6 }}>
                     Telegram Username
                   </Text>
                   <View 
-                    className="flex-row items-center px-3.5 py-3 rounded-2xl border"
                     style={{ 
-                      backgroundColor: isDark ? '#1C202B' : '#F8FAFC',
-                      borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#E2E8F0'
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingHorizontal: 14,
+                      paddingVertical: Platform.OS === 'ios' ? 12 : 6,
+                      borderRadius: 14,
+                      backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#F9FAFB',
+                      borderWidth: 1,
+                      borderColor: isDark ? COLORS.dark.border : '#E2E8F0',
                     }}
                   >
                     <Ionicons name="paper-plane-outline" size={16} color={primaryColor} />
-                    <Text className="text-xs font-black ml-2" style={{ color: primaryColor }}>@</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: primaryColor, marginLeft: 8 }}>@</Text>
                     <TextInput 
                       value={editTelegram}
                       onChangeText={(t) => setEditTelegram(t.replace(/^@+/, ''))}
                       placeholder="username"
-                      placeholderTextColor={isDark ? '#475569' : '#94A3B8'}
+                      placeholderTextColor={isDark ? '#6B7280' : '#94A3B8'}
                       autoCapitalize="none"
-                      className="flex-1 ml-1 text-xs font-bold"
-                      style={{ color: isDark ? '#F1F5F9' : '#0F172A' }}
+                      style={{ flex: 1, marginLeft: 4, fontSize: 13, fontWeight: '600', color: isDark ? COLORS.dark.text : COLORS.light.text }}
                     />
                   </View>
                 </View>
 
                 {/* Phone Number Input */}
-                <View className="mb-3.5">
-                  <Text className="text-xs font-bold mb-1.5" style={{ color: isDark ? '#94A3B8' : '#64748B' }}>
+                <View style={{ marginBottom: 14 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: isDark ? COLORS.dark.text : COLORS.light.text, marginBottom: 6 }}>
                     Phone Number
                   </Text>
                   <View 
-                    className="flex-row items-center px-3.5 py-3 rounded-2xl border"
                     style={{ 
-                      backgroundColor: isDark ? '#1C202B' : '#F8FAFC',
-                      borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#E2E8F0'
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingHorizontal: 14,
+                      paddingVertical: Platform.OS === 'ios' ? 12 : 6,
+                      borderRadius: 14,
+                      backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#F9FAFB',
+                      borderWidth: 1,
+                      borderColor: isDark ? COLORS.dark.border : '#E2E8F0',
                     }}
                   >
                     <Feather name="phone" size={16} color={primaryColor} />
@@ -1137,24 +1228,28 @@ export default function ProfileScreen({ theme, navigateTo, onLogout }) {
                       value={editPhone}
                       onChangeText={setEditPhone}
                       placeholder="e.g. 012 345 678"
-                      placeholderTextColor={isDark ? '#475569' : '#94A3B8'}
+                      placeholderTextColor={isDark ? '#6B7280' : '#94A3B8'}
                       keyboardType="phone-pad"
-                      className="flex-1 ml-2.5 text-xs font-bold"
-                      style={{ color: isDark ? '#F1F5F9' : '#0F172A' }}
+                      style={{ flex: 1, marginLeft: 10, fontSize: 13, fontWeight: '600', color: isDark ? COLORS.dark.text : COLORS.light.text }}
                     />
                   </View>
                 </View>
 
                 {/* Address Input */}
-                <View className="mb-3.5">
-                  <Text className="text-xs font-bold mb-1.5" style={{ color: isDark ? '#94A3B8' : '#64748B' }}>
+                <View style={{ marginBottom: 14 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: isDark ? COLORS.dark.text : COLORS.light.text, marginBottom: 6 }}>
                     Residential Address
                   </Text>
                   <View 
-                    className="flex-row items-center px-3.5 py-3 rounded-2xl border"
                     style={{ 
-                      backgroundColor: isDark ? '#1C202B' : '#F8FAFC',
-                      borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#E2E8F0'
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingHorizontal: 14,
+                      paddingVertical: Platform.OS === 'ios' ? 12 : 6,
+                      borderRadius: 14,
+                      backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#F9FAFB',
+                      borderWidth: 1,
+                      borderColor: isDark ? COLORS.dark.border : '#E2E8F0',
                     }}
                   >
                     <Feather name="map-pin" size={16} color={primaryColor} />
@@ -1162,19 +1257,18 @@ export default function ProfileScreen({ theme, navigateTo, onLogout }) {
                       value={editAddress}
                       onChangeText={setEditAddress}
                       placeholder="e.g. Phnom Penh, Cambodia"
-                      placeholderTextColor={isDark ? '#475569' : '#94A3B8'}
-                      className="flex-1 ml-2.5 text-xs font-bold"
-                      style={{ color: isDark ? '#F1F5F9' : '#0F172A' }}
+                      placeholderTextColor={isDark ? '#6B7280' : '#94A3B8'}
+                      style={{ flex: 1, marginLeft: 10, fontSize: 13, fontWeight: '600', color: isDark ? COLORS.dark.text : COLORS.light.text }}
                     />
                   </View>
                 </View>
 
                 {/* Gender Selector */}
-                <View className="mb-5">
-                  <Text className="text-xs font-bold mb-1.5" style={{ color: isDark ? '#94A3B8' : '#64748B' }}>
+                <View style={{ marginBottom: 20 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: isDark ? COLORS.dark.text : COLORS.light.text, marginBottom: 6 }}>
                     Gender
                   </Text>
-                  <View className="flex-row gap-2">
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
                     {[
                       { key: 'male', label: 'Male' },
                       { key: 'female', label: 'Female' },
@@ -1185,19 +1279,27 @@ export default function ProfileScreen({ theme, navigateTo, onLogout }) {
                         <TouchableOpacity
                           key={item.key}
                           onPress={() => setEditGender(item.key)}
-                          className="flex-1 py-3 rounded-2xl items-center justify-center border"
                           style={{
+                            flex: 1,
+                            paddingVertical: 12,
+                            borderRadius: 14,
+                            alignItems: 'center',
+                            justifyContent: 'center',
                             backgroundColor: isSelected 
                               ? primaryColor 
-                              : (isDark ? '#1C202B' : '#F8FAFC'),
+                              : (isDark ? 'rgba(255,255,255,0.04)' : '#F9FAFB'),
+                            borderWidth: 1,
                             borderColor: isSelected 
                               ? primaryColor 
-                              : (isDark ? 'rgba(255,255,255,0.08)' : '#E2E8F0'),
+                              : (isDark ? COLORS.dark.border : '#E2E8F0'),
                           }}
                         >
                           <Text 
-                            className="text-xs font-extrabold"
-                            style={{ color: isSelected ? '#FFFFFF' : (isDark ? '#E2E8F0' : '#334155') }}
+                            style={{ 
+                              fontSize: 12, 
+                              fontWeight: '800', 
+                              color: isSelected ? '#FFFFFF' : (isDark ? COLORS.dark.text : COLORS.light.text) 
+                            }}
                           >
                             {item.label}
                           </Text>
@@ -1208,25 +1310,41 @@ export default function ProfileScreen({ theme, navigateTo, onLogout }) {
                 </View>
 
                 {/* Submit & Cancel Buttons */}
-                <View className="flex-row gap-3 mt-2 mb-6">
+                <View style={{ flexDirection: 'row', gap: 10, marginTop: 4, marginBottom: 24 }}>
                   <TouchableOpacity
                     onPress={() => !isSavingProfile && setEditModalVisible(false)}
-                    className="flex-1 py-3.5 rounded-2xl items-center justify-center border"
                     style={{ 
-                      borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#CBD5E1',
-                      backgroundColor: 'transparent'
+                      flex: 1, 
+                      paddingVertical: 14, 
+                      borderRadius: 16, 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      borderWidth: 1, 
+                      borderColor: isDark ? COLORS.dark.border : '#CBD5E1',
                     }}
                     disabled={isSavingProfile}
                   >
-                    <Text className="text-xs font-bold" style={{ color: isDark ? '#94A3B8' : '#64748B' }}>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: isDark ? '#9CA3AF' : '#6B7280' }}>
                       Cancel
                     </Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
                     onPress={handleSaveProfile}
-                    className="flex-1 py-3.5 rounded-2xl items-center justify-center shadow-md flex-row"
-                    style={{ backgroundColor: primaryColor }}
+                    style={{ 
+                      flex: 1, 
+                      paddingVertical: 14, 
+                      borderRadius: 16, 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      backgroundColor: primaryColor,
+                      flexDirection: 'row',
+                      elevation: 2,
+                      shadowColor: primaryColor,
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.2,
+                      shadowRadius: 4,
+                    }}
                     disabled={isSavingProfile}
                   >
                     {isSavingProfile ? (
@@ -1234,7 +1352,9 @@ export default function ProfileScreen({ theme, navigateTo, onLogout }) {
                     ) : (
                       <>
                         <Feather name="check" size={15} color="#FFFFFF" />
-                        <Text className="text-white text-xs font-black ml-1.5">Save Changes</Text>
+                        <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800', marginLeft: 6 }}>
+                          Save Changes
+                        </Text>
                       </>
                     )}
                   </TouchableOpacity>
@@ -1254,61 +1374,68 @@ export default function ProfileScreen({ theme, navigateTo, onLogout }) {
         transparent={true}
         onRequestClose={() => !isUploadingDoc && setUploadModalVisible(false)}
       >
-        <View className="flex-1 justify-end bg-black/70">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' }}>
           <View 
-            className="rounded-t-[32px] p-5 max-h-[88%] border-t"
             style={{ 
-              backgroundColor: isDark ? '#151821' : '#FFFFFF',
-              borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#E2E8F0'
+              backgroundColor: isDark ? COLORS.dark.card : '#FFFFFF',
+              borderTopLeftRadius: 28,
+              borderTopRightRadius: 28,
+              padding: 20,
+              maxHeight: '88%',
+              borderTopWidth: 1,
+              borderColor: isDark ? COLORS.dark.border : '#E2E8F0',
             }}
           >
             {/* Drag Handle */}
-            <View className="w-12 h-1.5 rounded-full self-center mb-3" style={{ backgroundColor: isDark ? '#334155' : '#CBD5E1' }} />
+            <View style={{ width: 44, height: 5, borderRadius: 3, backgroundColor: isDark ? '#475569' : '#CBD5E1', alignSelf: 'center', marginBottom: 16 }} />
 
             {/* Modal Header */}
-            <View className="flex-row items-center justify-between pb-3 border-b" style={{ borderBottomColor: isDark ? 'rgba(255,255,255,0.06)' : '#E2E8F0' }}>
-              <View className="flex-row items-center">
-                <View className="w-8 h-8 rounded-xl items-center justify-center mr-2.5" style={{ backgroundColor: `${primaryColor}18` }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: isDark ? COLORS.dark.border : '#F1F5F9' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ width: 34, height: 34, borderRadius: 12, backgroundColor: `${primaryColor}18`, alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
                   <Feather name="upload-cloud" size={16} color={primaryColor} />
                 </View>
-                <Text className="text-base font-black tracking-tight" style={{ color: isDark ? '#F8FAFC' : '#0F172A' }}>
+                <Text style={{ fontSize: 16, fontWeight: '800', color: isDark ? COLORS.dark.text : COLORS.light.text }}>
                   Upload Document
                 </Text>
               </View>
               <TouchableOpacity 
                 onPress={() => !isUploadingDoc && setUploadModalVisible(false)}
-                className="w-8 h-8 rounded-full items-center justify-center"
-                style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9' }}
+                style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}
               >
                 <Feather name="x" size={16} color={isDark ? '#94A3B8' : '#64748B'} />
               </TouchableOpacity>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} className="mt-3">
+            <ScrollView showsVerticalScrollIndicator={false} style={{ marginTop: 12 }}>
               {/* Step 1: Select Document Type */}
-              <View className="mb-4">
-                <Text className="text-xs font-bold mb-1.5" style={{ color: isDark ? '#94A3B8' : '#64748B' }}>
+              <View style={{ marginBottom: 14 }}>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: isDark ? COLORS.dark.text : COLORS.light.text, marginBottom: 6 }}>
                   1. Select Document Type
                 </Text>
                 
                 {documentTypes.length === 0 ? (
                   <View 
-                    className="p-3.5 rounded-2xl border"
                     style={{ 
-                      backgroundColor: isDark ? '#1C202B' : '#F8FAFC',
-                      borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#E2E8F0' 
+                      padding: 14,
+                      borderRadius: 14,
+                      backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#F9FAFB',
+                      borderWidth: 1,
+                      borderColor: isDark ? COLORS.dark.border : '#E2E8F0',
                     }}
                   >
-                    <Text className="text-xs font-semibold" style={{ color: isDark ? '#F1F5F9' : '#0F172A' }}>
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: isDark ? COLORS.dark.text : COLORS.light.text }}>
                       Default Document Type
                     </Text>
                   </View>
                 ) : (
                   <View 
-                    className="rounded-2xl border overflow-hidden"
                     style={{ 
-                      backgroundColor: isDark ? '#1C202B' : '#F8FAFC',
-                      borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#E2E8F0' 
+                      borderRadius: 14,
+                      borderWidth: 1,
+                      borderColor: isDark ? COLORS.dark.border : '#E2E8F0',
+                      backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#F9FAFB',
+                      overflow: 'hidden',
                     }}
                   >
                     <Picker
@@ -1316,7 +1443,7 @@ export default function ProfileScreen({ theme, navigateTo, onLogout }) {
                       onValueChange={(itemValue) => setSelectedDocTypeId(itemValue)}
                       dropdownIconColor={primaryColor}
                       style={{
-                        color: isDark ? '#F8FAFC' : '#0F172A',
+                        color: isDark ? '#FFFFFF' : '#0F172A',
                         backgroundColor: 'transparent',
                       }}
                     >
@@ -1334,37 +1461,51 @@ export default function ProfileScreen({ theme, navigateTo, onLogout }) {
               </View>
 
               {/* Step 2: Choose File / Photo */}
-              <View className="mb-4">
-                <Text className="text-xs font-bold mb-1.5" style={{ color: isDark ? '#94A3B8' : '#64748B' }}>
+              <View style={{ marginBottom: 14 }}>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: isDark ? COLORS.dark.text : COLORS.light.text, marginBottom: 6 }}>
                   2. Select Document File or Photo
                 </Text>
 
                 {/* Source Selection Buttons */}
-                <View className="flex-row gap-2.5">
+                <View style={{ flexDirection: 'row', gap: 10 }}>
                   <TouchableOpacity
                     onPress={handleTakePhoto}
-                    className="flex-1 p-3.5 rounded-2xl items-center justify-center border flex-row active:scale-98 transition-transform"
                     style={{
-                      backgroundColor: isDark ? '#1C202B' : '#F8FAFC',
-                      borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#E2E8F0'
+                      flex: 1,
+                      padding: 14,
+                      borderRadius: 14,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexDirection: 'row',
+                      backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#F9FAFB',
+                      borderWidth: 1,
+                      borderColor: isDark ? COLORS.dark.border : '#E2E8F0',
                     }}
+                    activeOpacity={0.8}
                   >
                     <Feather name="camera" size={16} color={primaryColor} />
-                    <Text className="text-xs font-extrabold ml-2" style={{ color: isDark ? '#F1F5F9' : '#0F172A' }}>
+                    <Text style={{ fontSize: 12, fontWeight: '800', color: isDark ? COLORS.dark.text : COLORS.light.text, marginLeft: 8 }}>
                       Take Photo
                     </Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
                     onPress={handlePickFromGallery}
-                    className="flex-1 p-3.5 rounded-2xl items-center justify-center border flex-row active:scale-98 transition-transform"
                     style={{
-                      backgroundColor: isDark ? '#1C202B' : '#F8FAFC',
-                      borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#E2E8F0'
+                      flex: 1,
+                      padding: 14,
+                      borderRadius: 14,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexDirection: 'row',
+                      backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#F9FAFB',
+                      borderWidth: 1,
+                      borderColor: isDark ? COLORS.dark.border : '#E2E8F0',
                     }}
+                    activeOpacity={0.8}
                   >
                     <Feather name="image" size={16} color={primaryColor} />
-                    <Text className="text-xs font-extrabold ml-2" style={{ color: isDark ? '#F1F5F9' : '#0F172A' }}>
+                    <Text style={{ fontSize: 12, fontWeight: '800', color: isDark ? COLORS.dark.text : COLORS.light.text, marginLeft: 8 }}>
                       Choose Photo
                     </Text>
                   </TouchableOpacity>
@@ -1372,44 +1513,54 @@ export default function ProfileScreen({ theme, navigateTo, onLogout }) {
 
                 {/* File Preview */}
                 {selectedFile && (
-                  <View className="mt-3.5">
+                  <View style={{ marginTop: 12 }}>
                     <View 
-                      className="p-3 rounded-2xl border flex-row items-center"
                       style={{
-                        backgroundColor: `${primaryColor}10`,
-                        borderColor: `${primaryColor}35`
+                        padding: 12,
+                        borderRadius: 14,
+                        borderWidth: 1,
+                        borderColor: `${primaryColor}40`,
+                        backgroundColor: `${primaryColor}12`,
+                        flexDirection: 'row',
+                        alignItems: 'center',
                       }}
                     >
                       {selectedFile.uri && !isPdfFile(selectedFile.name) ? (
                         <Image 
                           source={{ uri: selectedFile.uri }}
-                          className="w-14 h-14 rounded-xl mr-3 border"
-                          style={{ borderColor: primaryColor }}
+                          style={{ width: 50, height: 50, borderRadius: 10, marginRight: 12, borderWidth: 1, borderColor: primaryColor }}
                         />
                       ) : (
                         <View 
-                          className="w-14 h-14 rounded-xl mr-3 items-center justify-center bg-red-500/10 border border-red-500/30"
+                          style={{
+                            width: 50,
+                            height: 50,
+                            borderRadius: 10,
+                            marginRight: 12,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: '#FEE2E2',
+                          }}
                         >
-                          <MaterialCommunityIcons name="file-pdf-box" size={32} color="#EF4444" />
+                          <MaterialCommunityIcons name="file-pdf-box" size={28} color="#EF4444" />
                         </View>
                       )}
                       
-                      <View className="flex-1">
+                      <View style={{ flex: 1, marginRight: 8 }}>
                         <Text 
-                          className="text-xs font-black"
-                          style={{ color: isDark ? '#F8FAFC' : '#0F172A' }}
+                          style={{ fontSize: 12, fontWeight: '800', color: isDark ? COLORS.dark.text : COLORS.light.text }}
                           numberOfLines={1}
                         >
                           {selectedFile.name || 'Selected Document'}
                         </Text>
-                        <Text className="text-[10px] mt-0.5 font-bold" style={{ color: primaryColor }}>
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: primaryColor, marginTop: 2 }}>
                           Ready to upload
                         </Text>
                       </View>
 
                       <TouchableOpacity 
                         onPress={() => setSelectedFile(null)}
-                        className="w-7 h-7 rounded-full items-center justify-center bg-red-500/10"
+                        style={{ width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FEE2E2' }}
                       >
                         <Feather name="x" size={14} color="#EF4444" />
                       </TouchableOpacity>
@@ -1420,18 +1571,26 @@ export default function ProfileScreen({ theme, navigateTo, onLogout }) {
                       <TouchableOpacity
                         onPress={handleAutoCrop}
                         disabled={isAutoCropping}
-                        className="mt-2.5 py-3 px-4 rounded-2xl border flex-row items-center justify-center active:scale-98 transition-transform"
                         style={{
-                          backgroundColor: isDark ? '#1C202B' : '#EEF2FF',
-                          borderColor: `${primaryColor}40`
+                          marginTop: 10,
+                          paddingVertical: 12,
+                          paddingHorizontal: 14,
+                          borderRadius: 14,
+                          borderWidth: 1,
+                          borderColor: `${primaryColor}40`,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          backgroundColor: `${primaryColor}10`,
                         }}
+                        activeOpacity={0.8}
                       >
                         {isAutoCropping ? (
                           <ActivityIndicator size="small" color={primaryColor} />
                         ) : (
                           <>
                             <MaterialCommunityIcons name="crop-rotate" size={16} color={primaryColor} />
-                            <Text className="text-xs font-extrabold ml-1.5" style={{ color: primaryColor }}>
+                            <Text style={{ fontSize: 12, fontWeight: '800', color: primaryColor, marginLeft: 6 }}>
                               Auto-Crop & Enhance with AI
                             </Text>
                           </>
@@ -1443,26 +1602,41 @@ export default function ProfileScreen({ theme, navigateTo, onLogout }) {
               </View>
 
               {/* Action Buttons */}
-              <View className="flex-row gap-3 mt-2 mb-6">
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 4, marginBottom: 24 }}>
                 <TouchableOpacity
                   onPress={() => !isUploadingDoc && setUploadModalVisible(false)}
-                  className="flex-1 py-3.5 rounded-2xl items-center justify-center border"
                   style={{ 
-                    borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#CBD5E1',
-                    backgroundColor: 'transparent'
+                    flex: 1, 
+                    paddingVertical: 14, 
+                    borderRadius: 16, 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    borderWidth: 1, 
+                    borderColor: isDark ? COLORS.dark.border : '#CBD5E1',
                   }}
                   disabled={isUploadingDoc}
                 >
-                  <Text className="text-xs font-bold" style={{ color: isDark ? '#94A3B8' : '#64748B' }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: isDark ? '#9CA3AF' : '#6B7280' }}>
                     Cancel
                   </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   onPress={handleUploadDocument}
-                  className="flex-1 py-3.5 rounded-2xl items-center justify-center shadow-md flex-row"
                   style={{ 
-                    backgroundColor: (!selectedFile || isUploadingDoc) ? `${primaryColor}70` : primaryColor 
+                    flex: 1, 
+                    paddingVertical: 14, 
+                    borderRadius: 16, 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    backgroundColor: primaryColor,
+                    flexDirection: 'row',
+                    opacity: (!selectedFile || isUploadingDoc) ? 0.6 : 1,
+                    elevation: 2,
+                    shadowColor: primaryColor,
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.2,
+                    shadowRadius: 4,
                   }}
                   disabled={!selectedFile || isUploadingDoc}
                 >
@@ -1471,7 +1645,9 @@ export default function ProfileScreen({ theme, navigateTo, onLogout }) {
                   ) : (
                     <>
                       <Feather name="upload-cloud" size={15} color="#FFFFFF" />
-                      <Text className="text-white text-xs font-black ml-1.5">Upload Document</Text>
+                      <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800', marginLeft: 6 }}>
+                        Upload Document
+                      </Text>
                     </>
                   )}
                 </TouchableOpacity>
@@ -1482,110 +1658,215 @@ export default function ProfileScreen({ theme, navigateTo, onLogout }) {
       </Modal>
 
       {/* ========================================================================= */}
-      {/* MODAL 3: VIEW & PREVIEW DOCUMENT MODAL                                    */}
+      {/* MODAL 3: VIEW & PREVIEW DOCUMENT (SOLID FULLSCREEN)                       */}
+      {/* ========================================================================= */}
+      {/* ========================================================================= */}
+      {/* MODAL 3: VIEW & PREVIEW DOCUMENT (SOLID FULLSCREEN)                       */}
       {/* ========================================================================= */}
       <Modal
         visible={viewModalVisible}
-        animationType="fade"
-        transparent={true}
+        animationType="slide"
+        transparent={false}
+        presentationStyle="fullScreen"
+        statusBarTranslucent={true}
         onRequestClose={() => setViewModalVisible(false)}
       >
-        <View className="flex-1 bg-black/92 justify-center items-center p-4">
-          {/* Top Bar with Title and Close */}
-          <SafeAreaView edges={['top']} className="w-full">
-            <View className="w-full flex-row items-center justify-between pb-3 px-2">
-              <View className="flex-1 mr-3">
-                <Text className="text-white text-base font-black" numberOfLines={1}>
+        <View style={{ flex: 1, backgroundColor: '#0B0F19' }}>
+          <StatusBar barStyle="light-content" backgroundColor="#0B0F19" />
+          
+          {/* Solid Top Header with Dynamic Island / Notch Inset Padding */}
+          <View 
+            style={{ 
+              backgroundColor: '#0F172A',
+              paddingTop: Platform.OS === 'ios' ? Math.max(insets.top, 48) : 16,
+              paddingBottom: 14,
+              paddingHorizontal: 16,
+              borderBottomWidth: 1,
+              borderBottomColor: 'rgba(255,255,255,0.08)',
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <TouchableOpacity 
+                onPress={() => setViewModalVisible(false)}
+                style={{ 
+                  width: 38, 
+                  height: 38, 
+                  borderRadius: 19, 
+                  backgroundColor: 'rgba(255,255,255,0.12)', 
+                  alignItems: 'center', 
+                  justifyContent: 'center' 
+                }}
+                activeOpacity={0.7}
+              >
+                <Feather name="x" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+
+              <View style={{ flex: 1, alignItems: 'center', marginHorizontal: 10 }}>
+                <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '800' }} numberOfLines={1}>
                   {activeDocument?.documenttype?.name || activeDocument?.document_type_name || 'Document Preview'}
                 </Text>
-                <Text className="text-gray-400 text-xs mt-0.5 font-medium">
+                <Text style={{ color: '#94A3B8', fontSize: 11, fontWeight: '600', marginTop: 2 }}>
                   Uploaded: {formatDate(activeDocument?.uploaded_at || activeDocument?.created_at)}
                 </Text>
               </View>
 
-              <View className="flex-row items-center gap-2">
-                <TouchableOpacity 
-                  onPress={handleShareDocument}
-                  className="w-10 h-10 rounded-2xl bg-white/10 items-center justify-center active:opacity-75"
-                  disabled={isSharingDoc}
-                >
-                  {isSharingDoc ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
-                  ) : (
-                    <Feather name="share-2" size={17} color="#FFFFFF" />
-                  )}
-                </TouchableOpacity>
-
-                <TouchableOpacity 
-                  onPress={() => setViewModalVisible(false)}
-                  className="w-10 h-10 rounded-2xl bg-white/10 items-center justify-center active:opacity-75"
-                >
-                  <Feather name="x" size={18} color="#FFFFFF" />
-                </TouchableOpacity>
-              </View>
+              <TouchableOpacity 
+                onPress={handleShareDocument}
+                style={{ 
+                  width: 38, 
+                  height: 38, 
+                  borderRadius: 19, 
+                  backgroundColor: 'rgba(255,255,255,0.12)', 
+                  alignItems: 'center', 
+                  justifyContent: 'center' 
+                }}
+                disabled={isSharingDoc}
+                activeOpacity={0.7}
+              >
+                {isSharingDoc ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Feather name="share-2" size={17} color="#FFFFFF" />
+                )}
+              </TouchableOpacity>
             </View>
-          </SafeAreaView>
+          </View>
 
-          {/* Document Content View */}
-          <View className="flex-1 w-full justify-center items-center my-2">
+          {/* Document Preview Canvas */}
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 16 }}>
             {activeDocument?.document_path ? (
               isPdfFile(activeDocument.document_path) ? (
-                <View className="items-center justify-center p-6 rounded-[28px] bg-zinc-900 border border-zinc-800 w-full max-w-sm">
-                  <View className="w-20 h-20 rounded-3xl items-center justify-center bg-red-500/10 mb-4 border border-red-500/30">
+                <View style={{
+                  backgroundColor: '#1E293B',
+                  borderColor: 'rgba(255,255,255,0.1)',
+                  borderWidth: 1,
+                  borderRadius: 24,
+                  padding: 24,
+                  alignItems: 'center',
+                  width: '100%',
+                  maxWidth: 340,
+                }}>
+                  <View style={{
+                    width: 72,
+                    height: 72,
+                    borderRadius: 20,
+                    backgroundColor: 'rgba(239,68,68,0.15)',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: 16,
+                  }}>
                     <MaterialCommunityIcons name="file-pdf-box" size={44} color="#EF4444" />
                   </View>
-                  <Text className="text-white text-base font-bold text-center mb-1">
+                  <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800', textAlign: 'center', marginBottom: 4 }}>
                     {activeDocument?.documenttype?.name || 'PDF Document'}
                   </Text>
-                  <Text className="text-gray-400 text-xs text-center mb-6 px-2 font-medium" numberOfLines={2}>
+                  <Text style={{ color: '#94A3B8', fontSize: 12, textAlign: 'center', marginBottom: 20 }} numberOfLines={1}>
                     {activeDocument.document_path.split('/').pop()}
                   </Text>
-                  
-                  <View className="w-full gap-2.5">
-                    <TouchableOpacity
-                      onPress={handleOpenExternal}
-                      className="py-3.5 px-4 rounded-2xl flex-row items-center justify-center shadow-md"
-                      style={{ backgroundColor: primaryColor }}
-                    >
-                      <Feather name="external-link" size={16} color="#FFFFFF" />
-                      <Text className="text-white text-xs font-black ml-2">Open / View PDF</Text>
-                    </TouchableOpacity>
 
-                    <TouchableOpacity
-                      onPress={handleShareDocument}
-                      className="py-3.5 px-4 rounded-2xl flex-row items-center justify-center border border-zinc-700 bg-white/5"
-                    >
-                      <Feather name="share-2" size={16} color="#FFFFFF" />
-                      <Text className="text-white text-xs font-black ml-2">Share & Download</Text>
-                    </TouchableOpacity>
-                  </View>
+                  <TouchableOpacity 
+                    onPress={handleOpenExternal}
+                    style={{
+                      backgroundColor: primaryColor,
+                      width: '100%',
+                      paddingVertical: 14,
+                      borderRadius: 16,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexDirection: 'row',
+                      marginBottom: 10,
+                    }}
+                    activeOpacity={0.85}
+                  >
+                    <Feather name="external-link" size={16} color="#FFFFFF" />
+                    <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 13, marginLeft: 8 }}>
+                      Open / View PDF
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity 
+                    onPress={handleShareDocument}
+                    style={{
+                      backgroundColor: 'rgba(255,255,255,0.06)',
+                      borderWidth: 1,
+                      borderColor: 'rgba(255,255,255,0.1)',
+                      width: '100%',
+                      paddingVertical: 14,
+                      borderRadius: 16,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexDirection: 'row',
+                    }}
+                    activeOpacity={0.85}
+                  >
+                    <Feather name="download" size={16} color="#FFFFFF" />
+                    <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 13, marginLeft: 8 }}>
+                      Share & Download
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               ) : (
-                <Image 
-                  source={{ uri: getFileUrl(activeDocument.document_path) }}
-                  style={{ width: SCREEN_WIDTH - 32, height: SCREEN_HEIGHT * 0.65 }}
-                  resizeMode="contain"
-                />
+                <View 
+                  style={{ 
+                    width: '100%', 
+                    height: '100%', 
+                    borderRadius: 20, 
+                    overflow: 'hidden', 
+                    backgroundColor: '#111827', 
+                    borderWidth: 1, 
+                    borderColor: 'rgba(255,255,255,0.08)',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: 8
+                  }}
+                >
+                  <Image 
+                    source={{ uri: getFileUrl(activeDocument.document_path) }}
+                    style={{ width: '100%', height: '100%', borderRadius: 14 }}
+                    resizeMode="contain"
+                  />
+                </View>
               )
             ) : (
-              <View className="items-center">
-                <Feather name="image" size={44} color="#64748B" />
-                <Text className="text-gray-400 text-xs mt-2 font-semibold">Document file unavailable</Text>
+              <View style={{ alignItems: 'center' }}>
+                <Feather name="file-text" size={48} color="#64748B" />
+                <Text style={{ color: '#94A3B8', fontSize: 13, marginTop: 12, fontWeight: '600' }}>
+                  Document file unavailable
+                </Text>
               </View>
             )}
           </View>
 
-          {/* Bottom Actions */}
-          <SafeAreaView edges={['bottom']} className="w-full pb-3 items-center">
-            <TouchableOpacity
+          {/* Solid Bottom Action Bar */}
+          <View 
+            style={{ 
+              backgroundColor: '#0F172A',
+              paddingTop: 12,
+              paddingBottom: Platform.OS === 'ios' ? Math.max(insets.bottom, 24) : 16,
+              paddingHorizontal: 20,
+              borderTopWidth: 1,
+              borderTopColor: 'rgba(255,255,255,0.08)',
+            }}
+          >
+            <TouchableOpacity 
               onPress={() => setViewModalVisible(false)}
-              className="px-8 py-3 rounded-full border border-white/10 bg-white/10"
+              style={{
+                backgroundColor: 'rgba(255,255,255,0.12)',
+                paddingVertical: 14,
+                borderRadius: 16,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+              activeOpacity={0.8}
             >
-              <Text className="text-white text-xs font-black">Close Preview</Text>
+              <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '800' }}>
+                Close Preview
+              </Text>
             </TouchableOpacity>
-          </SafeAreaView>
+          </View>
         </View>
       </Modal>
     </View>
   );
 }
+

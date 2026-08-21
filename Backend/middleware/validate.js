@@ -7,19 +7,21 @@ export const validate = (schema) => (req, res, next) => {
     });
     next();
   } catch (error) {
-    if (error.errors) {
+    const issues = error.issues || error.errors;
+    if (issues && Array.isArray(issues) && issues.length > 0) {
+      const firstErrorMessage = issues[0]?.message || "Validation Error";
       return res.status(400).json({
         result: false,
-        message: "Validation Error",
-        errors: error.errors.map((err) => ({
-          path: err.path.join("."),
+        message: firstErrorMessage,
+        errors: issues.map((err) => ({
+          path: Array.isArray(err.path) ? err.path.join(".") : String(err.path || ""),
           message: err.message,
         })),
       });
     }
-    return res.status(500).json({
+    return res.status(400).json({
       result: false,
-      message: error.message || "Internal Server Error",
+      message: error.message || "Invalid input data",
     });
   }
 };

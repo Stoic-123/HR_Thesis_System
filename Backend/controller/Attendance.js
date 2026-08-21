@@ -602,12 +602,15 @@ export const getAttendanceReportController = async (req, res) => {
         status = "present";
       }
 
+      const todayDateStr = formatICTDate(new Date());
+      const isTodayOrFuture = entry.date >= todayDateStr;
+
       return {
         employee_id: entry.employee.id,
         employee: `${entry.employee.first_name} ${entry.employee.last_name}`,
         date: entry.date,
-        checkIn: entry.timeIn || "Missed",
-        checkOut: entry.timeOut || "Missed",
+        checkIn: entry.timeIn || (isTodayOrFuture ? "--:--" : "Missed"),
+        checkOut: entry.timeOut || (isTodayOrFuture ? "--:--" : "Missed"),
         scans: entry.scans,
         status,
         is_excused: hasApprovedLate || hasApprovedEarly,

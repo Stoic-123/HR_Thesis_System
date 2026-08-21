@@ -90,6 +90,9 @@ const useAuthStore = create((set, get) => ({
       set({ isLoading: true, error: null });
       const response = await authService.changePassword(current_password, new_password, confirm_password);
       if (response.result) {
+        if (response.token) {
+          await authService.setToken(response.token);
+        }
         await AsyncStorage.removeItem(IS_DEFAULT_PASSWORD_KEY);
         set({
           isDefaultPassword: false,
@@ -105,6 +108,38 @@ const useAuthStore = create((set, get) => ({
         isLoading: false,
       });
       throw error;
+    }
+  },
+
+  // Update Profile
+  updateProfile: async (data) => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await authService.updateProfile(data);
+      if (response.result) {
+        const userProfile = await authService.getProfile();
+        set({ user: userProfile, isLoading: false });
+      } else {
+        set({ isLoading: false });
+      }
+      return response;
+    } catch (error) {
+      set({
+        error: error.message,
+        isLoading: false,
+      });
+      throw error;
+    }
+  },
+
+  // Refresh Profile
+  fetchProfile: async () => {
+    try {
+      const userProfile = await authService.getProfile();
+      set({ user: userProfile });
+      return userProfile;
+    } catch (error) {
+      console.warn("fetchProfile error:", error);
     }
   },
 
