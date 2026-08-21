@@ -41,6 +41,12 @@ export default function CheckInScreen({ theme, navigateTo }) {
         if (hay.includes('check in')) score += 90;
         if (hay.includes('clock in')) score += 80;
         if (hay === 'in') score += 70;
+      } else if (kind === 'lunch_out') {
+        if (hay.includes('lunch out') || hay.includes('break out')) score += 100;
+        if (hay.includes('lunch')) score += 80;
+      } else if (kind === 'lunch_in') {
+        if (hay.includes('lunch in') || hay.includes('break in')) score += 100;
+        if (hay.includes('lunch')) score += 80;
       } else {
         if (hay.includes('time out')) score += 100;
         if (hay.includes('check out')) score += 90;
@@ -60,7 +66,16 @@ export default function CheckInScreen({ theme, navigateTo }) {
     try {
       const res = await timeModeService.getAll(1, 50);
       const modes = res?.data || [];
-      const id = pickTimeModeId(modes, 'in');
+      const currentHour = new Date().getHours();
+      let preferredKind = 'in';
+      if (currentHour >= 11 && currentHour < 13) {
+        preferredKind = 'lunch_out';
+      } else if (currentHour >= 13 && currentHour < 15) {
+        preferredKind = 'lunch_in';
+      } else if (currentHour >= 15) {
+        preferredKind = 'out';
+      }
+      const id = pickTimeModeId(modes, preferredKind);
       setTimeModeId(id);
     } catch (e) {
       setTimeModeId(null);

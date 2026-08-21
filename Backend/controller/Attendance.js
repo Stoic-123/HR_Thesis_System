@@ -128,78 +128,86 @@ const inferTimeFieldFromSchedule = (timeSheet, nowMinutes, clockedFields = new S
   const lunchOut = parseTimeToMinutes(timeSheet.lunch_out);
   const lunchIn  = parseTimeToMinutes(timeSheet.lunch_in);
   const timeOut  = parseTimeToMinutes(timeSheet.time_out);
-  const grace    = Number(timeSheet.grace_period ?? ATTENDANCE_GRACE_MINUTES);
 
-  console.log("[Schedule Debug]", { timeIn, lunchOut, lunchIn, timeOut, grace, nowMinutes, clockedFields: Array.from(clockedFields) });
+  const hasTimeIn   = clockedFields.has("time_in");
+  const hasLunchOut = clockedFields.has("lunch_out");
+  const hasLunchIn  = clockedFields.has("lunch_in");
+  const hasTimeOut  = clockedFields.has("time_out");
 
-  const WINDOW = 120;
+  console.log("[Schedule Debug]", {
+    timeIn,
+    lunchOut,
+    lunchIn,
+    timeOut,
+    nowMinutes,
+    clockedFields: Array.from(clockedFields),
+  });
 
-  // ── time_in window ──────────────────────────────────────────────
-  // Covers: (time_in - grace) → midpoint between time_in and lunch_out
-  // After the midpoint the employee is clearly past check-in territory.
-  const timeInEnd =
-    lunchOut !== null
-      ? Math.floor((timeIn + lunchOut) / 2)
-      : timeIn + WINDOW;
+  // ── CASE 1: Standard 4-punch schedule (time_in, lunch_out, lunch_in, time_out) ──
+  if (timeIn !== null && lunchOut !== null && lunchIn !== null && timeOut !== null) {
+    const mid1 = Math.floor((timeIn + lunchOut) / 2);
+    const mid2 = Math.floor((lunchOut + lunchIn) / 2);
+    const mid3 = Math.floor((lunchIn + timeOut) / 2);
 
-  if (
-    timeIn !== null &&
-    nowMinutes >= timeIn - grace &&
-    nowMinutes <= timeInEnd
-  ) {
-    if (!clockedFields.has("time_in")) {
-      return "time_in";
-    }
-  }
-
-  // ── lunch_out / lunch_in ─────────────────────────────────────────
-  // The schedule defines a break block: lunch_out (start) → lunch_in (end).
-  if (lunchOut !== null && lunchIn !== null) {
-    const hasLunchOut = clockedFields.has("lunch_out");
-    const hasLunchIn = clockedFields.has("lunch_in");
-
-    // 1. If scan is after lunch_in (e.g. >= 13:00) up to WINDOW after lunch_in
-    if (nowMinutes >= lunchIn && nowMinutes <= lunchIn + WINDOW) {
-      if (!hasLunchIn) {
-        return "lunch_in";
-      }
-    }
-
-    // 2. If scan is between lunch_out and lunch_in (e.g. 12:00 to 13:00)
-    if (nowMinutes >= lunchOut && nowMinutes < lunchIn) {
-      if (!hasLunchOut) {
-        return "lunch_out";
-      } else if (!hasLunchIn) {
-        return "lunch_in";
-      }
-    }
-
-    // 3. If scan is before lunch_out (e.g. WINDOW before lunch_out up to lunch_out)
-    if (nowMinutes >= lunchOut - WINDOW && nowMinutes < lunchOut) {
-      if (!hasLunchOut) {
-        return "lunch_out";
-      }
-    }
-  } else if (lunchOut !== null) {
-    // Only lunch_out defined — simple window around it
-    if (nowMinutes >= lunchOut - WINDOW && nowMinutes <= lunchOut + WINDOW) {
+    // Segment 1: Morning Check-In (Before mid1)
+    if (nowMinutes < mid1) {
+      if (!hasTimeIn) return "time_in";
       return "lunch_out";
     }
-  } else if (lunchIn !== null) {
-    // Only lunch_in defined — simple window around it
-    if (nowMinutes >= lunchIn - WINDOW && nowMinutes <= lunchIn + WINDOW) {
-      return "lunch_in";
-    }
-  }
 
-  // ── time_out window ──────────────────────────────────────────────
-  // Covers: from WINDOW before time_out until end of day.
-  if (
-    timeOut !== null &&
-    nowMinutes >= timeOut - WINDOW
-  ) {
+    // Segment 2: Lunch Out (mid1 to mid2)
+    if (nowMinutes >= mid1 && nowMinutes < mid2) {
+      if (!hasLunchOut) return "lunch_out";
+      if (!hasLunchIn) return "lunch_in";
+      return "lunch_out";
+    }
+
+    // Segment 3: Lunch In (mid2 to mid3)
+    // Seamlessly covers afternoon (e.g. 12:30 PM to 4:00 PM for 19:00 checkout)
+    if (nowMinutes >= mid2 && nowMinutes < mid3) {
+      if (!hasLunchIn) return "lunch_in";
+      return "time_out";
+    }
+
+    // Segment 4: Evening Check-Out (mid3 to end of day)
     return "time_out";
   }
+
+  // ── CASE 2: 2-punch schedule (time_in and time_out only) ──
+  if (timeIn !== null && timeOut !== null) {
+    const mid = Math.floor((timeIn + timeOut) / 2);
+    if (nowMinutes < mid) {
+      if (!hasTimeIn) return "time_in";
+      return "time_out";
+    }
+    return "time_out";
+  }
+
+  // ── CASE 3: Morning Shift (time_in and lunch_out only) ──
+  if (timeIn !== null && lunchOut !== null) {
+    const mid = Math.floor((timeIn + lunchOut) / 2);
+    if (nowMinutes < mid) {
+      if (!hasTimeIn) return "time_in";
+      return "lunch_out";
+    }
+    return "lunch_out";
+  }
+
+  // ── CASE 4: Afternoon Shift (lunch_in and time_out only) ──
+  if (lunchIn !== null && timeOut !== null) {
+    const mid = Math.floor((lunchIn + timeOut) / 2);
+    if (nowMinutes < mid) {
+      if (!hasLunchIn) return "lunch_in";
+      return "time_out";
+    }
+    return "time_out";
+  }
+
+  // ── CASE 5: Single punch definitions fallback ──
+  if (timeIn !== null && !hasTimeIn) return "time_in";
+  if (timeOut !== null) return "time_out";
+  if (lunchOut !== null && !hasLunchOut) return "lunch_out";
+  if (lunchIn !== null && !hasLunchIn) return "lunch_in";
 
   return null;
 };
@@ -293,9 +301,29 @@ const computeAttendanceMeta = async ({ employee_id, company_id, timeMode, workAt
     }
   }
 
-  const timeField =
-    inferTimeFieldFromSchedule(schedule?.timeSheet, nowMinutes, clockedFields) ??
-    inferTimeFieldFromTimeMode(timeMode);
+  let timeField = inferTimeFieldFromSchedule(schedule?.timeSheet, nowMinutes, clockedFields);
+
+  if (!timeField) {
+    if (clockedFields.has("time_in")) {
+      const companyModes = await prisma.timemode.findMany({
+        where: { company_id: parseInt(company_id) },
+      });
+      const hasLunchModes = companyModes.some((m) => {
+        const hay = `${m.name || ""} ${m.remark || ""}`.toLowerCase();
+        return hay.includes("lunch") || hay.includes("break");
+      });
+
+      if (hasLunchModes && !clockedFields.has("lunch_out") && nowMinutes < 13 * 60) {
+        timeField = "lunch_out";
+      } else if (hasLunchModes && !clockedFields.has("lunch_in") && nowMinutes < 16 * 60) {
+        timeField = "lunch_in";
+      } else {
+        timeField = "time_out";
+      }
+    } else {
+      timeField = inferTimeFieldFromTimeMode(timeMode) || "time_in";
+    }
+  }
   const expectedTime = timeField ? schedule?.timeSheet?.[timeField] : null;
   const expectedMin = parseTimeToMinutes(expectedTime);
   const actualMin = ictDate.getUTCHours() * 60 + ictDate.getUTCMinutes();
