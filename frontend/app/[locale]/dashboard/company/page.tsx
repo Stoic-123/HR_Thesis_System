@@ -312,7 +312,7 @@ export default function CompanyPage() {
   const monogram = company.name ? company.name.charAt(0).toUpperCase() : "C";
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <div className="space-y-6 max-w-7xl w-full mx-auto">
       {/* Header Area */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>

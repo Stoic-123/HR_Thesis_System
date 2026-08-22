@@ -56,6 +56,7 @@ import announcementRoutes from "./routes/Announcement.js";
 import appMenuRoutes from "./routes/AppMenu.js";
 import recruitmentRoutes from "./routes/recruitment.routes.js";
 import lateRequestRoutes from "./routes/LateRequest.js";
+import kpiRoutes from "./routes/KPI.js";
 import http from "http";
 import { initSocket } from "./utils/socket.js";
 
@@ -205,6 +206,7 @@ app.use("/api/notification", notificationRoutes);
 app.use("/api/announcement", announcementRoutes);
 app.use("/api/app-menu", appMenuRoutes);
 app.use("/api/late-request", lateRequestRoutes);
+app.use("/api/kpi", kpiRoutes);
 
 app.get("/", (req, res) => {
   res.send("HR System API is running");

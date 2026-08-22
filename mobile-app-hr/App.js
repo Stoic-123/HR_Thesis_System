@@ -25,6 +25,8 @@ import CheckInScreen from './src/screens/CheckInScreen';
 import PayrollScreen from './src/screens/PayrollScreen';
 import HolidayCalendarScreen from './src/screens/HolidayCalendarScreen';
 import AssetScreen from './src/screens/AssetScreen';
+import KPIScreen from './src/screens/KPIScreen';
+import NotificationToast from './src/components/NotificationToast';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import useAuthStore from './src/stores/useAuthStore';
 import useNotificationStore from './src/stores/useNotificationStore';
@@ -203,6 +205,8 @@ export default function App() {
         return <HolidayCalendarScreen theme={theme} navigation={{ goBack: () => handleNavigate('Home') }} />;
       case 'Asset':
         return <AssetScreen theme={theme} navigateTo={setCurrentScreen} />;
+      case 'KPI':
+        return <KPIScreen theme={theme} navigateTo={setCurrentScreen} />;
       default:
         return <HomeScreen theme={theme} toggleTheme={toggleTheme} navigateTo={handleNavigate} />;
     }
@@ -214,6 +218,11 @@ export default function App() {
       className="flex-1"
       style={{ flex: 1, backgroundColor: isAuthenticated ? (isDark ? COLORS.dark.bg : COLORS.light.bg) : '#F5F5F7' }}
     >
+      {/* Real-time In-App Notification Toast */}
+      {isAuthenticated && (
+        <NotificationToast theme={theme} onNavigate={handleNavigate} />
+      )}
+
       {/* Active Screen Rendering with Animation */}
       <Animated.View 
         style={{ 

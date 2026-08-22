@@ -60,6 +60,7 @@ const DashboardPage = () => {
       caption: tc("active") || "Active",
       delta: "",
       icon: Users,
+      href: "/dashboard/employee",
     },
     {
       label: t("totalDepartments") || "Total Departments",
@@ -67,6 +68,7 @@ const DashboardPage = () => {
       caption: tc("active") || "Active",
       delta: "",
       icon: Building2,
+      href: "/dashboard/department",
     },
     {
       label: t("totalPositions") || "Total Positions",
@@ -74,6 +76,7 @@ const DashboardPage = () => {
       caption: tc("active") || "Active",
       delta: "",
       icon: BriefcaseBusiness,
+      href: "/dashboard/position",
     },
     {
       label: t("totalLocations") || "Total Locations",
@@ -81,6 +84,7 @@ const DashboardPage = () => {
       caption: tc("active") || "Active",
       delta: "",
       icon: MapPin,
+      href: "/dashboard/company",
     },
   ];
 
@@ -151,6 +155,13 @@ const DashboardPage = () => {
     ];
   }, [employeesRes, tc]);
 
+  const recentEmployees = useMemo(() => {
+    if (!employeesRes?.data) return [];
+    return [...employeesRes.data]
+      .sort((a: any, b: any) => (b.id || 0) - (a.id || 0))
+      .slice(0, 5);
+  }, [employeesRes]);
+
   if (isDataLoading) {
     return (
       <div className="flex flex-col gap-6 animate-pulse">
@@ -207,36 +218,46 @@ const DashboardPage = () => {
         {kpis.map((item) => {
           const isNegative = item.delta.startsWith("-");
           return (
-            <Card key={item.label} size="sm" className="p-2 ">
-              <CardHeader className="flex-row items-start justify-between pb-2">
-                <CardTitle className="text-sm font-semibold text-muted-foreground">
-                  {item.label}
-                </CardTitle>
-                <div className="rounded-2xl bg-primary/10 p-2 w-9 h-9 flex items-center justify-center text-primary">
-                  <item.icon className="size-4" />
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex items-end justify-between gap-3">
-                  <p className="text-3xl font-semibold tracking-tight">
-                    {item.value}
-                  </p>
-                  {item.delta && (
-                    <Badge
-                      className={`gap-1 rounded-full px-2.5 ${
-                        isNegative
-                          ? "bg-rose-50 text-rose-700"
-                          : "bg-emerald-50 text-emerald-700"
-                      }`}
-                    >
-                      <ArrowUpRight className="size-3.5" />
-                      {item.delta}
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground">{item.caption}</p>
-              </CardContent>
-            </Card>
+            <Link key={item.label} href={item.href} className="block group">
+              <Card
+                size="sm"
+                className="p-2 transition-all duration-200 hover:shadow-md hover:border-primary/50 hover:-translate-y-0.5 cursor-pointer bg-card/70 backdrop-blur-sm"
+              >
+                <CardHeader className="flex-row items-start justify-between pb-2">
+                  <CardTitle className="text-sm font-semibold text-muted-foreground group-hover:text-primary transition-colors">
+                    {item.label}
+                  </CardTitle>
+                  <div className="rounded-2xl bg-primary/10 p-2 w-9 h-9 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all shadow-xs">
+                    <item.icon className="size-4" />
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="flex items-end justify-between gap-3">
+                    <p className="text-3xl font-semibold tracking-tight group-hover:text-primary transition-colors">
+                      {item.value}
+                    </p>
+                    {item.delta && (
+                      <Badge
+                        className={`gap-1 rounded-full px-2.5 ${
+                          isNegative
+                            ? "bg-rose-50 text-rose-700"
+                            : "bg-emerald-50 text-emerald-700"
+                        }`}
+                      >
+                        <ArrowUpRight className="size-3.5" />
+                        {item.delta}
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>{item.caption}</span>
+                    <span className="text-[11px] font-medium text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+                      {tc("view") || "View"} &rarr;
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
           );
         })}
       </motion.div>
@@ -446,7 +467,7 @@ const DashboardPage = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {employeesRes?.data?.slice(0, 5).map((row: any) => (
+                  {recentEmployees.map((row: any) => (
                     <tr
                       key={row.id || row.full_name}
                       className="border-b border-white/30 last:border-0 hover:bg-white/5"
@@ -501,7 +522,7 @@ const DashboardPage = () => {
 
             {/* Mobile Card Grid View */}
             <div className="grid grid-cols-1 gap-3 md:hidden">
-              {employeesRes?.data?.slice(0, 5).map((row: any) => (
+              {recentEmployees.map((row: any) => (
                 <div key={row.id || row.full_name} className="p-3.5 rounded-2xl border bg-card/60 space-y-2.5 shadow-sm">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-3">

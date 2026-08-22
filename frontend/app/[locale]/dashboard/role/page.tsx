@@ -34,6 +34,7 @@ const AVAILABLE_PERMISSIONS = [
   { path: "role:manage", name: "Manage Roles & Permissions" },
   { path: "employee:manage", name: "Manage Employees List" },
   { path: "department:manage", name: "Manage Departments" },
+  { path: "kpi:manage", name: "Manage Monthly KPI & Reviews" },
   { path: "chatbot:access", name: "Access & Use HR AI Chatbot" },
 ];
 

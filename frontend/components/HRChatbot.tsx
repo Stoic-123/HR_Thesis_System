@@ -206,7 +206,7 @@ export function HRChatbot() {
     return (
       <Button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-2xl bg-primary hover:bg-primary/90 animate-bounce"
+        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-2xl bg-primary hover:bg-primary/90 animate-bounce z-[9999] cursor-pointer"
       >
         <MessageCircle className="size-6 text-white" />
       </Button>
@@ -216,7 +216,7 @@ export function HRChatbot() {
   return (
     <Card 
       className={cn(
-        "fixed right-6 bottom-6 bg-white opacity-100 shadow-2xl border border-gray-200 transition-all duration-300 z-50 overflow-hidden p-0 py-0 gap-0 flex flex-col",
+        "fixed right-6 bottom-6 bg-white opacity-100 shadow-2xl border border-gray-200 transition-all duration-300 z-[9999] overflow-hidden p-0 py-0 gap-0 flex flex-col",
         isMinimized ? "w-72 h-[68px] rounded-2xl" : "w-96 h-[500px] rounded-3xl"
       )}
     >

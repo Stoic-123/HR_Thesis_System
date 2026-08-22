@@ -26,7 +26,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Plus, UserPlus, Undo2, Laptop, ListTree, PackageSearch, CheckCircle2, UserCircle, RefreshCcw, Pencil, Trash2, Eye, Printer, Search, X } from "lucide-react";
+import { Plus, UserPlus, Undo2, Laptop, ListTree, PackageSearch, CheckCircle2, UserCircle, RefreshCcw, Pencil, Trash2, Eye, Printer, Search, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import dayjs from "dayjs";
 import { useMe } from "@/hooks/useMe";
@@ -93,6 +93,89 @@ export default function AssetDashboardPage() {
       (a.condition || "").toLowerCase().includes(term)
     );
   });
+
+  // Pagination State
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+
+  // Paginated slices for all tabs
+  const totalActivePages = Math.ceil(filteredActiveAssets.length / limit) || 1;
+  const paginatedActiveAssets = filteredActiveAssets.slice((page - 1) * limit, page * limit);
+
+  const totalRepairPages = Math.ceil(filteredRepairAssets.length / limit) || 1;
+  const paginatedRepairAssets = filteredRepairAssets.slice((page - 1) * limit, page * limit);
+
+  const totalBrokenPages = Math.ceil(filteredBrokenAssets.length / limit) || 1;
+  const paginatedBrokenAssets = filteredBrokenAssets.slice((page - 1) * limit, page * limit);
+
+  const totalCategoryPages = Math.ceil(categories.length / limit) || 1;
+  const paginatedCategories = categories.slice((page - 1) * limit, page * limit);
+
+  const totalRequestPages = Math.ceil(pendingRequests.length / limit) || 1;
+  const paginatedRequests = pendingRequests.slice((page - 1) * limit, page * limit);
+
+  const renderPagination = (totalItems: number, totalPages: number) => {
+    if (totalItems <= 0) return null;
+    const startIndex = (page - 1) * limit;
+    const endIndex = Math.min(startIndex + limit, totalItems);
+
+    return (
+      <div className="flex flex-col sm:flex-row items-center justify-between border-t border-border/30 px-6 py-4 gap-3 bg-muted/5">
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">
+            {locale === "km" ? "បង្ហាញ:" : "Show:"}
+          </span>
+          <Select
+            value={String(limit)}
+            onValueChange={(val) => {
+              setLimit(Number(val));
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="h-8 w-[72px] rounded-lg text-xs border-border/60 bg-background">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="20">20</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+            </SelectContent>
+          </Select>
+          <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
+            {locale === "km"
+              ? `បង្ហាញពី ${startIndex + 1} ដល់ ${endIndex} នៃ ${totalItems} ទិន្នន័យ`
+              : `Showing ${startIndex + 1} to ${endIndex} of ${totalItems} entries`}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage((p) => Math.max(p - 1, 1))}
+            disabled={page === 1}
+            className="h-8 px-3 rounded-lg text-xs border-border/60 font-medium cursor-pointer"
+          >
+            <ChevronLeft className="w-3.5 h-3.5 mr-1" />
+            {locale === "km" ? "ថយក្រោយ" : "Previous"}
+          </Button>
+          <span className="text-xs text-muted-foreground px-2 font-medium whitespace-nowrap">
+            {locale === "km" ? `ទំព័រ ${page} នៃ ${totalPages}` : `Page ${page} of ${totalPages}`}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
+            disabled={page >= totalPages}
+            className="h-8 px-3 rounded-lg text-xs border-border/60 font-medium cursor-pointer"
+          >
+            {locale === "km" ? "បន្ទាប់" : "Next"}
+            <ChevronRight className="w-3.5 h-3.5 ml-1" />
+          </Button>
+        </div>
+      </div>
+    );
+  };
 
   // Auto generate serial number on category selection
   const handleCategoryChange = (catId: string) => {
@@ -445,7 +528,14 @@ export default function AssetDashboardPage() {
         </p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
+      <Tabs
+        value={activeTab}
+        onValueChange={(tab) => {
+          setActiveTab(tab);
+          setPage(1);
+        }}
+        className="w-full space-y-6"
+      >
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <TabsList className="bg-muted p-1 rounded-xl flex flex-wrap gap-1">
             <TabsTrigger value="inventory" className="rounded-lg gap-2">
@@ -478,7 +568,10 @@ export default function AssetDashboardPage() {
                 <Input
                   placeholder={t("searchPlaceholder")}
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setPage(1);
+                  }}
                   className="pl-9 rounded-xl shadow-sm h-9"
                 />
               </div>
@@ -630,9 +723,9 @@ export default function AssetDashboardPage() {
               ) : filteredActiveAssets.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">{t("noActiveAssets")}</div>
               ) : (
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto max-h-[520px] overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
                   <Table>
-                    <TableHeader className="bg-zinc-50/50">
+                    <TableHeader className="sticky top-0 bg-card/95 backdrop-blur-md z-10 font-semibold text-muted-foreground uppercase border-b border-border/40">
                       <TableRow>
                         <TableHead className="font-semibold py-4">{t("assetDetails")}</TableHead>
                         <TableHead className="font-semibold">{t("category")}</TableHead>
@@ -643,7 +736,7 @@ export default function AssetDashboardPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredActiveAssets.map((a) => (
+                      {paginatedActiveAssets.map((a) => (
                         <TableRow key={a.id} className="hover:bg-zinc-50/30 transition-colors">
                           <TableCell className="py-4">
                             <div className="flex items-center gap-3">
@@ -738,6 +831,7 @@ export default function AssetDashboardPage() {
                   </Table>
                 </div>
               )}
+              {renderPagination(filteredActiveAssets.length, totalActivePages)}
             </CardContent>
           </Card>
         </TabsContent>
@@ -760,9 +854,9 @@ export default function AssetDashboardPage() {
               ) : filteredRepairAssets.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">{t("noRepairAssets")}</div>
               ) : (
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto max-h-[520px] overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
                   <Table>
-                    <TableHeader className="bg-zinc-50/50">
+                    <TableHeader className="sticky top-0 bg-card/95 backdrop-blur-md z-10 font-semibold text-muted-foreground uppercase border-b border-border/40">
                       <TableRow>
                         <TableHead className="font-semibold py-4">{t("assetDetails")}</TableHead>
                         <TableHead className="font-semibold">{t("category")}</TableHead>
@@ -772,7 +866,7 @@ export default function AssetDashboardPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredRepairAssets.map((a) => (
+                      {paginatedRepairAssets.map((a) => (
                         <TableRow key={a.id} className="hover:bg-zinc-50/30 transition-colors">
                           <TableCell className="py-4">
                             <div className="flex items-center gap-3">
@@ -836,6 +930,7 @@ export default function AssetDashboardPage() {
                   </Table>
                 </div>
               )}
+              {renderPagination(filteredRepairAssets.length, totalRepairPages)}
             </CardContent>
           </Card>
         </TabsContent>
@@ -858,9 +953,9 @@ export default function AssetDashboardPage() {
               ) : filteredBrokenAssets.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">{t("noBrokenAssets")}</div>
               ) : (
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto max-h-[520px] overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
                   <Table>
-                    <TableHeader className="bg-zinc-50/50">
+                    <TableHeader className="sticky top-0 bg-card/95 backdrop-blur-md z-10 font-semibold text-muted-foreground uppercase border-b border-border/40">
                       <TableRow>
                         <TableHead className="font-semibold py-4">{t("assetDetails")}</TableHead>
                         <TableHead className="font-semibold">{t("category")}</TableHead>
@@ -870,7 +965,7 @@ export default function AssetDashboardPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredBrokenAssets.map((a) => (
+                      {paginatedBrokenAssets.map((a) => (
                         <TableRow key={a.id} className="hover:bg-zinc-50/30 transition-colors">
                           <TableCell className="py-4">
                             <div className="flex items-center gap-3">
@@ -926,6 +1021,7 @@ export default function AssetDashboardPage() {
                   </Table>
                 </div>
               )}
+              {renderPagination(filteredBrokenAssets.length, totalBrokenPages)}
             </CardContent>
           </Card>
         </TabsContent>
@@ -991,9 +1087,9 @@ export default function AssetDashboardPage() {
               ) : categories.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">{tCommon("noData")}</div>
               ) : (
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto max-h-[520px] overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
                   <Table>
-                    <TableHeader className="bg-zinc-50/50">
+                    <TableHeader className="sticky top-0 bg-card/95 backdrop-blur-md z-10 font-semibold text-muted-foreground uppercase border-b border-border/40">
                       <TableRow>
                         <TableHead className="font-semibold py-4 pl-6">ID</TableHead>
                         <TableHead className="font-semibold">{t("category")}</TableHead>
@@ -1001,7 +1097,7 @@ export default function AssetDashboardPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {categories.map((c) => (
+                      {paginatedCategories.map((c) => (
                         <TableRow key={c.id} className="hover:bg-zinc-50/30 transition-colors">
                           <TableCell className="font-mono text-zinc-400 py-4 pl-6">#{c.id}</TableCell>
                           <TableCell className="font-semibold text-zinc-900">{c.name}</TableCell>
@@ -1012,6 +1108,7 @@ export default function AssetDashboardPage() {
                   </Table>
                 </div>
               )}
+              {renderPagination(categories.length, totalCategoryPages)}
             </CardContent>
           </Card>
         </TabsContent>
@@ -1034,9 +1131,9 @@ export default function AssetDashboardPage() {
               ) : pendingRequests.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">{tCommon("noData")}</div>
               ) : (
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto max-h-[520px] overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
                   <Table>
-                    <TableHeader className="bg-zinc-50/50">
+                    <TableHeader className="sticky top-0 bg-card/95 backdrop-blur-md z-10 font-semibold text-muted-foreground uppercase border-b border-border/40">
                       <TableRow>
                         <TableHead className="font-semibold py-4 pl-6">Requested By</TableHead>
                         <TableHead className="font-semibold">Type</TableHead>
@@ -1048,7 +1145,7 @@ export default function AssetDashboardPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {pendingRequests.map((r) => (
+                      {paginatedRequests.map((r) => (
                         <TableRow key={r.id} className="hover:bg-zinc-50/30 transition-colors">
                           <TableCell className="py-4 pl-6">
                             <div className="flex items-center gap-2">
@@ -1097,6 +1194,7 @@ export default function AssetDashboardPage() {
                   </Table>
                 </div>
               )}
+              {renderPagination(pendingRequests.length, totalRequestPages)}
             </CardContent>
           </Card>
         </TabsContent>

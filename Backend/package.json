@@ -5,6 +5,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon server.js",
+    "seed": "node seed-bayon-market.js",
+    "seed:bayon": "node seed-bayon-market.js",
     "seed:payroll": "node seed-payroll.js"
   },
   "type": "module",

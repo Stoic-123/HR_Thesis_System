@@ -97,5 +97,6 @@ export const mockQuickAccess = [
   { id: "overtime", label: "Overtime", image: require('../../assets/overtime.png'), color: "orange" },
   { id: "calendar", label: "Holiday Calendar", image: require('../../assets/calendar.png'), color: "blue" },
   { id: "asset", label: "Asset Management", image: require('../../assets/scanner.png'), color: "blue" },
+  { id: "kpi", label: "Performance (KPI)", image: require('../../assets/scanner.png'), color: "orange" },
 ];
 

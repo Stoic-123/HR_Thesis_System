@@ -290,7 +290,11 @@ function AnnouncementForm({
                 </div>
                 <div className="flex items-center gap-1.5">
                   {dept && <Badge variant="outline" className="text-[10px] rounded-full px-2 py-0">{dept.name}</Badge>}
-                  {emp.telegram_username && <Badge variant="secondary" className="text-[10px] rounded-full px-2 py-0">@{emp.telegram_username.replace(/^@+/, "")}</Badge>}
+                  {emp.telegram_username && (
+                    <span className="text-[11px] rounded-full px-2.5 py-0.5 bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 font-medium whitespace-nowrap">
+                      @{emp.telegram_username.replace(/^@+/, "")}
+                    </span>
+                  )}
                 </div>
               </div>
             );

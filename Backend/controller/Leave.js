@@ -271,11 +271,18 @@ export const getLeaveSummaryController = async (req, res) => {
       });
     }
 
+    const annualDetail = details.find(
+      (d) => d.code === "AL" || (d.leaveType && d.leaveType.toLowerCase().includes("annual"))
+    );
+
     res.status(200).json({
       result: true,
       totalLeave,
       leaveUsed,
       leaveBalance: totalLeave - leaveUsed,
+      annualLeaveBalance: annualDetail ? annualDetail.balance : (details[0]?.balance || 0),
+      annualLeaveTotal: annualDetail ? annualDetail.assignment : (details[0]?.assignment || 18),
+      annualLeaveUsed: annualDetail ? annualDetail.used : (details[0]?.used || 0),
       details,
     });
   } catch (error) {

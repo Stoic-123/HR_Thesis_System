@@ -10,6 +10,10 @@ const useNotificationStore = create((set, get) => ({
   unreadCount: 0,
   isLoading: false,
   socket: null,
+  activeToast: null,
+
+  showToast: (notif) => set({ activeToast: notif }),
+  hideToast: () => set({ activeToast: null }),
 
   fetchNotifications: async () => {
     try {
@@ -88,11 +92,12 @@ const useNotificationStore = create((set, get) => ({
         set((state) => {
           // Check if notification already exists to prevent duplicates
           if (state.notifications.some(n => n.id === newNotif.id)) {
-            return {};
+            return { activeToast: newNotif };
           }
           return {
             notifications: [newNotif, ...state.notifications],
-            unreadCount: state.unreadCount + 1
+            unreadCount: state.unreadCount + 1,
+            activeToast: newNotif
           };
         });
       });

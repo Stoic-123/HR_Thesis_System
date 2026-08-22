@@ -881,6 +881,25 @@ export const appMenuService = {
   },
 };
 
+// KPI Services (Performance Evaluation)
+export const kpiService = {
+  getMyKPI: async (year) => {
+    return await apiRequest(`/api/kpi/my-evaluations${year ? `?year=${year}` : ""}`);
+  },
+  getTeamKPI: async (month, year) => {
+    const params = new URLSearchParams();
+    if (month) params.append("month", month);
+    if (year) params.append("year", year);
+    return await apiRequest(`/api/kpi/team?${params.toString()}`);
+  },
+  submitKPI: async (payload) => {
+    return await apiRequest("/api/kpi/evaluate", {
+      method: "POST",
+      body: payload,
+    });
+  },
+};
+
 export default {
   authService,
   attendanceService,
@@ -894,4 +913,5 @@ export default {
   documentService,
   scannerService,
   appMenuService,
+  kpiService,
 };

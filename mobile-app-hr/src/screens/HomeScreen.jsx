@@ -64,8 +64,29 @@ export default function HomeScreen({ theme, toggleTheme, navigateTo }) {
           try {
             const leaveRes = await leaveService.getLeaveSummary();
             if (leaveRes && leaveRes.result) {
-              setLeaveBalance(typeof leaveRes.leaveBalance === 'number' ? leaveRes.leaveBalance : 0);
-              setTotalLeaveDays(typeof leaveRes.totalLeave === 'number' && leaveRes.totalLeave > 0 ? leaveRes.totalLeave : 25);
+              // Extract Annual Leave specifically from details
+              const annualDetail = Array.isArray(leaveRes.details)
+                ? leaveRes.details.find(
+                    (d) =>
+                      d.code === 'AL' ||
+                      (d.leaveType && d.leaveType.toLowerCase().includes('annual'))
+                  )
+                : null;
+
+              if (annualDetail) {
+                setLeaveBalance(typeof annualDetail.balance === 'number' ? annualDetail.balance : 0);
+                setTotalLeaveDays(
+                  typeof annualDetail.assignment === 'number' && annualDetail.assignment > 0
+                    ? annualDetail.assignment
+                    : 18
+                );
+              } else if (typeof leaveRes.annualLeaveBalance === 'number') {
+                setLeaveBalance(leaveRes.annualLeaveBalance);
+                setTotalLeaveDays(leaveRes.annualLeaveTotal || 18);
+              } else {
+                setLeaveBalance(typeof leaveRes.leaveBalance === 'number' ? leaveRes.leaveBalance : 0);
+                setTotalLeaveDays(typeof leaveRes.totalLeave === 'number' && leaveRes.totalLeave > 0 ? leaveRes.totalLeave : 18);
+              }
             }
           } catch (err) {
             console.log('[HomeScreen] Leave summary error:', err);
@@ -368,11 +389,11 @@ export default function HomeScreen({ theme, toggleTheme, navigateTo }) {
             theme={theme}
           />
           
-          {/* Leave Balance Gauge */}
+          {/* Annual Leave Balance Gauge */}
           <CircularGauge 
             value={leaveBalance}
             max={totalLeaveDays}
-            label="Leave Balance"
+            label="Annual Leave"
             sublabel="days"
             color={secondaryColor}
             theme={theme}
@@ -410,6 +431,8 @@ export default function HomeScreen({ theme, toggleTheme, navigateTo }) {
                     navigateTo('HolidayCalendar');
                   } else if (item.id === 'asset') {
                     navigateTo('Asset');
+                  } else if (item.id === 'kpi') {
+                    navigateTo('KPI');
                   }
                 }}
               />

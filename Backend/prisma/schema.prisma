@@ -226,6 +226,8 @@ model company {
   jobposting         jobposting[]
   candidate          candidate[]
   laterequest        laterequest[]
+  kpitemplate        kpitemplate[]
+  kpievaluation      kpievaluation[]
   @@index([name], map: "idx_company_name")
 }
 
@@ -343,6 +345,8 @@ model employee {
   assetrequest_requested_by    assetrequest[] @relation("assetrequest_requested_by")
   assetrequest_manager_id      assetrequest[] @relation("assetrequest_manager_id")
   candidate_hired              candidate[]    @relation("candidate_hired_employee")
+  kpi_evaluations_received     kpievaluation[] @relation("kpi_evaluated_employee")
+  kpi_evaluations_given        kpievaluation[] @relation("kpi_evaluator_manager")
   @@index([is_active], map: "idx_employee_active")
   @@index([company_id], map: "idx_employee_company")
   @@index([company_id, is_active], map: "idx_employee_company_active")
@@ -510,6 +514,7 @@ model positions {
   employee      employee[]
   department    department? @relation(fields: [department_id], references: [id], onUpdate: NoAction, map: "fk_position_department")
   jobposting    jobposting[]
+  kpitemplate   kpitemplate[]
 
   @@index([department_id], map: "idx_position_department")
 }
@@ -944,5 +949,77 @@ enum laterequest_status {
   approved
   rejected
   cancelled
+}
+
+model kpitemplate {
+  id            Int            @id @default(autoincrement())
+  company_id    Int
+  position_id   Int?
+  name          String         @db.VarChar(255)
+  description   String?        @db.Text
+  is_active     Boolean        @default(true)
+  created_at    DateTime?      @default(now()) @db.DateTime(0)
+  updated_at    DateTime?      @default(now()) @db.DateTime(0)
+
+  company       company        @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  position      positions?     @relation(fields: [position_id], references: [id], onDelete: SetNull)
+  evaluations   kpievaluation[]
+
+  @@index([company_id], map: "idx_kpitemplate_company")
+  @@index([position_id], map: "idx_kpitemplate_position")
+}
+
+model kpievaluation {
+  id                  Int                  @id @default(autoincrement())
+  company_id          Int
+  template_id         Int?
+  employee_id         Int
+  evaluator_id        Int
+  month               Int                  // 1 - 12
+  year                Int                  // e.g. 2026
+
+  discipline_rating   kpi_rating_tier      @default(good)
+  output_rating       kpi_rating_tier      @default(good)
+  attitude_rating     kpi_rating_tier      @default(good)
+
+  total_score         Decimal              @default(3.00) @db.Decimal(4, 2)
+  overall_grade       kpi_grade            @default(GOOD)
+
+  manager_comment     String?              @db.Text
+  employee_feedback   String?              @db.Text
+  status              kpi_status           @default(submitted)
+  acknowledged_at     DateTime?            @db.DateTime(0)
+
+  created_at          DateTime?            @default(now()) @db.DateTime(0)
+  updated_at          DateTime?            @default(now()) @db.DateTime(0)
+
+  company             company              @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  template            kpitemplate?         @relation(fields: [template_id], references: [id], onDelete: SetNull)
+  employee            employee             @relation("kpi_evaluated_employee", fields: [employee_id], references: [id], onDelete: Cascade)
+  evaluator           employee             @relation("kpi_evaluator_manager", fields: [evaluator_id], references: [id], onDelete: Cascade)
+
+  @@unique([employee_id, month, year], map: "unique_employee_monthly_kpi")
+  @@index([company_id, month, year], map: "idx_kpi_company_period")
+  @@index([evaluator_id], map: "idx_kpi_evaluator")
+  @@index([status], map: "idx_kpi_status")
+}
+
+enum kpi_rating_tier {
+  good
+  average
+  needs_improvement
+}
+
+enum kpi_grade {
+  GOOD
+  AVERAGE
+  NEEDS_IMPROVEMENT
+}
+
+enum kpi_status {
+  draft
+  submitted
+  approved
+  acknowledged
 }
 

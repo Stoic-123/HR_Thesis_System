@@ -29,6 +29,7 @@ import {
   Megaphone,
   UserPlus,
   GripVertical,
+  Award,
 } from "lucide-react";
 import { useMe } from "@/hooks/useMe";
 import { useCompany } from "@/hooks/useCompany";
@@ -260,6 +261,13 @@ const menuItems: MenuItem[] = [
         permission: "payroll:manage",
       },
     ],
+  },
+  {
+    title: "Performance (KPI)",
+    labelKey: "kpi",
+    icon: Award,
+    href: "/dashboard/kpi",
+    permission: "payroll:view",
   },
   {
     title: "Asset",

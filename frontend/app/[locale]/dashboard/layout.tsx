@@ -87,6 +87,7 @@ const routePermissions = [
   { path: "/dashboard/asset/categories", permission: "role:manage" },
   { path: "/dashboard/asset/requests", permission: "asset:approve" },
   { path: "/dashboard/asset", permission: "asset:approve" },
+  { path: "/dashboard/kpi", permission: "app:web_login" },
 ];
 
 export default function DashboardLayout({
@@ -215,14 +216,6 @@ export default function DashboardLayout({
     user?.employee?.role?.toLowerCase() === "admin" ||
     user?.employee?.permissions?.includes("*") ||
     user?.employee?.permissions?.includes(matchingRoute.permission);
-
-  console.log("RBAC Guard Status:", {
-    pathname,
-    matchingRoute,
-    role: user?.employee?.role,
-    permissions: user?.employee?.permissions,
-    isAuthorized
-  });
 
 
   useEffect(() => {

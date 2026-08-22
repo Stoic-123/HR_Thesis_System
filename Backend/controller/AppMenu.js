@@ -7,8 +7,9 @@ const DEFAULT_MENUS = [
   { menu_key: "online-attendance", label: "Online Attendance", color: "blue", order: 1 },
   { menu_key: "leave", label: "Leave", color: "orange", order: 2 },
   { menu_key: "overtime", label: "Overtime", color: "orange", order: 3 },
-  { menu_key: "calendar", label: "Holiday Calendar", color: "blue", order: 4 },
-  { menu_key: "asset", label: "Asset Management", color: "blue", order: 5 },
+  { menu_key: "kpi", label: "Performance (KPI)", color: "blue", order: 4 },
+  { menu_key: "calendar", label: "Holiday Calendar", color: "blue", order: 5 },
+  { menu_key: "asset", label: "Asset Management", color: "blue", order: 6 },
 ];
 
 /**

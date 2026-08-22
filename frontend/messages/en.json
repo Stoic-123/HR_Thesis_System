@@ -98,7 +98,8 @@
     "assetCategories": "Categories",
     "assetRequests": "Requests",
     "recruitment": "Recruitment",
-    "announcements": "Announcements"
+    "announcements": "Announcements",
+    "kpi": "Performance (KPI)"
   },
   "layout": {
     "searchPlaceholder": "AI-powered search... (e.g. 'show me developers')",
