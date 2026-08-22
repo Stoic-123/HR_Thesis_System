@@ -32,6 +32,29 @@ export const getAppMenusController = async (req, res) => {
       return res.status(404).json({ success: false, message: "Company not found" });
     }
 
+    // Migrate legacy 'performance' entry to 'kpi' if applicable
+    const legacyPerformanceMenu = await prisma.appmenu.findFirst({
+      where: { company_id: userCompanyId, menu_key: "performance" },
+    });
+    if (legacyPerformanceMenu) {
+      const kpiExists = await prisma.appmenu.findFirst({
+        where: { company_id: userCompanyId, menu_key: "kpi" },
+      });
+      if (!kpiExists) {
+        await prisma.appmenu.update({
+          where: { id: legacyPerformanceMenu.id },
+          data: {
+            menu_key: "kpi",
+            label: legacyPerformanceMenu.label === "Performance" || !legacyPerformanceMenu.label
+              ? "Performance (KPI)"
+              : legacyPerformanceMenu.label,
+          },
+        });
+      } else {
+        await prisma.appmenu.delete({ where: { id: legacyPerformanceMenu.id } }).catch(() => {});
+      }
+    }
+
     // Clean up deprecated menu keys
     await prisma.appmenu.deleteMany({
       where: {
@@ -45,13 +68,31 @@ export const getAppMenusController = async (req, res) => {
       orderBy: { order: "asc" },
     });
 
-    // Auto-seed defaults if not initialized for this company yet
-    if (menus.length === 0) {
-      const seedData = DEFAULT_MENUS.map((item) => ({
-        ...item,
-        company_id: userCompanyId,
-      }));
-      await prisma.appmenu.createMany({ data: seedData });
+    // Auto-seed missing default menus (e.g. KPI for existing companies in production)
+    const existingKeys = new Set(menus.map((m) => m.menu_key));
+    const missingDefaults = DEFAULT_MENUS.filter((d) => !existingKeys.has(d.menu_key));
+
+    if (missingDefaults.length > 0) {
+      for (const item of missingDefaults) {
+        await prisma.appmenu.upsert({
+          where: {
+            company_id_menu_key: {
+              company_id: userCompanyId,
+              menu_key: item.menu_key,
+            },
+          },
+          update: {},
+          create: {
+            company_id: userCompanyId,
+            menu_key: item.menu_key,
+            label: item.label,
+            color: item.color,
+            order: item.order,
+            is_active: true,
+          },
+        }).catch((err) => console.warn(`[AppMenu] Could not auto-seed missing menu ${item.menu_key}:`, err.message));
+      }
+
       menus = await prisma.appmenu.findMany({
         where: { company_id: userCompanyId, NOT: { menu_key: { in: ["document-scanner", "performance"] } } },
         orderBy: { order: "asc" },
@@ -72,7 +113,7 @@ export const getAppMenusController = async (req, res) => {
 export const updateAppMenuController = async (req, res) => {
   try {
     const { id } = req.params;
-    const { label, color, is_active, order } = req.body || {};
+    const { label, color, is_active, order, icon_url } = req.body || {};
     const userCompanyId = req.user?.company_id || req.user?.employee?.company_id;
 
     const whereClause = userCompanyId
@@ -105,6 +146,8 @@ export const updateAppMenuController = async (req, res) => {
       if (dbPath) {
         iconUrl = getStorageUrl(dbPath);
       }
+    } else if (icon_url !== undefined) {
+      iconUrl = icon_url;
     }
 
     const updateData = {

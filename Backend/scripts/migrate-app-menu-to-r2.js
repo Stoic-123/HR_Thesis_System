@@ -15,8 +15,9 @@ const DEFAULT_MENU_ASSETS = [
   { key: "online-attendance", label: "Online Attendance", file: "online.png", color: "blue", order: 1 },
   { key: "leave", label: "Leave", file: "leave.png", color: "orange", order: 2 },
   { key: "overtime", label: "Overtime", file: "overtime.png", color: "orange", order: 3 },
-  { key: "calendar", label: "Holiday Calendar", file: "calendar.png", color: "blue", order: 4 },
-  { key: "asset", label: "Asset Management", file: "scanner.png", color: "blue", order: 5 },
+  { key: "kpi", label: "Performance (KPI)", file: "performance.png", color: "blue", order: 4 },
+  { key: "calendar", label: "Holiday Calendar", file: "calendar.png", color: "blue", order: 5 },
+  { key: "asset", label: "Asset Management", file: "scanner.png", color: "blue", order: 6 },
 ];
 
 async function main() {
