@@ -43,6 +43,7 @@ import {
 import { motion } from "framer-motion";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useSearchParams } from "next/navigation";
+import { Link } from "@/src/i18n/routing";
 import {
   Dialog,
   DialogContent,
