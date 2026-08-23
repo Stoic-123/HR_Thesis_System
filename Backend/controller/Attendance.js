@@ -1070,6 +1070,8 @@ export const onlineAttendanceController = async (req, res) => {
       });
     }
 
+    const employee = user.employee;
+
     // Verify if employee account is active
     if (employee.is_active !== "active") {
       return res.status(403).json({
