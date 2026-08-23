@@ -90,6 +90,28 @@ export default function OvertimeReportPage() {
   const [selectedDeptId, setSelectedDeptId] = useState<string>("all");
   const [selectedEmpId, setSelectedEmpId] = useState<string>("all");
 
+  const rawRole = (user as any)?.data?.employee?.role ?? (user as any)?.employee?.role;
+  const roleName = (typeof rawRole === "string" ? rawRole : rawRole?.name || "").toLowerCase();
+  const userPermissions = (user as any)?.data?.employee?.permissions || (user as any)?.employee?.permissions || [];
+  const isHrOrAdmin =
+    roleName.includes("admin") ||
+    roleName.includes("superadmin") ||
+    roleName.includes("hr") ||
+    roleName.includes("general manager") ||
+    roleName.includes("director") ||
+    userPermissions.includes("*");
+  const userDeptId = (user as any)?.data?.employee?.department_id || (user as any)?.data?.employee?.department_employee_department_idTodepartment?.id || (user as any)?.employee?.department_id || (user as any)?.employee?.department_employee_department_idTodepartment?.id;
+
+  useEffect(() => {
+    if (!isHrOrAdmin && userDeptId) {
+      setSelectedDeptId(String(userDeptId));
+    }
+  }, [isHrOrAdmin, userDeptId]);
+
+  const visibleEmployees = isHrOrAdmin
+    ? (selectedDeptId === "all" ? employees : employees.filter((e: any) => e.department_id === Number(selectedDeptId)))
+    : employees.filter((e: any) => e.department_id === Number(userDeptId));
+
   // Pagination states
   const [page, setPage] = useState<number>(1);
   const [limit, setLimit] = useState<number>(10);
@@ -114,12 +136,13 @@ export default function OvertimeReportPage() {
   const fetchData = async () => {
     try {
       setLoading(true);
+      const effectiveDeptId = !isHrOrAdmin && userDeptId ? String(userDeptId) : selectedDeptId;
       const data = await getAllOvertimes({
         page,
         limit,
         startDate: toISODate(startDate),
         endDate: toISODate(endDate),
-        departmentId: selectedDeptId,
+        departmentId: effectiveDeptId,
         employeeId: selectedEmpId,
         status: filter,
       });
@@ -238,9 +261,11 @@ export default function OvertimeReportPage() {
       ? (locale === "km" ? "កំពុងរង់ចាំ" : "Pending")
       : (locale === "km" ? "បានបដិសេធ" : "Rejected");
 
-    const deptLabel = selectedDeptId === "all"
-      ? (locale === "km" ? "គ្រប់ផ្នែក" : "All Departments")
-      : departments.find(d => String(d.id) === selectedDeptId)?.name || (locale === "km" ? "នាយកដ្ឋាន" : "Department");
+    const deptLabel = isHrOrAdmin
+      ? (selectedDeptId === "all"
+          ? (locale === "km" ? "គ្រប់ផ្នែក" : "All Departments")
+          : departments.find(d => String(d.id) === selectedDeptId)?.name || (locale === "km" ? "នាយកដ្ឋាន" : "Department"))
+      : departments.find(d => d.id === Number(userDeptId))?.name || (user as any)?.employee?.department_employee_department_idTodepartment?.name || (locale === "km" ? "នាយកដ្ឋាន" : "Department");
 
     const apiBaseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
     const companyLogo = user?.employee?.company?.logo_path
@@ -311,7 +336,7 @@ export default function OvertimeReportPage() {
 
       {/* Filter Control Bar */}
       <Card className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+        <div className={`grid grid-cols-1 sm:grid-cols-2 ${isHrOrAdmin ? "lg:grid-cols-5" : "lg:grid-cols-4"} gap-4 items-end`}>
           {/* Date Range Picker (From / To) */}
           <div className="space-y-1.5 lg:col-span-2">
             <Label className="text-xs font-semibold text-muted-foreground">{locale === "km" ? "កាលបរិច្ឆេទ" : "Date Range"}</Label>
@@ -325,23 +350,25 @@ export default function OvertimeReportPage() {
             />
           </div>
 
-          {/* Department Select */}
-          <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-muted-foreground">{locale === "km" ? "នាយកដ្ឋាន" : "Department"}</Label>
-            <Select value={selectedDeptId} onValueChange={setSelectedDeptId}>
-              <SelectTrigger className="h-10 rounded-xl shadow-xs bg-background border-border/60">
-                <SelectValue placeholder={locale === "km" ? "នាយកដ្ឋាន" : "Department"} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{locale === "km" ? "ទាំងអស់" : "All"}</SelectItem>
-                {departments.map((dept) => (
-                  <SelectItem key={dept.id} value={String(dept.id)}>
-                    {dept.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Department Select (Only for Admin/HR) */}
+          {isHrOrAdmin && (
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-muted-foreground">{locale === "km" ? "នាយកដ្ឋាន" : "Department"}</Label>
+              <Select value={selectedDeptId} onValueChange={setSelectedDeptId}>
+                <SelectTrigger className="h-10 rounded-xl shadow-xs bg-background border-border/60">
+                  <SelectValue placeholder={locale === "km" ? "នាយកដ្ឋាន" : "Department"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{locale === "km" ? "ទាំងអស់" : "All"}</SelectItem>
+                  {departments.map((dept) => (
+                    <SelectItem key={dept.id} value={String(dept.id)}>
+                      {dept.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Employee Select */}
           <div className="space-y-1.5">
@@ -352,7 +379,7 @@ export default function OvertimeReportPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{locale === "km" ? "ទាំងអស់" : "All"}</SelectItem>
-                {employees.map((emp) => (
+                {visibleEmployees.map((emp) => (
                   <SelectItem key={emp.id} value={String(emp.id)}>
                     {`${emp.first_name} ${emp.last_name}`}
                   </SelectItem>

@@ -158,8 +158,16 @@ const TimeAttendanceReportPage = () => {
   const locale = useLocale();
   const { data: user } = useMe();
 
-  const roleName = (user as any)?.data?.employee?.role?.name?.toLowerCase() || (user as any)?.employee?.role?.name?.toLowerCase() || "";
-  const isHrOrAdmin = roleName.includes("admin") || roleName.includes("superadmin") || roleName.includes("hr") || roleName.includes("general manager") || roleName.includes("director");
+  const rawRole = (user as any)?.data?.employee?.role ?? (user as any)?.employee?.role;
+  const roleName = (typeof rawRole === "string" ? rawRole : rawRole?.name || "").toLowerCase();
+  const userPermissions = (user as any)?.data?.employee?.permissions || (user as any)?.employee?.permissions || [];
+  const isHrOrAdmin =
+    roleName.includes("admin") ||
+    roleName.includes("superadmin") ||
+    roleName.includes("hr") ||
+    roleName.includes("general manager") ||
+    roleName.includes("director") ||
+    userPermissions.includes("*");
   const userDeptId = (user as any)?.data?.employee?.department_id || (user as any)?.data?.employee?.department_employee_department_idTodepartment?.id || (user as any)?.employee?.department_id || (user as any)?.employee?.department_employee_department_idTodepartment?.id;
 
   useEffect(() => {
@@ -240,9 +248,11 @@ const TimeAttendanceReportPage = () => {
         })
       : `${formatKhmerDate(toISODate(startDate))} - ${formatKhmerDate(toISODate(endDate))}`;
 
-    const deptLabel = selectedDeptId === "all"
-      ? "គ្រប់ផ្នែក / All Departments"
-      : departments.find(d => String(d.id) === selectedDeptId)?.name || "នាយកដ្ឋាន / Department";
+    const deptLabel = isHrOrAdmin
+      ? (selectedDeptId === "all"
+          ? "គ្រប់ផ្នែក / All Departments"
+          : departments.find(d => String(d.id) === selectedDeptId)?.name || "នាយកដ្ឋាន / Department")
+      : departments.find(d => d.id === Number(userDeptId))?.name || (user as any)?.employee?.department_employee_department_idTodepartment?.name || "នាយកដ្ឋាន / Department";
 
     const userFullName = user?.employee ? `${user.employee.first_name} ${user.employee.last_name}` : "";
 
@@ -470,7 +480,7 @@ const TimeAttendanceReportPage = () => {
 
       {/* Filter Control Bar */}
       <Card className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+        <div className={`grid grid-cols-1 sm:grid-cols-2 ${isHrOrAdmin ? "lg:grid-cols-4" : "lg:grid-cols-3"} gap-4 items-end`}>
           {/* Date Range Picker (From / To) */}
           <div className="space-y-1.5 lg:col-span-2">
             <Label className="text-xs font-semibold text-muted-foreground">{locale === "km" ? "កាលបរិច្ឆេទ" : "Date Range"}</Label>
@@ -484,27 +494,28 @@ const TimeAttendanceReportPage = () => {
             />
           </div>
 
-          {/* Department Select */}
-          <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-muted-foreground">{t("department")}</Label>
-            <Select 
-              value={!isHrOrAdmin && userDeptId ? String(userDeptId) : selectedDeptId} 
-              onValueChange={setSelectedDeptId}
-              disabled={!isHrOrAdmin}
-            >
-              <SelectTrigger className="h-10 rounded-xl shadow-xs bg-background border-border/60">
-                <SelectValue placeholder={t("department")} />
-              </SelectTrigger>
-              <SelectContent>
-                {isHrOrAdmin && <SelectItem value="all">{t("all")}</SelectItem>}
-                {visibleDepartments.map((dept) => (
-                  <SelectItem key={dept.id} value={String(dept.id)}>
-                    {dept.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Department Select (Only for Admin/HR) */}
+          {isHrOrAdmin && (
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-muted-foreground">{t("department")}</Label>
+              <Select 
+                value={selectedDeptId} 
+                onValueChange={setSelectedDeptId}
+              >
+                <SelectTrigger className="h-10 rounded-xl shadow-xs bg-background border-border/60">
+                  <SelectValue placeholder={t("department")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("all")}</SelectItem>
+                  {visibleDepartments.map((dept) => (
+                    <SelectItem key={dept.id} value={String(dept.id)}>
+                      {dept.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Employee Select */}
           <div className="space-y-1.5">
