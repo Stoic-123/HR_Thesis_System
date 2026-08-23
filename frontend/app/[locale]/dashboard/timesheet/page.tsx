@@ -397,9 +397,6 @@ export const TimeSheetPage = () => {
                       </td>
                       <td className="py-3.5 pl-3 pr-6 text-right">
                         <div className="flex items-center justify-end gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => handleEdit(ts)} className="size-8 rounded-lg text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary">
-                            <Edit className="size-3.5" />
-                          </Button>
                           <Button
                             variant="ghost"
                             size="icon"

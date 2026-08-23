@@ -58,8 +58,10 @@ export const countLeaveDaysInPeriod = (leaveStart, leaveEnd, periodStart, period
   const start = new Date(Math.max(new Date(leaveStart).getTime(), new Date(periodStart).getTime()));
   const end = new Date(Math.min(new Date(leaveEnd).getTime(), new Date(periodEnd).getTime()));
   if (start > end) return 0;
-  const diffTime = Math.abs(end - start);
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+  const s = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  const e = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+  const diffDays = Math.round((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  return Math.max(0, diffDays);
 };
 
 export const estimateDailySalary = (baseSalary, workingDays = 22) =>

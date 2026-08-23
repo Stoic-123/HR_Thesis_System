@@ -180,8 +180,10 @@ export const getMe = async (user_id) => {
                 logo_path: true,
               },
             },
+            department_id: true,
             department_employee_department_idTodepartment: {
               select: {
+                id: true,
                 name: true,
               },
             },
@@ -362,87 +364,48 @@ export const forgotPassword = async (username) => {
     // Set cooldown timestamp after confirming valid user
     forgotPasswordCooldowns.set(username.toLowerCase(), now);
 
-    // Find strictly HR Manager accounts in the same company
+    // Find all HR Managers / HR Department staff / Admins in the company (Centralized HR Model)
     let hrManagers = await prisma.user.findMany({
       where: {
         employee: {
           company_id: user.employee.company_id,
-          role: {
-            name: {
-              in: [
-                "HR Manager", "hr manager", "HR manager", "Hr Manager", "HR MANAGER",
-                "Head of HR", "head of hr", "HR Director", "hr director",
-                "HR Lead", "hr lead"
-              ],
+          is_active: "active",
+          OR: [
+            {
+              role: {
+                name: {
+                  in: [
+                    "HR Manager", "hr manager", "HR manager", "Hr Manager", "HR MANAGER",
+                    "Head of HR", "head of hr", "HR Director", "hr director", "HR Lead", "hr lead",
+                    "HR", "hr", "Hr", "Human Resource", "human resource", "Human Resources", "human resources",
+                    "HR Officer", "hr officer", "HR Executive", "hr executive",
+                    "Admin", "admin", "Super Admin", "super admin", "SuperAdmin", "ADMIN"
+                  ],
+                },
+              },
             },
-          },
+            {
+              department_employee_department_idTodepartment: {
+                name: {
+                  in: [
+                    "Human Resource", "human resource", "Human Resources", "human resources",
+                    "HR", "hr", "HR Department", "hr department"
+                  ],
+                },
+              },
+            },
+          ],
         },
       },
       include: {
         employee: {
           include: {
             role: true,
+            department_employee_department_idTodepartment: true,
           },
         },
       },
     });
-
-    // Fallback 1: If no role named "HR Manager" is found, look for HR Department or HR role
-    if (hrManagers.length === 0) {
-      hrManagers = await prisma.user.findMany({
-        where: {
-          employee: {
-            company_id: user.employee.company_id,
-            OR: [
-              {
-                role: {
-                  name: {
-                    in: ["HR", "hr", "Human Resource", "human resource", "Human Resources", "human resources", "HR Officer", "hr officer", "HR Executive"],
-                  },
-                },
-              },
-              {
-                department_employee_department_idTodepartment: {
-                  name: {
-                    in: ["Human Resource", "human resource", "Human Resources", "human resources", "HR", "hr", "HR Department"],
-                  },
-                },
-              },
-            ],
-          },
-        },
-        include: {
-          employee: {
-            include: {
-              role: true,
-            },
-          },
-        },
-      });
-    }
-
-    // Fallback 2: If still no HR found, look for Admin / Super Admin
-    if (hrManagers.length === 0) {
-      hrManagers = await prisma.user.findMany({
-        where: {
-          employee: {
-            company_id: user.employee.company_id,
-            role: {
-              name: {
-                in: ["Admin", "admin", "Super Admin", "super admin", "SuperAdmin", "ADMIN"],
-              },
-            },
-          },
-        },
-        include: {
-          employee: {
-            include: {
-              role: true,
-            },
-          },
-        },
-      });
-    }
 
     console.log(`[Forgot Password] Found ${hrManagers.length} HR/Admin recipient user(s)`);
     for (const hrUser of hrManagers) {
@@ -482,40 +445,24 @@ export const forgotPassword = async (username) => {
       ]],
     };
 
-    // Collect ONLY HR Manager chat IDs
+    // Collect HR Manager chat IDs and usernames
     const chatIds = [];
+    const hrUsernames = [];
 
-    hrManagers.forEach(hrUser => {
+    hrManagers.forEach((hrUser) => {
       const chatId = hrUser.employee?.telegram_chat_id;
+      const username = hrUser.employee?.telegram_username?.replace(/^@/, "").trim();
       if (chatId && hrUser.id !== user.id && !chatIds.includes(chatId)) {
         chatIds.push(chatId);
       }
+      if (username && !hrUsernames.includes(username)) {
+        hrUsernames.push(username);
+      }
     });
 
-    console.log(`[Forgot Password] Collected ${chatIds.length} HR Manager chat ID(s) to send to:`, chatIds);
+    console.log(`[Forgot Password] Found ${hrManagers.length} HR manager(s), ${chatIds.length} DM chat ID(s), ${hrUsernames.length} username(s)`);
 
-    if (chatIds.length === 0) {
-      console.log(`[Forgot Password] No direct Telegram chat IDs found for HR Manager reset request of ${username}`);
-      return {
-        result: false,
-        message: "No registered HR Manager Telegram chat found to process your request.",
-      };
-    }
-
-    // Send direct messages to all recipients
-    if (botToken) {
-      for (const chatId of chatIds) {
-        try {
-          console.log(`[Forgot Password] Sending message to chat ID: ${chatId}`);
-          await sendTelegramMessage(botToken, chatId, msg, {
-            reply_markup: keyboard,
-          });
-          console.log(`[Forgot Password] Sent direct message to chat ID: ${chatId}`);
-        } catch (e) {
-          console.error(`[Forgot Password] Error sending to chat ID ${chatId}:`, e.message);
-        }
-      }
-    } else {
+    if (!botToken) {
       console.log(`[Forgot Password] No bot token available for company`);
       return {
         result: false,
@@ -523,9 +470,48 @@ export const forgotPassword = async (username) => {
       };
     }
 
+    let sentCount = 0;
+
+    // 1. Send direct messages to all HR Managers with registered chat IDs
+    for (const chatId of chatIds) {
+      try {
+        console.log(`[Forgot Password] Sending DM to chat ID: ${chatId}`);
+        await sendTelegramMessage(botToken, chatId, msg, {
+          reply_markup: keyboard,
+        });
+        sentCount++;
+      } catch (e) {
+        console.error(`[Forgot Password] Error sending to chat ID ${chatId}:`, e.message);
+      }
+    }
+
+    // 2. Fallback: If no direct DMs were sent, post to company Telegram group tagging the HR Managers
+    const groupId = company.telegram_group_id || company.telegram_attendance_group_id;
+    if (sentCount === 0 && groupId) {
+      const mentions = hrUsernames.map((u) => `@${u}`).join(" ");
+      const groupMsg = msg + (mentions ? `\n👔 <b>To HR:</b> ${mentions}` : "");
+
+      try {
+        console.log(`[Forgot Password] Fallback: Sending to Telegram group: ${groupId}`);
+        await sendTelegramMessage(botToken, groupId, groupMsg, {
+          reply_markup: keyboard,
+        });
+        sentCount++;
+      } catch (e) {
+        console.error(`[Forgot Password] Error sending to group ${groupId}:`, e.message);
+      }
+    }
+
+    if (sentCount === 0) {
+      return {
+        result: false,
+        message: "Could not deliver reset request to HR Manager Telegram. Please ensure HR Manager has started the Telegram bot.",
+      };
+    }
+
     return {
       result: true,
-      message: "Password reset request sent successfully.",
+      message: "Password reset request sent to HR Manager(s) successfully.",
     };
   } catch (error) {
     console.error(`[Forgot Password] Error processing request:`, error.message);

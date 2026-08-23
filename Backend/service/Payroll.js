@@ -65,12 +65,51 @@ const serializePeriod = (period) => ({
 });
 
 export const createPayrollPeriod = async (companyId, payload) => {
+  const startDate = new Date(payload.start_date);
+  const endDate = new Date(payload.end_date);
+  const payDate = new Date(payload.pay_date);
+
+  if (endDate < startDate) {
+    throw new Error("End date cannot be before start date");
+  }
+
+  // 1. Check for duplicate name in the same company
+  const trimmedName = (payload.name || "").trim();
+  const existingByName = await prisma.payrollperiod.findFirst({
+    where: {
+      company_id: companyId,
+      name: trimmedName,
+    },
+  });
+
+  if (existingByName) {
+    throw new Error(`A payroll period named "${trimmedName}" already exists.`);
+  }
+
+  // 2. Check for overlapping date ranges in the same company
+  // Two date ranges [A, B] and [C, D] overlap if A <= D and B >= C
+  const overlappingPeriod = await prisma.payrollperiod.findFirst({
+    where: {
+      company_id: companyId,
+      start_date: { lte: endDate },
+      end_date: { gte: startDate },
+    },
+  });
+
+  if (overlappingPeriod) {
+    const overlapStart = formatICTDate(overlappingPeriod.start_date);
+    const overlapEnd = formatICTDate(overlappingPeriod.end_date);
+    throw new Error(
+      `Date range overlaps with existing period "${overlappingPeriod.name}" (${overlapStart} to ${overlapEnd}).`
+    );
+  }
+
   const period = await createPeriod({
     company_id: companyId,
-    name: payload.name,
-    start_date: new Date(payload.start_date),
-    end_date: new Date(payload.end_date),
-    pay_date: new Date(payload.pay_date),
+    name: trimmedName,
+    start_date: startDate,
+    end_date: endDate,
+    pay_date: payDate,
     status: "draft",
   });
   return { result: true, data: period };

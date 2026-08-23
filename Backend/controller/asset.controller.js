@@ -11,7 +11,15 @@ const getCategories = async (req, res) => {
   try {
     const categories = await prisma.assetcategory.findMany({
       where: { company_id: req.user.company_id },
-      orderBy: { name: 'asc' }
+      include: {
+        _count: {
+          select: {
+            asset: true,
+            assetrequest: true,
+          },
+        },
+      },
+      orderBy: { name: 'asc' },
     });
     res.status(200).json({ result: true, data: categories });
   } catch (error) {
@@ -30,6 +38,51 @@ const createCategory = async (req, res) => {
       }
     });
     res.status(201).json({ result: true, data: category });
+  } catch (error) {
+    res.status(500).json({ result: false, message: error.message });
+  }
+};
+
+const deleteCategory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const categoryId = parseInt(id);
+
+    const category = await prisma.assetcategory.findFirst({
+      where: { id: categoryId, company_id: req.user.company_id },
+      include: {
+        _count: {
+          select: {
+            asset: true,
+            assetrequest: true,
+          }
+        }
+      }
+    });
+
+    if (!category) {
+      return res.status(404).json({ result: false, message: "Category not found" });
+    }
+
+    if (category._count.asset > 0) {
+      return res.status(400).json({
+        result: false,
+        message: `Cannot delete category because it is currently assigned to ${category._count.asset} asset(s). Please delete or reassign those assets first.`
+      });
+    }
+
+    if (category._count.assetrequest > 0) {
+      return res.status(400).json({
+        result: false,
+        message: `Cannot delete category because it is linked to ${category._count.assetrequest} asset request(s).`
+      });
+    }
+
+    await prisma.assetcategory.delete({
+      where: { id: categoryId }
+    });
+
+    res.status(200).json({ result: true, message: "Category deleted successfully" });
   } catch (error) {
     res.status(500).json({ result: false, message: error.message });
   }
@@ -641,6 +694,7 @@ const deleteAsset = async (req, res) => {
 export default {
   getCategories,
   createCategory,
+  deleteCategory,
   getAssets,
   createAsset,
   directAssign,

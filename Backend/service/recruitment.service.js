@@ -51,6 +51,13 @@ class RecruitmentService {
   }
 
   async deleteJobPosting(id, companyId) {
+    const candidateCount = await prisma.candidate.count({
+      where: { job_posting_id: parseInt(id), company_id: companyId },
+    });
+    if (candidateCount > 0) {
+      throw new Error(`Cannot delete this job posting because ${candidateCount} candidate(s) have applied to it.`);
+    }
+
     return recruitmentRepository.deleteJobPosting(id, companyId);
   }
 
@@ -79,14 +86,22 @@ class RecruitmentService {
   }
 
   async updateCandidate(id, companyId, data) {
-    const updateData = { ...data };
-    if (data.job_posting_id !== undefined) {
-      updateData.job_posting_id = data.job_posting_id ? parseInt(data.job_posting_id) : null;
+    const candidate = await recruitmentRepository.getCandidateById(id, companyId);
+    if (!candidate) throw new Error("Candidate not found");
+
+    if (candidate.hired_employee_id && data.status && data.status !== "HIRED") {
+      throw new Error("This candidate has already been converted to an active employee and cannot be moved from the Hired stage.");
     }
-    if (data.rating !== undefined) updateData.rating = parseInt(data.rating);
-    if (data.interview_date) updateData.interview_date = new Date(data.interview_date);
-    if (data.offered_salary !== undefined) {
-      updateData.offered_salary = data.offered_salary ? parseFloat(data.offered_salary) : null;
+
+    const updateData = { ...data };
+    if (updateData.job_posting_id) {
+      updateData.job_posting_id = parseInt(updateData.job_posting_id);
+    }
+    if (updateData.rating) {
+      updateData.rating = parseInt(updateData.rating);
+    }
+    if (updateData.offered_salary) {
+      updateData.offered_salary = parseFloat(updateData.offered_salary);
     }
 
     return recruitmentRepository.updateCandidate(id, companyId, updateData);
@@ -96,6 +111,13 @@ class RecruitmentService {
     const validStages = ["APPLIED", "SCREENING", "INTERVIEW", "OFFER", "HIRED", "REJECTED"];
     if (!validStages.includes(stage)) {
       throw new Error(`Invalid stage: ${stage}`);
+    }
+
+    const candidate = await recruitmentRepository.getCandidateById(id, companyId);
+    if (!candidate) throw new Error("Candidate not found");
+
+    if (candidate.hired_employee_id && stage !== "HIRED") {
+      throw new Error("This candidate has already been converted to an active employee and cannot be moved from the Hired stage.");
     }
 
     return recruitmentRepository.updateCandidate(id, companyId, { status: stage });

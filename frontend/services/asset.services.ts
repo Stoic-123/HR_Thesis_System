@@ -6,6 +6,10 @@ export type AssetCategory = {
   id: number;
   name: string;
   description: string;
+  _count?: {
+    asset?: number;
+    assetrequest?: number;
+  };
 };
 
 export type AssetHistory = {
@@ -74,6 +78,11 @@ export const getAssetCategories = async () => {
 
 export const createAssetCategory = async (data: { name: string; description?: string }) => {
   const res = await api.post(`${API_URL}/categories`, data);
+  return res.data;
+};
+
+export const deleteAssetCategory = async (id: number) => {
+  const res = await api.delete(`${API_URL}/categories/${id}`);
   return res.data;
 };
 

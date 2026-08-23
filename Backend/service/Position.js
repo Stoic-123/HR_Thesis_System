@@ -140,7 +140,18 @@ export const deletePosition = async (position_id, company_id) => {
     if (checkPositionInUsed.length !== 0) {
       return {
         result: false,
-        message: "Position is in used, you cannot delete this position..!",
+        message: `Cannot delete this position because ${checkPositionInUsed.length} employee(s) are currently assigned to it.`,
+      };
+    }
+
+    const checkJobPostings = await prisma.jobposting.count({
+      where: { position_id: id },
+    });
+
+    if (checkJobPostings > 0) {
+      return {
+        result: false,
+        message: `Cannot delete this position because ${checkJobPostings} job opening(s) are currently attached to it.`,
       };
     }
 

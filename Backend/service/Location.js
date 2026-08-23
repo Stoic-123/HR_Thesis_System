@@ -169,10 +169,35 @@ export const assignEmployeeLocations = async (employee_id, location_id, secondar
 
 export const deleteLocation = async (id, company_id) => {
   try {
+    const locId = parseInt(id);
+    const companyId = parseInt(company_id);
+
+    // 1. Check if any employee working profile is assigned to this location
+    const workingProfileCount = await prisma.employeeworkingprofile.count({
+      where: { working_location_id: locId },
+    });
+    if (workingProfileCount > 0) {
+      return {
+        result: false,
+        message: `Cannot delete this Location because ${workingProfileCount} employee working profile(s) are currently assigned to it.`,
+      };
+    }
+
+    // 2. Check if any location schedule is linked to this location
+    const scheduleCount = await prisma.working_location_schedule.count({
+      where: { location_id: locId },
+    });
+    if (scheduleCount > 0) {
+      return {
+        result: false,
+        message: `Cannot delete this Location because ${scheduleCount} location schedule(s) are currently linked to it.`,
+      };
+    }
+
     await prisma.location.delete({
       where: { 
-        id: parseInt(id),
-        company_id: parseInt(company_id)
+        id: locId,
+        company_id: companyId
       },
     });
     return {

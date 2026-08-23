@@ -7,6 +7,14 @@ import { Link } from "@/src/i18n/routing";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import {
+  Clock,
+  CalendarCheck,
+  Zap,
+  ArrowDownRight,
+  ArrowUpRight,
+  Sparkles,
+} from "lucide-react";
+import {
   Card,
   CardContent,
   CardDescription,
@@ -24,7 +32,7 @@ import {
   getPayslipUrl,
   type PayrollRecord,
 } from "@/services/payroll.services";
-import { computePayrollPreview, SALARY_TAX_BRACKETS_USD } from "@/lib/payrollTax";
+import { computePayrollPreview } from "@/lib/payrollTax";
 import { cn } from "@/lib/utils";
 import { translatePayrollStatus } from "@/lib/payrollStatus";
 import { useMe } from "@/hooks/useMe";
@@ -46,7 +54,7 @@ function MoneyField({
 }: {
   label: string;
   value: number;
-  onChange?: (value: number) => void;
+  onChange?: (val: number) => void;
   disabled?: boolean;
   hint?: string;
 }) {
@@ -68,32 +76,6 @@ function MoneyField({
         />
       </div>
       {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
-    </div>
-  );
-}
-
-function SummaryStat({
-  label,
-  value,
-  sub,
-  tone,
-}: {
-  label: string;
-  value: React.ReactNode;
-  sub?: string;
-  tone: "amber" | "blue" | "emerald";
-}) {
-  const tones = {
-    amber: "text-amber-700 dark:text-amber-400",
-    blue: "text-blue-700 dark:text-blue-400",
-    emerald: "text-emerald-700 dark:text-emerald-400",
-  };
-
-  return (
-    <div className="rounded-2xl border border-border/60 bg-background p-4 shadow-sm">
-      <p className="text-sm text-muted-foreground">{label}</p>
-      <p className={cn("mt-1 text-2xl font-bold tabular-nums", tones[tone])}>{value}</p>
-      {sub ? <p className="mt-1 text-xs text-muted-foreground">{sub}</p> : null}
     </div>
   );
 }
@@ -297,151 +279,205 @@ export default function PayrollDetailPage() {
       </div>
 
       {ctx && (
-        <Card className="rounded-3xl border-amber-200/50 bg-amber-50/40 shadow-sm dark:bg-amber-950/20">
-          <CardHeader>
-            <CardTitle>{t("periodSummaryTitle")}</CardTitle>
-            <CardDescription>{t("periodSummaryDesc")}</CardDescription>
+        <Card className="rounded-3xl border-border/60 shadow-sm overflow-hidden">
+          <CardHeader className="bg-muted/20 pb-4 border-b border-border/40">
+            <div className="flex items-center gap-2">
+              <Sparkles className="size-5 text-amber-500" />
+              <div>
+                <CardTitle className="text-base">{t("periodSummaryTitle")}</CardTitle>
+                <CardDescription className="text-xs">{t("periodSummaryDesc")}</CardDescription>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <SummaryStat
-                label={t("lateDays")}
-                tone="amber"
-                value={
-                  <>
-                    {ctx.lateDays}{" "}
-                    <span className="text-sm font-normal text-muted-foreground">
-                      {t("daysUnit")}
+          <CardContent className="p-5 sm:p-6">
+            <div className="grid gap-5 lg:grid-cols-3">
+              {/* 1. LATE ATTENDANCE CARD */}
+              <div className="flex flex-col justify-between rounded-2xl border border-amber-200/60 bg-amber-50/40 p-4 sm:p-5 dark:border-amber-900/50 dark:bg-amber-950/20">
+                <div className="space-y-3.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-amber-800 dark:text-amber-300">
+                      {t("lateDays")}
                     </span>
-                  </>
-                }
-              />
-              <SummaryStat
-                label={t("leaveDays")}
-                tone="blue"
-                value={
-                  <>
-                    {ctx.leaveDays}{" "}
-                    <span className="text-sm font-normal text-muted-foreground">
-                      {t("daysUnit")}
-                    </span>
-                  </>
-                }
-              />
-              <SummaryStat
-                label={t("otTotalHours")}
-                tone="emerald"
-                value={
-                  <>
-                    {ctx.overtime.totalHours}{" "}
-                    <span className="text-sm font-normal text-muted-foreground">
-                      {t("hoursUnit")}
-                    </span>
-                  </>
-                }
-              />
-              <SummaryStat
-                label={t("otTotalAmount")}
-                tone="emerald"
-                value={formatMoney(ctx.overtime.totalAmount)}
-                sub={`${t("otHourlyRate")}: ${formatMoney(ctx.overtime.hourlyRate)} · ${t("otRateNote")}`}
-              />
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-border/60 bg-background px-4 py-3 text-sm">
-                <span className="text-muted-foreground">{t("dailyRate")}: </span>
-                <span className="font-medium tabular-nums">
-                  {formatMoney(ctx.reference.dailyRate)}
-                </span>
-              </div>
-              <div className="rounded-2xl border border-border/60 bg-background px-4 py-3 text-sm">
-                <span className="text-muted-foreground">{t("suggestedLateDeduction")}: </span>
-                <span className="font-medium tabular-nums text-red-600">
-                  {formatMoney(ctx.reference.suggestedLateDeduction)}
-                </span>
-                <span className="ml-2 text-xs text-muted-foreground">{t("referenceNote")}</span>
-              </div>
-            </div>
-
-            {!isReadOnly && (
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={ctx.overtime.totalAmount <= 0}
-                  onClick={() =>
-                    setForm((prev) => ({
-                      ...prev,
-                      overtime: ctx.overtime.totalAmount,
-                    }))
-                  }
-                >
-                  {t("applyOtAmount")}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={ctx.reference.suggestedLateDeduction <= 0}
-                  onClick={() =>
-                    setForm((prev) => ({
-                      ...prev,
-                      deduction: ctx.reference.suggestedLateDeduction,
-                    }))
-                  }
-                >
-                  {t("applyLateDeduction")}
-                </Button>
-              </div>
-            )}
-
-            <div className="grid gap-4 lg:grid-cols-2">
-              <div className="rounded-2xl border border-border/60 bg-background p-4">
-                <p className="mb-3 font-medium">{t("leaveBreakdown")}</p>
-                {ctx.leaveRecords.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">{t("noLeaveThisPeriod")}</p>
-                ) : (
-                  <div className="space-y-2">
-                    {ctx.leaveRecords.map((leave) => (
-                      <div
-                        key={leave.id}
-                        className="rounded-xl border border-border/50 px-3 py-2 text-sm"
-                      >
-                        <p className="font-medium">{leave.leave_type}</p>
-                        <p className="text-muted-foreground">
-                          {formatDate(leave.start_date)} – {formatDate(leave.end_date)} ·{" "}
-                          {leave.days} {t("daysUnit")}
-                        </p>
-                      </div>
-                    ))}
+                    <div className="rounded-xl bg-amber-100 p-2 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300">
+                      <Clock className="size-4" />
+                    </div>
                   </div>
+
+                  <div>
+                    <p className="text-2xl sm:text-3xl font-bold tabular-nums text-amber-900 dark:text-amber-100">
+                      {ctx.lateDays}{" "}
+                      <span className="text-sm font-normal text-muted-foreground">
+                        {t("daysUnit")}
+                      </span>
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5 rounded-xl border border-amber-200/60 bg-background/90 p-3 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">{t("dailyRate")}:</span>
+                      <span className="font-semibold tabular-nums">
+                        {formatMoney(ctx.reference.dailyRate)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-red-600 font-medium">
+                      <span>{t("suggestedLateDeduction")}:</span>
+                      <span className="tabular-nums font-bold">
+                        -{formatMoney(ctx.reference.suggestedLateDeduction)}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground pt-1 border-t border-border/40">
+                      {t("referenceNote")}
+                    </p>
+                  </div>
+                </div>
+
+                {!isReadOnly && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={ctx.reference.suggestedLateDeduction <= 0}
+                    className="mt-4 w-full rounded-xl border-amber-300 bg-amber-100/60 text-amber-900 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200 text-xs font-semibold gap-1.5"
+                    onClick={() =>
+                      setForm((prev) => ({
+                        ...prev,
+                        deduction: ctx.reference.suggestedLateDeduction,
+                      }))
+                    }
+                  >
+                    <ArrowDownRight className="size-3.5" />
+                    {t("applyLateDeduction")} ({formatMoney(ctx.reference.suggestedLateDeduction)})
+                  </Button>
                 )}
               </div>
 
-              <div className="rounded-2xl border border-border/60 bg-background p-4">
-                <p className="mb-3 font-medium">{t("otBreakdown")}</p>
-                {ctx.overtime.records.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">{t("noOtThisPeriod")}</p>
-                ) : (
-                  <div className="space-y-2">
-                    {ctx.overtime.records.map((ot) => (
-                      <div
-                        key={ot.id}
-                        className="rounded-xl border border-border/50 px-3 py-2 text-sm"
-                      >
-                        <p className="font-medium">
-                          {formatDate(ot.start_date)} · {ot.hours} {t("hoursUnit")}
-                        </p>
-                        <p className="text-muted-foreground">
-                          {format(new Date(ot.start_date), "HH:mm")} –{" "}
-                          {format(new Date(ot.end_date), "HH:mm")}
-                          {ot.reason ? ` · ${ot.reason}` : ""}
-                        </p>
-                      </div>
-                    ))}
+              {/* 2. LEAVE REQUESTS CARD */}
+              <div className="flex flex-col justify-between rounded-2xl border border-blue-200/60 bg-blue-50/40 p-4 sm:p-5 dark:border-blue-900/50 dark:bg-blue-950/20">
+                <div className="space-y-3.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-blue-800 dark:text-blue-300">
+                      {t("leaveDays")}
+                    </span>
+                    <div className="rounded-xl bg-blue-100 p-2 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300">
+                      <CalendarCheck className="size-4" />
+                    </div>
                   </div>
+
+                  <div>
+                    <p className="text-2xl sm:text-3xl font-bold tabular-nums text-blue-900 dark:text-blue-100">
+                      {ctx.leaveDays}{" "}
+                      <span className="text-sm font-normal text-muted-foreground">
+                        {t("daysUnit")}
+                      </span>
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-semibold text-muted-foreground">{t("leaveBreakdown")}</p>
+                    {ctx.leaveRecords.length === 0 ? (
+                      <p className="text-xs text-muted-foreground italic py-3">
+                        {t("noLeaveThisPeriod")}
+                      </p>
+                    ) : (
+                      <div className="max-h-36 overflow-y-auto space-y-1.5 pr-1">
+                        {ctx.leaveRecords.map((leave) => (
+                          <div
+                            key={leave.id}
+                            className="rounded-xl border border-blue-200/60 bg-background/90 px-3 py-2 text-xs"
+                          >
+                            <p className="font-semibold text-foreground">{leave.leave_type}</p>
+                            <p className="text-muted-foreground text-[11px]">
+                              {formatDate(leave.start_date)} – {formatDate(leave.end_date)} ·{" "}
+                              <span className="font-semibold text-blue-600">{leave.days} {t("daysUnit")}</span>
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* 3. OVERTIME (OT) CARD */}
+              <div className="flex flex-col justify-between rounded-2xl border border-emerald-200/60 bg-emerald-50/40 p-4 sm:p-5 dark:border-emerald-900/50 dark:bg-emerald-950/20">
+                <div className="space-y-3.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+                      {t("otBreakdown")}
+                    </span>
+                    <div className="rounded-xl bg-emerald-100 p-2 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300">
+                      <Zap className="size-4" />
+                    </div>
+                  </div>
+
+                  <div className="flex items-baseline justify-between gap-2">
+                    <p className="text-2xl sm:text-3xl font-bold tabular-nums text-emerald-900 dark:text-emerald-100">
+                      {ctx.overtime.totalHours}{" "}
+                      <span className="text-sm font-normal text-muted-foreground">
+                        {t("hoursUnit")}
+                      </span>
+                    </p>
+                    <p className="text-lg sm:text-xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
+                      +{formatMoney(ctx.overtime.totalAmount)}
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5 rounded-xl border border-emerald-200/60 bg-background/90 p-3 text-xs">
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>{t("otHourlyRate")}:</span>
+                      <span className="font-semibold tabular-nums text-foreground">
+                        {formatMoney(ctx.overtime.hourlyRate)}/hr
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground pt-1 border-t border-border/40">
+                      {t("otRateNote")}
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    {ctx.overtime.records.length === 0 ? (
+                      <p className="text-xs text-muted-foreground italic py-1">
+                        {t("noOtThisPeriod")}
+                      </p>
+                    ) : (
+                      <div className="max-h-24 overflow-y-auto space-y-1.5 pr-1">
+                        {ctx.overtime.records.map((ot) => (
+                          <div
+                            key={ot.id}
+                            className="rounded-xl border border-emerald-200/60 bg-background/90 px-3 py-1.5 text-xs"
+                          >
+                            <div className="flex justify-between font-medium">
+                              <span>{formatDate(ot.start_date)}</span>
+                              <span className="font-semibold text-emerald-600">{ot.hours} {t("hoursUnit")}</span>
+                            </div>
+                            <p className="text-muted-foreground text-[11px] truncate">
+                              {format(new Date(ot.start_date), "HH:mm")}–{format(new Date(ot.end_date), "HH:mm")}
+                              {ot.reason ? ` · ${ot.reason}` : ""}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {!isReadOnly && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={ctx.overtime.totalAmount <= 0}
+                    className="mt-4 w-full rounded-xl border-emerald-300 bg-emerald-100/60 text-emerald-900 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 text-xs font-semibold gap-1.5"
+                    onClick={() =>
+                      setForm((prev) => ({
+                        ...prev,
+                        overtime: ctx.overtime.totalAmount,
+                      }))
+                    }
+                  >
+                    <ArrowUpRight className="size-3.5" />
+                    {t("applyOtAmount")} ({formatMoney(ctx.overtime.totalAmount)})
+                  </Button>
                 )}
               </div>
             </div>
@@ -449,28 +485,6 @@ export default function PayrollDetailPage() {
         </Card>
       )}
 
-      <Card className="rounded-3xl border-dashed border-border/60">
-        <CardHeader>
-          <CardTitle className="text-base">{t("taxBracketsTitle")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
-            {SALARY_TAX_BRACKETS_USD.map((bracket, index) => {
-              const prev = SALARY_TAX_BRACKETS_USD[index - 1]?.upTo ?? 0;
-              const label =
-                bracket.upTo === Infinity
-                  ? `> $${prev.toFixed(2)}`
-                  : `$${(prev + 0.01).toFixed(2)} – $${bracket.upTo.toFixed(2)}`;
-              return (
-                <div key={index} className="rounded-xl border border-border/50 px-3 py-2">
-                  <p className="font-medium tabular-nums">{label}</p>
-                  <p className="text-muted-foreground">{bracket.rateLabel}</p>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Card className="rounded-3xl border-blue-200/60 bg-blue-50/50 dark:bg-blue-950/20">

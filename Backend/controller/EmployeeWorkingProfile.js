@@ -79,6 +79,9 @@ export const deleteEmployeeWorkingProfileController = async (req, res) => {
     }
 
     const data = await deleteEmployeeWorkingProfile(id);
+    if (!data.result) {
+      return res.status(400).json(data);
+    }
     res.status(200).json(data);
   } catch (error) {
     console.log(error.message);

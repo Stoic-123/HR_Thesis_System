@@ -32,6 +32,7 @@ import {
   GripVertical,
   Inbox,
   UploadCloud,
+  Lock,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -359,10 +360,19 @@ export default function RecruitmentPage() {
   // ==========================================
   // DRAG & DROP HANDLERS
   // ==========================================
-  const handleDragStart = (e: React.DragEvent, candidateId: number) => {
-    e.dataTransfer.setData("text/plain", candidateId.toString());
+  const handleDragStart = (e: React.DragEvent, candidate: Candidate) => {
+    if (candidate.hired_employee_id) {
+      e.preventDefault();
+      toast.info(
+        locale === "km"
+          ? "បេក្ខជននេះបានក្លាយជាបុគ្គលិករួចហើយ មិនអាចផ្លាស់ប្តូរដំណាក់កាលបានទេ"
+          : "This candidate has already been converted to an employee and cannot be moved."
+      );
+      return;
+    }
+    e.dataTransfer.setData("text/plain", candidate.id.toString());
     e.dataTransfer.effectAllowed = "move";
-    setDraggedCandidateId(candidateId);
+    setDraggedCandidateId(candidate.id);
   };
 
   const handleDragOver = (e: React.DragEvent, stageKey: string) => {
@@ -389,6 +399,15 @@ export default function RecruitmentPage() {
 
     const candidateId = parseInt(candidateIdStr);
     const candidate = candidates.find((c) => c.id === candidateId);
+
+    if (candidate?.hired_employee_id) {
+      toast.warning(
+        locale === "km"
+          ? "បេក្ខជននេះបានក្លាយជាបុគ្គលិករួចហើយ មិនអាចផ្លាស់ប្តូរបានទេ"
+          : "This candidate has already been converted to an employee."
+      );
+      return;
+    }
 
     if (candidate && candidate.status !== targetStageKey) {
       stageMutation.mutate({ id: candidateId, stage: targetStageKey });
@@ -726,23 +745,34 @@ export default function RecruitmentPage() {
                       ) : (
                         stageCandidates.map((candidate) => {
                           const isDragging = draggedCandidateId === candidate.id;
+                          const isConverted = Boolean(candidate.hired_employee_id);
 
                           return (
                             <div
                               key={candidate.id}
-                              draggable
-                              onDragStart={(e) => handleDragStart(e, candidate.id)}
+                              draggable={!isConverted}
+                              onDragStart={(e) => handleDragStart(e, candidate)}
                               onDragEnd={handleDragEnd}
-                              className={`rounded-2xl border p-4 space-y-3 transition-all cursor-grab active:cursor-grabbing group overflow-hidden ${
+                              className={`rounded-2xl border p-4 space-y-3 transition-all group overflow-hidden ${
+                                isConverted
+                                  ? "cursor-default bg-white/90 dark:bg-slate-800/90 border-emerald-200/80 dark:border-emerald-800/50 shadow-xs"
+                                  : "cursor-grab active:cursor-grabbing bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-xs hover:shadow-md hover:border-slate-300 dark:hover:border-slate-600"
+                              } ${
                                 isDragging
                                   ? "opacity-40 scale-95 border-dashed border-primary bg-primary/5"
-                                  : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-xs hover:shadow-md hover:border-slate-300 dark:hover:border-slate-600"
+                                  : ""
                               }`}
                             >
-                              {/* Top row: Drag Grip + Avatar + Name + Dropdown */}
+                              {/* Top row: Drag Grip / Lock + Avatar + Name + Dropdown */}
                               <div className="flex items-start justify-between gap-2">
                                 <div className="flex items-center gap-2 min-w-0">
-                                  <GripVertical className="size-4 text-slate-400 dark:text-slate-500 group-hover:text-slate-700 dark:group-hover:text-slate-300 shrink-0 transition-colors cursor-grab" />
+                                  {isConverted ? (
+                                    <div title="Converted to Employee (Locked in Hired Stage)" className="p-0.5 rounded bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 shrink-0">
+                                      <Lock className="size-3.5" />
+                                    </div>
+                                  ) : (
+                                    <GripVertical className="size-4 text-slate-400 dark:text-slate-500 group-hover:text-slate-700 dark:group-hover:text-slate-300 shrink-0 transition-colors cursor-grab" />
+                                  )}
                                   <Avatar className="size-9 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-xs bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-200 shrink-0">
                                     <AvatarFallback>
                                       {getInitials(candidate.first_name, candidate.last_name)}
@@ -1408,12 +1438,20 @@ export default function RecruitmentPage() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label className="font-semibold text-xs text-foreground">{t("pipelineStage")}</Label>
+                    <div className="flex items-center justify-between">
+                      <Label className="font-semibold text-xs text-foreground">{t("pipelineStage")}</Label>
+                      {editingCandidate?.hired_employee_id && (
+                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                          ({t("alreadyConverted")})
+                        </span>
+                      )}
+                    </div>
                     <Select
                       value={candidateForm.status}
+                      disabled={Boolean(editingCandidate?.hired_employee_id)}
                       onValueChange={(val) => setCandidateForm({ ...candidateForm, status: val })}
                     >
-                      <SelectTrigger className="rounded-xl h-10 text-xs bg-background border-slate-200 dark:border-slate-700">
+                      <SelectTrigger className="rounded-xl h-10 text-xs bg-background border-slate-200 dark:border-slate-700 disabled:opacity-75 disabled:cursor-not-allowed">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="rounded-xl">

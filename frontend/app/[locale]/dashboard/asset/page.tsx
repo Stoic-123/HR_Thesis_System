@@ -9,6 +9,7 @@ import {
   directAssignAsset,
   confirmReturnAsset,
   createAssetCategory,
+  deleteAssetCategory,
   approveHRAssetRequest,
   updateAsset,
   deleteAsset,
@@ -266,6 +267,12 @@ export default function AssetDashboardPage() {
     assetId: null,
   });
 
+  // Delete Category State
+  const [deleteCategoryOpen, setDeleteCategoryOpen] = useState<{ open: boolean; categoryId: number | null }>({
+    open: false,
+    categoryId: null,
+  });
+
   // History Asset State
   const [historyOpen, setHistoryOpen] = useState<{ open: boolean; asset: Asset | null }>({
     open: false,
@@ -358,7 +365,22 @@ export default function AssetDashboardPage() {
       setCategoryName("");
       setCategoryDesc("");
     } catch (error: any) {
-      toast.error("Failed to create category");
+      toast.error(error?.response?.data?.message || "Failed to create category");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteCategory = async () => {
+    if (!deleteCategoryOpen.categoryId) return;
+    setIsSubmitting(true);
+    try {
+      await deleteAssetCategory(deleteCategoryOpen.categoryId);
+      toast.success("Category deleted successfully");
+      queryClient.invalidateQueries({ queryKey: ["asset-categories"] });
+      setDeleteCategoryOpen({ open: false, categoryId: null });
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to delete category");
     } finally {
       setIsSubmitting(false);
     }
@@ -724,106 +746,106 @@ export default function AssetDashboardPage() {
                 <div className="text-center py-12 text-muted-foreground">{t("noActiveAssets")}</div>
               ) : (
                 <div className="overflow-x-auto max-h-[520px] overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
-                  <Table>
-                    <TableHeader className="sticky top-0 bg-card/95 backdrop-blur-md z-10 font-semibold text-muted-foreground uppercase border-b border-border/40">
-                      <TableRow>
-                        <TableHead className="font-semibold py-4">{t("assetDetails")}</TableHead>
-                        <TableHead className="font-semibold">{t("category")}</TableHead>
-                        <TableHead className="font-semibold">{t("status")}</TableHead>
-                        <TableHead className="font-semibold">{t("condition")}</TableHead>
-                        <TableHead className="font-semibold">{t("assignedTo")}</TableHead>
-                        <TableHead className="text-right font-semibold pr-6">{tCommon("actions")}</TableHead>
+                  <Table className="w-full min-w-[950px]">
+                    <TableHeader className="sticky top-0 bg-card/95 backdrop-blur-md z-10 font-semibold text-muted-foreground uppercase border-b border-border/40 whitespace-nowrap">
+                      <TableRow className="whitespace-nowrap">
+                        <TableHead className="font-semibold py-3.5 pl-6 whitespace-nowrap">{t("assetDetails")}</TableHead>
+                        <TableHead className="font-semibold py-3.5 px-4 whitespace-nowrap">{t("category")}</TableHead>
+                        <TableHead className="font-semibold py-3.5 px-4 whitespace-nowrap">{t("status")}</TableHead>
+                        <TableHead className="font-semibold py-3.5 px-4 whitespace-nowrap">{t("condition")}</TableHead>
+                        <TableHead className="font-semibold py-3.5 px-4 whitespace-nowrap">{t("assignedTo")}</TableHead>
+                        <TableHead className="text-right font-semibold py-3.5 pl-4 pr-6 whitespace-nowrap">{tCommon("actions")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {paginatedActiveAssets.map((a) => (
-                        <TableRow key={a.id} className="hover:bg-zinc-50/30 transition-colors">
-                          <TableCell className="py-4">
+                        <TableRow key={a.id} className="hover:bg-zinc-50/30 transition-colors whitespace-nowrap">
+                          <TableCell className="py-3.5 pl-6 pr-4 whitespace-nowrap">
                             <div className="flex items-center gap-3">
                               {a.image_path ? (
                                 <img
                                   src={`${apiHost}${a.image_path}`}
                                   alt={a.name}
-                                  className="w-12 h-12 object-cover rounded-xl border border-zinc-150 shadow-sm"
+                                  className="w-10 h-10 object-cover rounded-xl border border-zinc-150 shadow-sm shrink-0"
                                 />
                               ) : (
-                                <div className="w-12 h-12 bg-zinc-100 flex items-center justify-center rounded-xl border border-zinc-150">
-                                  <Laptop className="size-5 text-zinc-400" />
+                                <div className="w-10 h-10 bg-zinc-100 flex items-center justify-center rounded-xl border border-zinc-150 shrink-0">
+                                  <Laptop className="size-4 text-zinc-400" />
                                 </div>
                               )}
-                              <div>
-                                <div className="font-semibold text-zinc-900">{a.name}</div>
-                                <div className="text-xs text-muted-foreground font-mono">
+                              <div className="min-w-0">
+                                <div className="font-semibold text-zinc-900 whitespace-nowrap">{a.name}</div>
+                                <div className="text-xs text-muted-foreground font-mono whitespace-nowrap">
                                   SN: {a.serial_number || "N/A"}
                                 </div>
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell className="text-zinc-600">{a.category?.name}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className={`rounded-full px-2.5 py-0.5 font-medium ${assetStatusColors[a.status] || ""}`}>
+                          <TableCell className="py-3.5 px-4 text-zinc-600 whitespace-nowrap">{a.category?.name}</TableCell>
+                          <TableCell className="py-3.5 px-4 whitespace-nowrap">
+                            <Badge variant="outline" className={`rounded-full px-2.5 py-0.5 font-medium whitespace-nowrap ${assetStatusColors[a.status] || ""}`}>
                               {a.status === "available" ? t("available") : a.status === "assigned" ? t("assigned") : a.status === "under_repair" ? t("underRepair") : t("broken")}
                             </Badge>
                           </TableCell>
-                          <TableCell className="capitalize text-zinc-600">
+                          <TableCell className="py-3.5 px-4 capitalize text-zinc-600 whitespace-nowrap">
                             {a.condition === "good" ? t("good") : a.condition === "fair" ? t("fair") : t("damaged")}
                           </TableCell>
-                          <TableCell className="text-zinc-700">
+                          <TableCell className="py-3.5 px-4 text-zinc-700 whitespace-nowrap">
                             {a.employee ? (
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium text-zinc-900">
-                                  {a.employee.first_name} {a.employee.last_name}
-                                </span>
-                              </div>
+                              <span className="font-medium text-zinc-900 whitespace-nowrap">
+                                {a.employee.first_name} {a.employee.last_name}
+                              </span>
                             ) : (
-                              <span className="text-muted-foreground italic text-xs">{t("unassigned")}</span>
+                              <span className="text-muted-foreground italic text-xs whitespace-nowrap">{t("unassigned")}</span>
                             )}
                           </TableCell>
-                          <TableCell className="text-right pr-6 space-x-2">
-                            {a.status === "available" && (
+                          <TableCell className="py-3.5 pl-4 pr-6 text-right whitespace-nowrap">
+                            <div className="inline-flex items-center justify-end gap-1.5">
+                              {a.status === "available" && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-8 rounded-lg border-primary/20 text-primary hover:bg-primary/5 gap-1 text-xs whitespace-nowrap"
+                                  onClick={() => setAssignOpen({ open: true, asset: a })}
+                                >
+                                  <UserPlus className="size-3.5" /> {t("assign")}
+                                </Button>
+                              )}
+                              {a.status === "assigned" && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-8 rounded-lg border-zinc-200 text-zinc-700 hover:bg-zinc-50 gap-1 text-xs whitespace-nowrap"
+                                  onClick={() => setReturnOpen({ open: true, asset: a })}
+                                >
+                                  <Undo2 className="size-3.5" /> {t("return")}
+                                </Button>
+                              )}
                               <Button
-                                size="sm"
-                                variant="outline"
-                                className="rounded-xl border-primary/20 text-primary hover:bg-primary/5 gap-1.5"
-                                onClick={() => setAssignOpen({ open: true, asset: a })}
+                                size="icon"
+                                variant="ghost"
+                                className="size-8 rounded-lg text-muted-foreground hover:text-zinc-900 hover:bg-zinc-100"
+                                onClick={() => setHistoryOpen({ open: true, asset: a })}
                               >
-                                <UserPlus className="size-4" /> {t("assign")}
+                                <Eye className="size-3.5" />
                               </Button>
-                            )}
-                            {a.status === "assigned" && (
                               <Button
-                                size="sm"
-                                variant="outline"
-                                className="rounded-xl border-zinc-200 text-zinc-700 hover:bg-zinc-50 gap-1.5"
-                                onClick={() => setReturnOpen({ open: true, asset: a })}
+                                size="icon"
+                                variant="ghost"
+                                className="size-8 rounded-lg text-muted-foreground hover:text-zinc-900 hover:bg-zinc-100"
+                                onClick={() => handleEditClick(a)}
                               >
-                                <Undo2 className="size-4" /> {t("return")}
+                                <Pencil className="size-3.5" />
                               </Button>
-                            )}
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="rounded-xl border-zinc-200 text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"
-                              onClick={() => setHistoryOpen({ open: true, asset: a })}
-                            >
-                              <Eye className="size-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="rounded-xl border-zinc-200 text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"
-                              onClick={() => handleEditClick(a)}
-                            >
-                              <Pencil className="size-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="rounded-xl border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
-                              onClick={() => setDeleteOpen({ open: true, assetId: a.id })}
-                            >
-                              <Trash2 className="size-4" />
-                            </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="size-8 rounded-lg text-rose-500 hover:text-rose-600 hover:bg-rose-50"
+                                onClick={() => setDeleteOpen({ open: true, assetId: a.id })}
+                              >
+                                <Trash2 className="size-3.5" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -855,74 +877,76 @@ export default function AssetDashboardPage() {
                 <div className="text-center py-12 text-muted-foreground">{t("noRepairAssets")}</div>
               ) : (
                 <div className="overflow-x-auto max-h-[520px] overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
-                  <Table>
-                    <TableHeader className="sticky top-0 bg-card/95 backdrop-blur-md z-10 font-semibold text-muted-foreground uppercase border-b border-border/40">
-                      <TableRow>
-                        <TableHead className="font-semibold py-4">{t("assetDetails")}</TableHead>
-                        <TableHead className="font-semibold">{t("category")}</TableHead>
-                        <TableHead className="font-semibold">{t("status")}</TableHead>
-                        <TableHead className="font-semibold">{t("condition")}</TableHead>
-                        <TableHead className="text-right font-semibold pr-6">{tCommon("actions")}</TableHead>
+                  <Table className="w-full min-w-[850px]">
+                    <TableHeader className="sticky top-0 bg-card/95 backdrop-blur-md z-10 font-semibold text-muted-foreground uppercase border-b border-border/40 whitespace-nowrap">
+                      <TableRow className="whitespace-nowrap">
+                        <TableHead className="font-semibold py-3.5 pl-6 whitespace-nowrap">{t("assetDetails")}</TableHead>
+                        <TableHead className="font-semibold py-3.5 px-4 whitespace-nowrap">{t("category")}</TableHead>
+                        <TableHead className="font-semibold py-3.5 px-4 whitespace-nowrap">{t("status")}</TableHead>
+                        <TableHead className="font-semibold py-3.5 px-4 whitespace-nowrap">{t("condition")}</TableHead>
+                        <TableHead className="text-right font-semibold py-3.5 pl-4 pr-6 whitespace-nowrap">{tCommon("actions")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {paginatedRepairAssets.map((a) => (
-                        <TableRow key={a.id} className="hover:bg-zinc-50/30 transition-colors">
-                          <TableCell className="py-4">
+                        <TableRow key={a.id} className="hover:bg-zinc-50/30 transition-colors whitespace-nowrap">
+                          <TableCell className="py-3.5 pl-6 pr-4 whitespace-nowrap">
                             <div className="flex items-center gap-3">
                               {a.image_path ? (
                                 <img
                                   src={`${apiHost}${a.image_path}`}
                                   alt={a.name}
-                                  className="w-12 h-12 object-cover rounded-xl border border-zinc-150 shadow-sm"
+                                  className="w-10 h-10 object-cover rounded-xl border border-zinc-150 shadow-sm shrink-0"
                                 />
                               ) : (
-                                <div className="w-12 h-12 bg-zinc-100 flex items-center justify-center rounded-xl border border-zinc-150">
-                                  <Laptop className="size-5 text-zinc-400" />
+                                <div className="w-10 h-10 bg-zinc-100 flex items-center justify-center rounded-xl border border-zinc-150 shrink-0">
+                                  <Laptop className="size-4 text-zinc-400" />
                                 </div>
                               )}
-                              <div>
-                                <div className="font-semibold text-zinc-900">{a.name}</div>
-                                <div className="text-xs text-muted-foreground font-mono">
+                              <div className="min-w-0">
+                                <div className="font-semibold text-zinc-900 whitespace-nowrap">{a.name}</div>
+                                <div className="text-xs text-muted-foreground font-mono whitespace-nowrap">
                                   SN: {a.serial_number || "N/A"}
                                 </div>
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell className="text-zinc-600">{a.category?.name}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className={`rounded-full px-2.5 py-0.5 font-medium ${assetStatusColors[a.status] || ""}`}>
+                          <TableCell className="py-3.5 px-4 text-zinc-600 whitespace-nowrap">{a.category?.name}</TableCell>
+                          <TableCell className="py-3.5 px-4 whitespace-nowrap">
+                            <Badge variant="outline" className={`rounded-full px-2.5 py-0.5 font-medium whitespace-nowrap ${assetStatusColors[a.status] || ""}`}>
                               {a.status === "available" ? t("available") : a.status === "assigned" ? t("assigned") : a.status === "under_repair" ? t("underRepair") : t("broken")}
                             </Badge>
                           </TableCell>
-                          <TableCell className="capitalize text-zinc-600">
+                          <TableCell className="py-3.5 px-4 capitalize text-zinc-600 whitespace-nowrap">
                             {a.condition === "good" ? t("good") : a.condition === "fair" ? t("fair") : t("damaged")}
                           </TableCell>
-                          <TableCell className="text-right pr-6 space-x-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="rounded-xl border-zinc-200 text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"
-                              onClick={() => setHistoryOpen({ open: true, asset: a })}
-                            >
-                              <Eye className="size-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="rounded-xl border-zinc-200 text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"
-                              onClick={() => handleEditClick(a)}
-                            >
-                              <Pencil className="size-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="rounded-xl border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
-                              onClick={() => setDeleteOpen({ open: true, assetId: a.id })}
-                            >
-                              <Trash2 className="size-4" />
-                            </Button>
+                          <TableCell className="py-3.5 pl-4 pr-6 text-right whitespace-nowrap">
+                            <div className="inline-flex items-center justify-end gap-1.5">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="size-8 rounded-lg text-muted-foreground hover:text-zinc-900 hover:bg-zinc-100"
+                                onClick={() => setHistoryOpen({ open: true, asset: a })}
+                              >
+                                <Eye className="size-3.5" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="size-8 rounded-lg text-muted-foreground hover:text-zinc-900 hover:bg-zinc-100"
+                                onClick={() => handleEditClick(a)}
+                              >
+                                <Pencil className="size-3.5" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="size-8 rounded-lg text-rose-500 hover:text-rose-600 hover:bg-rose-50"
+                                onClick={() => setDeleteOpen({ open: true, assetId: a.id })}
+                              >
+                                <Trash2 className="size-3.5" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -954,66 +978,68 @@ export default function AssetDashboardPage() {
                 <div className="text-center py-12 text-muted-foreground">{t("noBrokenAssets")}</div>
               ) : (
                 <div className="overflow-x-auto max-h-[520px] overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
-                  <Table>
-                    <TableHeader className="sticky top-0 bg-card/95 backdrop-blur-md z-10 font-semibold text-muted-foreground uppercase border-b border-border/40">
-                      <TableRow>
-                        <TableHead className="font-semibold py-4">{t("assetDetails")}</TableHead>
-                        <TableHead className="font-semibold">{t("category")}</TableHead>
-                        <TableHead className="font-semibold">{t("status")}</TableHead>
-                        <TableHead className="font-semibold">{t("condition")}</TableHead>
-                        <TableHead className="text-right font-semibold pr-6">{tCommon("actions")}</TableHead>
+                  <Table className="w-full min-w-[850px]">
+                    <TableHeader className="sticky top-0 bg-card/95 backdrop-blur-md z-10 font-semibold text-muted-foreground uppercase border-b border-border/40 whitespace-nowrap">
+                      <TableRow className="whitespace-nowrap">
+                        <TableHead className="font-semibold py-3.5 pl-6 whitespace-nowrap">{t("assetDetails")}</TableHead>
+                        <TableHead className="font-semibold py-3.5 px-4 whitespace-nowrap">{t("category")}</TableHead>
+                        <TableHead className="font-semibold py-3.5 px-4 whitespace-nowrap">{t("status")}</TableHead>
+                        <TableHead className="font-semibold py-3.5 px-4 whitespace-nowrap">{t("condition")}</TableHead>
+                        <TableHead className="text-right font-semibold py-3.5 pl-4 pr-6 whitespace-nowrap">{tCommon("actions")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {paginatedBrokenAssets.map((a) => (
-                        <TableRow key={a.id} className="hover:bg-zinc-50/30 transition-colors">
-                          <TableCell className="py-4">
+                        <TableRow key={a.id} className="hover:bg-zinc-50/30 transition-colors whitespace-nowrap">
+                          <TableCell className="py-3.5 pl-6 pr-4 whitespace-nowrap">
                             <div className="flex items-center gap-3">
                               {a.image_path ? (
                                 <img
                                   src={`${apiHost}${a.image_path}`}
                                   alt={a.name}
-                                  className="w-12 h-12 object-cover rounded-xl border border-zinc-150 shadow-sm"
+                                  className="w-10 h-10 object-cover rounded-xl border border-zinc-150 shadow-sm shrink-0"
                                 />
                               ) : (
-                                <div className="w-12 h-12 bg-zinc-100 flex items-center justify-center rounded-xl border border-zinc-150">
-                                  <Laptop className="size-5 text-zinc-400" />
+                                <div className="w-10 h-10 bg-zinc-100 flex items-center justify-center rounded-xl border border-zinc-150 shrink-0">
+                                  <Laptop className="size-4 text-zinc-400" />
                                 </div>
                               )}
-                              <div>
-                                <div className="font-semibold text-zinc-900">{a.name}</div>
-                                <div className="text-xs text-muted-foreground font-mono">
+                              <div className="min-w-0">
+                                <div className="font-semibold text-zinc-900 whitespace-nowrap">{a.name}</div>
+                                <div className="text-xs text-muted-foreground font-mono whitespace-nowrap">
                                   SN: {a.serial_number || "N/A"}
                                 </div>
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell className="text-zinc-600">{a.category?.name}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className={`rounded-full px-2.5 py-0.5 font-medium ${assetStatusColors[a.status] || ""}`}>
+                          <TableCell className="py-3.5 px-4 text-zinc-600 whitespace-nowrap">{a.category?.name}</TableCell>
+                          <TableCell className="py-3.5 px-4 whitespace-nowrap">
+                            <Badge variant="outline" className={`rounded-full px-2.5 py-0.5 font-medium whitespace-nowrap ${assetStatusColors[a.status] || ""}`}>
                               {a.status === "available" ? t("available") : a.status === "assigned" ? t("assigned") : a.status === "under_repair" ? t("underRepair") : t("broken")}
                             </Badge>
                           </TableCell>
-                          <TableCell className="capitalize text-zinc-600">
+                          <TableCell className="py-3.5 px-4 capitalize text-zinc-600 whitespace-nowrap">
                             {a.condition === "good" ? t("good") : a.condition === "fair" ? t("fair") : t("damaged")}
                           </TableCell>
-                          <TableCell className="text-right pr-6 space-x-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="rounded-xl border-zinc-200 text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"
-                              onClick={() => setHistoryOpen({ open: true, asset: a })}
-                            >
-                              <Eye className="size-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="rounded-xl border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
-                              onClick={() => setDeleteOpen({ open: true, assetId: a.id })}
-                            >
-                              <Trash2 className="size-4" />
-                            </Button>
+                          <TableCell className="py-3.5 pl-4 pr-6 text-right whitespace-nowrap">
+                            <div className="inline-flex items-center justify-end gap-1.5">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="size-8 rounded-lg text-muted-foreground hover:text-zinc-900 hover:bg-zinc-100"
+                                onClick={() => setHistoryOpen({ open: true, asset: a })}
+                              >
+                                <Eye className="size-3.5" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="size-8 rounded-lg text-rose-500 hover:text-rose-600 hover:bg-rose-50"
+                                onClick={() => setDeleteOpen({ open: true, assetId: a.id })}
+                              >
+                                <Trash2 className="size-3.5" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -1088,20 +1114,37 @@ export default function AssetDashboardPage() {
                 <div className="text-center py-12 text-muted-foreground">{tCommon("noData")}</div>
               ) : (
                 <div className="overflow-x-auto max-h-[520px] overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
-                  <Table>
-                    <TableHeader className="sticky top-0 bg-card/95 backdrop-blur-md z-10 font-semibold text-muted-foreground uppercase border-b border-border/40">
-                      <TableRow>
-                        <TableHead className="font-semibold py-4 pl-6">ID</TableHead>
-                        <TableHead className="font-semibold">{t("category")}</TableHead>
-                        <TableHead className="font-semibold">{tCommon("description") || "Description"}</TableHead>
+                  <Table className="w-full min-w-[750px]">
+                    <TableHeader className="sticky top-0 bg-card/95 backdrop-blur-md z-10 font-semibold text-muted-foreground uppercase border-b border-border/40 whitespace-nowrap">
+                      <TableRow className="whitespace-nowrap">
+                        <TableHead className="font-semibold py-3.5 pl-6 whitespace-nowrap">ID</TableHead>
+                        <TableHead className="font-semibold py-3.5 px-4 whitespace-nowrap">{t("category")}</TableHead>
+                        <TableHead className="font-semibold py-3.5 px-4 whitespace-nowrap">{tCommon("description") || "Description"}</TableHead>
+                        <TableHead className="font-semibold py-3.5 px-4 whitespace-nowrap text-center">Assets</TableHead>
+                        <TableHead className="text-right font-semibold py-3.5 pl-4 pr-6 whitespace-nowrap">{tCommon("actions")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {paginatedCategories.map((c) => (
-                        <TableRow key={c.id} className="hover:bg-zinc-50/30 transition-colors">
-                          <TableCell className="font-mono text-zinc-400 py-4 pl-6">#{c.id}</TableCell>
-                          <TableCell className="font-semibold text-zinc-900">{c.name}</TableCell>
-                          <TableCell className="text-zinc-600">{c.description || <span className="italic text-zinc-400 text-xs">—</span>}</TableCell>
+                        <TableRow key={c.id} className="hover:bg-zinc-50/30 transition-colors whitespace-nowrap">
+                          <TableCell className="font-mono text-zinc-400 py-3.5 pl-6 whitespace-nowrap">#{c.id}</TableCell>
+                          <TableCell className="font-semibold text-zinc-900 py-3.5 px-4 whitespace-nowrap">{c.name}</TableCell>
+                          <TableCell className="text-zinc-600 py-3.5 px-4 whitespace-nowrap">{c.description || <span className="italic text-zinc-400 text-xs">—</span>}</TableCell>
+                          <TableCell className="py-3.5 px-4 text-center whitespace-nowrap">
+                            <Badge variant="outline" className="rounded-full px-2.5 py-0.5 text-xs font-medium bg-zinc-50 text-zinc-600 border-zinc-200">
+                              {c._count?.asset ?? 0} {c._count?.asset === 1 ? "asset" : "assets"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="py-3.5 pl-4 pr-6 text-right whitespace-nowrap">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="size-8 rounded-lg text-rose-500 hover:text-rose-600 hover:bg-rose-50"
+                              onClick={() => setDeleteCategoryOpen({ open: true, categoryId: c.id })}
+                            >
+                              <Trash2 className="size-3.5" />
+                            </Button>
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -1132,56 +1175,56 @@ export default function AssetDashboardPage() {
                 <div className="text-center py-12 text-muted-foreground">{tCommon("noData")}</div>
               ) : (
                 <div className="overflow-x-auto max-h-[520px] overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
-                  <Table>
-                    <TableHeader className="sticky top-0 bg-card/95 backdrop-blur-md z-10 font-semibold text-muted-foreground uppercase border-b border-border/40">
-                      <TableRow>
-                        <TableHead className="font-semibold py-4 pl-6">Requested By</TableHead>
-                        <TableHead className="font-semibold">Type</TableHead>
-                        <TableHead className="font-semibold">Category / Asset</TableHead>
-                        <TableHead className="font-semibold">Reason</TableHead>
-                        <TableHead className="font-semibold">Date</TableHead>
-                        <TableHead className="font-semibold">Status</TableHead>
-                        <TableHead className="text-right font-semibold pr-6">Actions</TableHead>
+                  <Table className="w-full min-w-[950px]">
+                    <TableHeader className="sticky top-0 bg-card/95 backdrop-blur-md z-10 font-semibold text-muted-foreground uppercase border-b border-border/40 whitespace-nowrap">
+                      <TableRow className="whitespace-nowrap">
+                        <TableHead className="font-semibold py-3.5 pl-6 whitespace-nowrap">Requested By</TableHead>
+                        <TableHead className="font-semibold py-3.5 px-4 whitespace-nowrap">Type</TableHead>
+                        <TableHead className="font-semibold py-3.5 px-4 whitespace-nowrap">Category / Asset</TableHead>
+                        <TableHead className="font-semibold py-3.5 px-4 whitespace-nowrap">Reason</TableHead>
+                        <TableHead className="font-semibold py-3.5 px-4 whitespace-nowrap">Date</TableHead>
+                        <TableHead className="font-semibold py-3.5 px-4 whitespace-nowrap">Status</TableHead>
+                        <TableHead className="text-right font-semibold py-3.5 pl-4 pr-6 whitespace-nowrap">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {paginatedRequests.map((r) => (
-                        <TableRow key={r.id} className="hover:bg-zinc-50/30 transition-colors">
-                          <TableCell className="py-4 pl-6">
-                            <div className="flex items-center gap-2">
-                              <UserCircle className="size-5 text-zinc-400" />
-                              <span className="font-semibold text-zinc-900">
+                        <TableRow key={r.id} className="hover:bg-zinc-50/30 transition-colors whitespace-nowrap">
+                          <TableCell className="py-3.5 pl-6 pr-4 whitespace-nowrap">
+                            <div className="flex items-center gap-2 whitespace-nowrap">
+                              <UserCircle className="size-5 text-zinc-400 shrink-0" />
+                              <span className="font-semibold text-zinc-900 whitespace-nowrap">
                                 {r.employee?.first_name} {r.employee?.last_name}
                               </span>
                             </div>
                           </TableCell>
-                          <TableCell className="capitalize font-medium text-zinc-700">{r.type}</TableCell>
-                          <TableCell className="text-zinc-600">
+                          <TableCell className="capitalize font-medium text-zinc-700 py-3.5 px-4 whitespace-nowrap">{r.type}</TableCell>
+                          <TableCell className="text-zinc-600 py-3.5 px-4 whitespace-nowrap">
                             {r.type === "assignment" ? (
                               r.category?.name
                             ) : (
                               <div>
-                                <span className="font-medium text-zinc-900">{r.asset?.name}</span>
-                                <div className="text-xs font-mono text-zinc-400">SN: {r.asset?.serial_number || "N/A"}</div>
+                                <span className="font-medium text-zinc-900 whitespace-nowrap">{r.asset?.name}</span>
+                                <div className="text-xs font-mono text-zinc-400 whitespace-nowrap">SN: {r.asset?.serial_number || "N/A"}</div>
                               </div>
                             )}
                           </TableCell>
-                          <TableCell className="max-w-[180px] truncate text-zinc-600" title={r.reason}>
+                          <TableCell className="max-w-[200px] truncate text-zinc-600 py-3.5 px-4 whitespace-nowrap" title={r.reason}>
                             {r.reason || <span className="text-zinc-300 italic text-xs">No reason provided</span>}
                           </TableCell>
-                          <TableCell className="text-zinc-500 font-mono text-xs">
+                          <TableCell className="text-zinc-500 font-mono text-xs py-3.5 px-4 whitespace-nowrap">
                             {dayjs(r.created_at).format("YYYY-MM-DD")}
                           </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className={`rounded-full px-2.5 py-0.5 font-medium ${requestStatusColors[r.status] || ""}`}>
+                          <TableCell className="py-3.5 px-4 whitespace-nowrap">
+                            <Badge variant="outline" className={`rounded-full px-2.5 py-0.5 font-medium whitespace-nowrap ${requestStatusColors[r.status] || ""}`}>
                               {r.status === "available" ? "RETURNED" : r.status.replace("_", " ").toUpperCase()}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-right pr-6">
+                          <TableCell className="py-3.5 pl-4 pr-6 text-right whitespace-nowrap">
                             {r.status === "pending_hr" && (
                               <Button
                                 size="sm"
-                                className="rounded-xl shadow-sm gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                                className="rounded-xl shadow-sm gap-1 bg-emerald-600 hover:bg-emerald-700 text-white whitespace-nowrap"
                                 onClick={() => setApproveOpen({ open: true, request: r })}
                               >
                                 Review & Approve
@@ -1501,6 +1544,59 @@ export default function AssetDashboardPage() {
               {isSubmitting ? "Deleting..." : "Delete Asset"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ============================================================ */}
+      {/* DELETE CATEGORY DIALOG */}
+      {/* ============================================================ */}
+      <Dialog open={deleteCategoryOpen.open} onOpenChange={(v) => !v && setDeleteCategoryOpen({ open: false, categoryId: null })}>
+        <DialogContent className="sm:max-w-[425px] rounded-2xl">
+          {(() => {
+            const catToDelete = categories.find((c) => c.id === deleteCategoryOpen.categoryId);
+            const assetCount = catToDelete?._count?.asset ?? 0;
+            const requestCount = catToDelete?._count?.assetrequest ?? 0;
+            const inUse = assetCount > 0 || requestCount > 0;
+
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="text-xl font-bold text-rose-600">
+                    {locale === "km" ? "បញ្ជាក់ការលុបប្រភេទ" : "Confirm Category Deletion"}
+                  </DialogTitle>
+                  <DialogDescription asChild>
+                    <div className="text-sm text-muted-foreground pt-1">
+                      {inUse ? (
+                        <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs leading-relaxed dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-200">
+                          {locale === "km"
+                            ? `មិនអាចលុបប្រភេទ "${catToDelete?.name}" បានទេ ពីព្រោះកំពុងមាន ${assetCount} ទ្រព្យសកម្មកំពុងប្រើប្រាស់វា។ សូមលុប ឬផ្ទេរទ្រព្យសកម្មទាំងនោះជាមុនសិន។`
+                            : `Cannot delete "${catToDelete?.name}" because it is currently assigned to ${assetCount} asset(s). Please delete or reassign those assets first.`}
+                        </div>
+                      ) : (
+                        <span>
+                          {locale === "km"
+                            ? `តើអ្នកប្រាកដជាចង់លុបប្រភេទ "${catToDelete?.name}" មែនទេ? សកម្មភាពនេះមិនអាចត្រឡប់វិញបានទេ។`
+                            : `Are you sure you want to delete "${catToDelete?.name}"? This action cannot be undone.`}
+                        </span>
+                      )}
+                    </div>
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter className="gap-2 mt-4">
+                  <Button variant="outline" className="rounded-xl" onClick={() => setDeleteCategoryOpen({ open: false, categoryId: null })}>
+                    {tCommon("cancel")}
+                  </Button>
+                  <Button
+                    className="rounded-xl bg-rose-600 hover:bg-rose-700 text-white"
+                    onClick={handleDeleteCategory}
+                    disabled={isSubmitting || inUse}
+                  >
+                    {isSubmitting ? tCommon("deleting") || "Deleting..." : tCommon("delete") || "Delete"}
+                  </Button>
+                </DialogFooter>
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
 

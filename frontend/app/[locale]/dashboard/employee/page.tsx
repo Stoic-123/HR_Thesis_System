@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Link } from "@/src/i18n/routing";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
@@ -56,6 +56,7 @@ import { useMe } from "@/hooks/useMe";
 import { toast } from "sonner";
 
 export default function EmployeePage() {
+  const locale = useLocale();
   const queryClient = useQueryClient();
   const t = useTranslations("employee");
   const tc = useTranslations("common");
@@ -193,6 +194,18 @@ export default function EmployeePage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.department_id) {
+      toast.error(locale === "km" ? "សូមជ្រើសរើសផ្នែក (Department)" : "Please select a department");
+      return;
+    }
+    if (!formData.position_id) {
+      toast.error(locale === "km" ? "សូមជ្រើសរើសតួនាទី (Position)" : "Please select a position");
+      return;
+    }
+    if (!formData.role_id) {
+      toast.error(locale === "km" ? "សូមជ្រើសរើសសិទ្ធិប្រើប្រាស់ (User Role)" : "Please select a user role");
+      return;
+    }
     const data = new FormData();
     Object.entries(formData).forEach(([key, value]) => {
       data.append(key, value);

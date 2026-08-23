@@ -68,6 +68,9 @@ export const deleteLeaveTypeController = async (req, res) => {
         .json({ result: false, message: "Id is required..!" });
     }
     const leaveTypeDeleteData = await deleteLeaveType(id);
+    if (!leaveTypeDeleteData.result) {
+      return res.status(400).json(leaveTypeDeleteData);
+    }
     res.status(200).json(leaveTypeDeleteData);
   } catch (error) {
     console.error({ result: false, message: error.message });

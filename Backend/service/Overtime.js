@@ -106,6 +106,24 @@ export const createOvertime = async (employee_id, start_date, end_date, reason, 
       }
     }
 
+    // Get employee details and check department
+    const employee = await prisma.employee.findUnique({
+      where: { id: parseInt(employee_id) },
+      include: {
+        department_employee_department_idTodepartment: true,
+        positions: true,
+        company: true,
+      },
+    });
+
+    if (employee?.is_active !== "active") {
+      throw new Error("Your employee account is inactive. Please contact HR/Admin.");
+    }
+
+    if (!employee?.department_id) {
+      throw new Error("You are not assigned to any department. Please contact HR/Admin before requesting overtime.");
+    }
+
     // First create the overtime record to get an ID
     const newOvertime = await prisma.overtime.create({
       data: {
@@ -113,16 +131,6 @@ export const createOvertime = async (employee_id, start_date, end_date, reason, 
         start_date: startDate,
         end_date: endDate,
         reason: reason,
-      },
-    });
-
-    // Get employee details
-    const employee = await prisma.employee.findUnique({
-      where: { id: parseInt(employee_id) },
-      include: {
-        department_employee_department_idTodepartment: true,
-        positions: true,
-        company: true,
       },
     });
 

@@ -74,6 +74,9 @@ export const deletedPositionController = async (req, res) => {
         .json({ result: false, message: "Position_id is required..!" });
     }
     const positionDeleteData = await deletePosition(position_id, req.user.company_id);
+    if (!positionDeleteData.result) {
+      return res.status(400).json(positionDeleteData);
+    }
     res.status(200).json(positionDeleteData);
   } catch (error) {
     console.log(error.message);

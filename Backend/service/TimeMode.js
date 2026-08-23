@@ -88,10 +88,35 @@ export const updateTimeMode = async (id, name, company_id, remark) => {
 
 export const deleteTimeMode = async (id, company_id) => {
   try {
+    const timeModeId = parseInt(id);
+    const companyId = parseInt(company_id);
+
+    // 1. Check if any employee working profile is using this time mode
+    const workingProfileCount = await prisma.employeeworkingprofile.count({
+      where: { time_mode_id: timeModeId },
+    });
+    if (workingProfileCount > 0) {
+      return {
+        result: false,
+        message: `Cannot delete this Time Mode because ${workingProfileCount} employee working profile(s) are currently using it.`,
+      };
+    }
+
+    // 2. Check if any schedule (dayofweek) is using this time mode
+    const dayOfWeekCount = await prisma.dayofweek.count({
+      where: { time_mode_id: timeModeId },
+    });
+    if (dayOfWeekCount > 0) {
+      return {
+        result: false,
+        message: `Cannot delete this Time Mode because ${dayOfWeekCount} day schedule(s) are currently linked to it.`,
+      };
+    }
+
     await prisma.timemode.delete({
       where: {
-        id: parseInt(id),
-        company_id: parseInt(company_id),
+        id: timeModeId,
+        company_id: companyId,
       },
     });
 

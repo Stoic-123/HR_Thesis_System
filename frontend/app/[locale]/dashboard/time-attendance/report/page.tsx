@@ -158,13 +158,32 @@ const TimeAttendanceReportPage = () => {
   const locale = useLocale();
   const { data: user } = useMe();
 
+  const roleName = (user as any)?.data?.employee?.role?.name?.toLowerCase() || (user as any)?.employee?.role?.name?.toLowerCase() || "";
+  const isHrOrAdmin = roleName.includes("admin") || roleName.includes("superadmin") || roleName.includes("hr") || roleName.includes("general manager") || roleName.includes("director");
+  const userDeptId = (user as any)?.data?.employee?.department_id || (user as any)?.data?.employee?.department_employee_department_idTodepartment?.id || (user as any)?.employee?.department_id || (user as any)?.employee?.department_employee_department_idTodepartment?.id;
+
+  useEffect(() => {
+    if (!isHrOrAdmin && userDeptId) {
+      setSelectedDeptId(String(userDeptId));
+    }
+  }, [isHrOrAdmin, userDeptId]);
+
+  const visibleDepartments = isHrOrAdmin
+    ? departments
+    : departments.filter((d) => d.id === Number(userDeptId));
+
+  const visibleEmployees = isHrOrAdmin
+    ? (selectedDeptId === "all" ? employees : employees.filter((e: any) => e.department_id === Number(selectedDeptId)))
+    : employees.filter((e: any) => e.department_id === Number(userDeptId));
+
   const fetchReport = async () => {
     setLoading(true);
     try {
+      const effectiveDeptId = !isHrOrAdmin && userDeptId ? String(userDeptId) : selectedDeptId;
       const res = await getAttendanceReport({
         startDate: toISODate(startDate),
         endDate: toISODate(endDate),
-        departmentId: selectedDeptId,
+        departmentId: effectiveDeptId,
         employeeId: selectedEmpId,
         page,
         limit,
@@ -208,7 +227,7 @@ const TimeAttendanceReportPage = () => {
 
   useEffect(() => {
     fetchReport();
-  }, [startDate, endDate, selectedDeptId, selectedEmpId, page, limit]);
+  }, [startDate, endDate, selectedDeptId, selectedEmpId, page, limit, isHrOrAdmin, userDeptId]);
 
   const handleExportPDF = () => {
     if (!report) return;
@@ -468,13 +487,17 @@ const TimeAttendanceReportPage = () => {
           {/* Department Select */}
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold text-muted-foreground">{t("department")}</Label>
-            <Select value={selectedDeptId} onValueChange={setSelectedDeptId}>
+            <Select 
+              value={!isHrOrAdmin && userDeptId ? String(userDeptId) : selectedDeptId} 
+              onValueChange={setSelectedDeptId}
+              disabled={!isHrOrAdmin}
+            >
               <SelectTrigger className="h-10 rounded-xl shadow-xs bg-background border-border/60">
                 <SelectValue placeholder={t("department")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">{t("all")}</SelectItem>
-                {departments.map((dept) => (
+                {isHrOrAdmin && <SelectItem value="all">{t("all")}</SelectItem>}
+                {visibleDepartments.map((dept) => (
                   <SelectItem key={dept.id} value={String(dept.id)}>
                     {dept.name}
                   </SelectItem>
@@ -492,7 +515,7 @@ const TimeAttendanceReportPage = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t("all")}</SelectItem>
-                {employees.map((emp) => (
+                {visibleEmployees.map((emp) => (
                   <SelectItem key={emp.id} value={String(emp.id)}>
                     {`${emp.first_name} ${emp.last_name}`}
                   </SelectItem>

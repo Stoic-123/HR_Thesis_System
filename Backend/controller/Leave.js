@@ -307,9 +307,13 @@ export const getAllLeavesController = async (req, res) => {
       include: { role: true },
     });
 
+    const roleName = currentEmployee?.role?.name?.toLowerCase() || '';
     const isHrOrAdmin =
-      currentEmployee?.role?.name?.toLowerCase().includes("admin") ||
-      currentEmployee?.role?.name?.toLowerCase().includes("hr");
+      roleName.includes("admin") ||
+      roleName.includes("superadmin") ||
+      roleName.includes("hr") ||
+      roleName.includes("general manager") ||
+      roleName.includes("director");
     
     const filters = {};
     if (status) filters.status = status;

@@ -79,6 +79,9 @@ export const deleteLocationController = async (req, res) => {
     const company_id = req.user.company_id;
 
     const result = await deleteLocation(id, company_id);
+    if (!result.result) {
+      return res.status(400).json(result);
+    }
 
     // Audit Log
     await addAuditLog(

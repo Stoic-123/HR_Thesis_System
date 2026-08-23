@@ -94,16 +94,35 @@ export const getAllEmployee = async (company_id, page = 1, limit = 10, status = 
     }
     if (search && search.trim()) {
       const cleanSearch = search.trim();
-      where.AND.push({
-        OR: [
-          { first_name: { contains: cleanSearch } },
-          { last_name: { contains: cleanSearch } },
-          { email: { contains: cleanSearch } },
-          { address: { contains: cleanSearch } },
-          { positions: { name: { contains: cleanSearch } } },
-          { department_employee_department_idTodepartment: { name: { contains: cleanSearch } } },
-        ]
-      });
+      const searchTerms = cleanSearch.split(/\s+/).filter(Boolean);
+
+      if (searchTerms.length > 1) {
+        where.AND.push({
+          OR: [
+            {
+              AND: [
+                { first_name: { contains: searchTerms[0] } },
+                { last_name: { contains: searchTerms.slice(1).join(" ") } },
+              ],
+            },
+            {
+              AND: [
+                { last_name: { contains: searchTerms[0] } },
+                { first_name: { contains: searchTerms.slice(1).join(" ") } },
+              ],
+            },
+            { first_name: { contains: cleanSearch } },
+            { last_name: { contains: cleanSearch } },
+          ],
+        });
+      } else {
+        where.AND.push({
+          OR: [
+            { first_name: { contains: cleanSearch } },
+            { last_name: { contains: cleanSearch } },
+          ],
+        });
+      }
     }
     
     console.log("DEBUG WHERE CLAUSE:", JSON.stringify(where));
@@ -531,8 +550,21 @@ export const deleteDocument = async (id) => {
 
 export const deleteEmployee = async (id) => {
   try {
+    const employeeId = parseInt(id);
+
+    // 1. Check if employee is currently assigned as a Department Manager
+    const managingDept = await prisma.department.findFirst({
+      where: { manager_id: employeeId },
+    });
+    if (managingDept) {
+      return {
+        result: false,
+        message: `Cannot delete this employee because they are currently assigned as the Manager of the "${managingDept.name}" department. Please reassign the department manager first.`,
+      };
+    }
+
     await prisma.employee.delete({
-      where: { id: parseInt(id) },
+      where: { id: employeeId },
     });
     return {
       result: true,

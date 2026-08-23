@@ -32,6 +32,7 @@ export function DateRangePicker({
         <Label className="text-xs font-medium text-muted-foreground">{fromLabel}</Label>
         <DatePicker
           value={startDate}
+          maxDate={endDate}
           onChange={(val) => {
             onStartDateChange(val);
             if (endDate && val > endDate) {
@@ -46,6 +47,7 @@ export function DateRangePicker({
         <Label className="text-xs font-medium text-muted-foreground">{toLabel}</Label>
         <DatePicker
           value={endDate}
+          minDate={startDate}
           onChange={(val) => {
             onEndDateChange(val);
           }}

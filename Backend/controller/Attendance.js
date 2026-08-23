@@ -411,23 +411,29 @@ export const getAttendanceReportController = async (req, res) => {
       include: { role: true },
     });
 
+    const roleName = currentEmployee?.role?.name?.toLowerCase() || '';
     const isHrOrAdmin =
-      currentEmployee?.role?.name?.toLowerCase().includes("admin") ||
-      currentEmployee?.role?.name?.toLowerCase().includes("hr");
+      roleName.includes("admin") ||
+      roleName.includes("superadmin") ||
+      roleName.includes("hr") ||
+      roleName.includes("general manager") ||
+      roleName.includes("director");
 
     const whereClause = {
       work_at: { gte: start, lte: end },
       employee: { company_id: parseInt(company_id) },
     };
 
-    // Restrict query to the manager's department if not Admin or HR
-    if (!isHrOrAdmin && currentEmployee?.department_id) {
-      whereClause.employee.department_id = currentEmployee.department_id;
-    }
-
-    // Department filter from query
-    if (departmentId && departmentId !== "all") {
-      whereClause.employee.department_id = parseInt(departmentId);
+    // Restrict query: non-HR/Admin (e.g. Store Manager, Department Manager) is LOCKED to their department
+    if (!isHrOrAdmin) {
+      if (currentEmployee?.department_id) {
+        whereClause.employee.department_id = currentEmployee.department_id;
+      }
+    } else {
+      // HR/Admin can filter by any department
+      if (departmentId && departmentId !== "all") {
+        whereClause.employee.department_id = parseInt(departmentId);
+      }
     }
 
     // Employee filter from query
@@ -1061,7 +1067,21 @@ export const onlineAttendanceController = async (req, res) => {
       });
     }
 
-    const employee = user.employee;
+    // Verify if employee account is active
+    if (employee.is_active !== "active") {
+      return res.status(403).json({
+        result: false,
+        message: "Your employee account is inactive. Please contact HR/Admin.",
+      });
+    }
+
+    // Verify if employee is assigned to a department (strict requirement)
+    if (!employee.department_id) {
+      return res.status(400).json({
+        result: false,
+        message: "You are not assigned to any department. Please contact HR/Admin to assign your department before checking in.",
+      });
+    }
 
     // Verify if employee working profile is configured (strict requirement)
     const workingProfile = await prisma.employeeworkingprofile.findUnique({
@@ -1231,11 +1251,19 @@ export const onlineAttendanceController = async (req, res) => {
         const dept = await prisma.department.findUnique({
           where: { id: employee.department_id },
           select: {
+            name: true,
+            manager_id: true,
             employee_department_manager_idToemployee: {
               select: { telegram_username: true },
             },
           },
         });
+        if (!dept?.manager_id) {
+          return res.status(400).json({
+            result: false,
+            message: `Your department (${dept?.name || 'Assigned Department'}) does not have an assigned manager to approve remote attendance. Please contact HR/Admin.`,
+          });
+        }
         const managerUsername =
           dept?.employee_department_manager_idToemployee?.telegram_username;
         if (managerUsername) {

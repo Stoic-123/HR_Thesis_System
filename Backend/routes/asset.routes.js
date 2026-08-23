@@ -8,6 +8,7 @@ router.use(requireAuth);
 // CATEGORIES
 router.get('/categories', assetController.getCategories);
 router.post('/categories', assetController.createCategory);
+router.delete('/categories/:id', assetController.deleteCategory);
 
 // ASSETS
 router.get('/', assetController.getAssets);

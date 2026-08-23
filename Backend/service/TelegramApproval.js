@@ -130,51 +130,74 @@ export const sendApprovalRequest = async (botToken, chatId, {
     ]],
   };
 
-  const hasPhoto = !!absolutePhotoPath && fs.existsSync(absolutePhotoPath);
+  const isUrl = typeof absolutePhotoPath === 'string' && absolutePhotoPath.startsWith('http');
+  const isLocalFile = typeof absolutePhotoPath === 'string' && !isUrl && fs.existsSync(absolutePhotoPath);
+  const hasPhoto = isUrl || isLocalFile;
 
   try {
     let result;
 
     if (hasPhoto) {
-      const boundary   = `----TgBound${Date.now()}`;
-      const CRLF       = '\r\n';
-      const filename   = path.basename(absolutePhotoPath);
-      const fileBuffer = fs.readFileSync(absolutePhotoPath);
-      const kbJson     = JSON.stringify(keyboard);
+      if (isUrl) {
+        result = await tgPost(botToken, 'sendPhoto', {
+          chat_id: chatId,
+          photo: absolutePhotoPath,
+          caption: caption,
+          parse_mode: 'HTML',
+          reply_markup: keyboard,
+        });
+      } else {
+        const boundary   = `----TgBound${Date.now()}`;
+        const CRLF       = '\r\n';
+        const filename   = path.basename(absolutePhotoPath);
+        const fileBuffer = fs.readFileSync(absolutePhotoPath);
+        const kbJson     = JSON.stringify(keyboard);
 
-      const metaFields = [
-        { name: 'chat_id',      value: String(chatId) },
-        { name: 'caption',      value: caption },
-        { name: 'parse_mode',   value: 'HTML' },
-        { name: 'reply_markup', value: kbJson },
-      ];
+        const metaFields = [
+          { name: 'chat_id',      value: String(chatId) },
+          { name: 'caption',      value: caption },
+          { name: 'parse_mode',   value: 'HTML' },
+          { name: 'reply_markup', value: kbJson },
+        ];
 
-      const parts = [];
-      for (const { name, value } of metaFields) {
+        const parts = [];
+        for (const { name, value } of metaFields) {
+          parts.push(Buffer.from(
+            `--${boundary}${CRLF}` +
+            `Content-Disposition: form-data; name="${name}"${CRLF}${CRLF}` +
+            `${value}${CRLF}`, 'utf8'
+          ));
+        }
         parts.push(Buffer.from(
           `--${boundary}${CRLF}` +
-          `Content-Disposition: form-data; name="${name}"${CRLF}${CRLF}` +
-          `${value}${CRLF}`, 'utf8'
+          `Content-Disposition: form-data; name="photo"; filename="${filename}"${CRLF}` +
+          `Content-Type: image/jpeg${CRLF}${CRLF}`, 'utf8'
         ));
-      }
-      parts.push(Buffer.from(
-        `--${boundary}${CRLF}` +
-        `Content-Disposition: form-data; name="photo"; filename="${filename}"${CRLF}` +
-        `Content-Type: image/jpeg${CRLF}${CRLF}`, 'utf8'
-      ));
-      parts.push(fileBuffer);
-      parts.push(Buffer.from(`${CRLF}--${boundary}--${CRLF}`, 'utf8'));
-      const body = Buffer.concat(parts);
+        parts.push(fileBuffer);
+        parts.push(Buffer.from(`${CRLF}--${boundary}--${CRLF}`, 'utf8'));
+        const body = Buffer.concat(parts);
 
-      const res = await fetch(`${TELEGRAM_API}/bot${botToken}/sendPhoto`, {
-        method:  'POST',
-        headers: {
-          'Content-Type':   `multipart/form-data; boundary=${boundary}`,
-          'Content-Length': String(body.length),
-        },
-        body,
-      });
-      result = await res.json();
+        const res = await fetch(`${TELEGRAM_API}/bot${botToken}/sendPhoto`, {
+          method:  'POST',
+          headers: {
+            'Content-Type':   `multipart/form-data; boundary=${boundary}`,
+            'Content-Length': String(body.length),
+          },
+          body,
+        });
+        result = await res.json();
+      }
+
+      // If sendPhoto failed (e.g. invalid URL or format), fall back to text message
+      if (!result?.ok) {
+        console.warn('[TgApproval] sendPhoto failed, falling back to sendMessage:', result?.description);
+        result = await tgPost(botToken, 'sendMessage', {
+          chat_id:      chatId,
+          text:         caption,
+          parse_mode:   'HTML',
+          reply_markup: keyboard,
+        });
+      }
     } else {
       result = await tgPost(botToken, 'sendMessage', {
         chat_id:      chatId,
@@ -903,11 +926,21 @@ const handleApprovalAction = async (token, groupId, pendingId, action, cbId, mes
     return;
   }
 
-  // ── Manager-only gate ────────────────────────────────────────────────────────
+  // ── Manager-only & HR/Admin Gate ──────────────────────────────────────────
   let isAuthorized = false;
   let managerDisplay = pending.manager_telegram_username || "Manager";
 
   try {
+    const approverEmployee = await findEmployeeByTelegramUsername(fromUsername, pending.company_id, fromChatId);
+    const roleName = approverEmployee?.role?.name?.toLowerCase() || '';
+    const isHrOrAdmin = roleName === 'admin' || roleName === 'superadmin' || roleName.includes('hr');
+
+    // Prevent self-approval (unless HR/Admin)
+    if (approverEmployee && approverEmployee.id === pending.employee_id && !isHrOrAdmin) {
+      await answerCallback(token, cbId, '⛔ អ្នកមិនអាចអនុម័តវត្តមានផ្ទាល់ខ្លួនបានទេ។ (Cannot approve own attendance)', true);
+      return;
+    }
+
     const emp = await prisma.employee.findUnique({
       where:  { id: pending.employee_id },
       select: {
@@ -936,14 +969,16 @@ const handleApprovalAction = async (token, groupId, pendingId, action, cbId, mes
       const userMatch = fromUsername && mgrUsername && fromUsername === mgrUsername;
       const chatMatch = fromChatId && mgrChatId && fromChatId === mgrChatId;
 
-      if (userMatch || chatMatch) {
+      if (userMatch || chatMatch || isHrOrAdmin) {
         isAuthorized = true;
       }
     } else if (pending.manager_telegram_username) {
       const pendingMgrUsername = pending.manager_telegram_username.replace(/^@/, '').toLowerCase().trim();
-      if (fromUsername && pendingMgrUsername && fromUsername === pendingMgrUsername) {
+      if ((fromUsername && pendingMgrUsername && fromUsername === pendingMgrUsername) || isHrOrAdmin) {
         isAuthorized = true;
       }
+    } else if (isHrOrAdmin) {
+      isAuthorized = true;
     }
   } catch (err) {
     console.error("[TgApproval] manager check error:", err.message);

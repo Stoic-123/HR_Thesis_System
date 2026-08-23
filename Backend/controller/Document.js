@@ -136,6 +136,9 @@ export const deleteDocumentTypeController = async (req, res) => {
     const company_id = req.user.company_id;
 
     const result = await deleteDocumentType(id, company_id);
+    if (!result.result) {
+      return res.status(400).json(result);
+    }
     res.status(200).json(result);
   } catch (error) {
     console.log(error.message);

@@ -123,6 +123,9 @@ export const deactivatedDepartmentController = async (req, res) => {
         .json({ result: false, message: "id is required..!" });
     }
     const departmentModifyResult = await deactivatedDepartment(department_id, company_id);
+    if (!departmentModifyResult.result) {
+      return res.status(400).json(departmentModifyResult);
+    }
 
     // Audit Log
     await addAuditLog(

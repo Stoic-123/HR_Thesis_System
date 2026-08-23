@@ -90,9 +90,33 @@ export const updateLeaveType = async (name,code,default_balance,id) => {
 };
 export const deleteLeaveType = async (id) => {
   try {
+    const leaveTypeId = parseInt(id);
+
+    // 1. Check if any leave records (requests) are using this leave type
+    const recordCount = await prisma.leaverecord.count({
+      where: { leave_type_id: leaveTypeId },
+    });
+    if (recordCount > 0) {
+      return {
+        result: false,
+        message: `Cannot delete this Leave Type because ${recordCount} leave request record(s) are using it.`,
+      };
+    }
+
+    // 2. Check if any employee leave profile balance is using this leave type
+    const profileCount = await prisma.leaveprofile.count({
+      where: { leave_type_id: leaveTypeId },
+    });
+    if (profileCount > 0) {
+      return {
+        result: false,
+        message: `Cannot delete this Leave Type because ${profileCount} employee leave balance profile(s) are assigned to it.`,
+      };
+    }
+
     await prisma.leavetype.delete({
       where: {
-        id: parseInt(id),
+        id: leaveTypeId,
       },
     });
     return {

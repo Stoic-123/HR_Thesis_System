@@ -68,6 +68,9 @@ export const deleteTimeModeController = async (req, res) => {
     }
 
     const result = await deleteTimeMode(id, company_id);
+    if (!result.result) {
+      return res.status(400).json(result);
+    }
     res.status(200).json(result);
   } catch (error) {
     console.log(error.message);

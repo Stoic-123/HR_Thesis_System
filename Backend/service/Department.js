@@ -104,14 +104,22 @@ export const deactivatedDepartment = async (department_id, company_id) => {
   try {
     const id = parseInt(department_id);
     const cid = parseInt(company_id);
+
+    // 1. Prevent deactivation if active employees are assigned
+    const activeEmployees = await prisma.employee.count({
+      where: { department_id: id, company_id: cid, is_active: "active" },
+    });
+    if (activeEmployees > 0) {
+      return {
+        result: false,
+        message: `Cannot deactivate department because ${activeEmployees} active employee(s) are currently assigned to it. Please reassign them first.`,
+      };
+    }
+
     await prisma.$transaction([
       prisma.department.update({
         where: { id, company_id: cid },
         data: { is_active: false },
-      }),
-      prisma.employee.updateMany({
-        where: { department_id: id, company_id: cid },
-        data: { department_id: null, position_id: null },
       }),
       prisma.positions.updateMany({
         where: { department_id: id, department: { company_id: cid } },

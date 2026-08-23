@@ -169,7 +169,11 @@ export const DayOfWeekPage = () => {
   const getTimeSheetName = (tsId: number | undefined | null) => {
     if (!tsId) return t("none");
     const ts = timeSheets?.data?.find((item: TimeSheet) => item.id === tsId);
-    return ts?.name || t("none");
+    if (!ts) return t("none");
+    const startTime = (ts.time_in && ts.time_in !== "-") ? ts.time_in : ((ts.lunch_in && ts.lunch_in !== "-") ? ts.lunch_in : null);
+    const endTime = (ts.time_out && ts.time_out !== "-") ? ts.time_out : ((ts.lunch_out && ts.lunch_out !== "-") ? ts.lunch_out : null);
+    const range = startTime && endTime ? `${startTime}–${endTime}` : (startTime || endTime || "");
+    return range ? `${ts.name} (${range})` : ts.name;
   };
 
   const days = [
@@ -231,15 +235,6 @@ export const DayOfWeekPage = () => {
                     required
                   />
                 </div>
-              </div>
-              <div className="mt-4 flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={formData.is_default}
-                  onChange={(e) => setFormData({ ...formData, is_default: e.target.checked })}
-                  className="h-4 w-4"
-                />
-                <Label>{t("setDefault")}</Label>
               </div>
               <div className="mt-6 space-y-4">
                 <h4 className="font-semibold">{t("assignSchedule")}</h4>
@@ -309,7 +304,6 @@ export const DayOfWeekPage = () => {
                   <tr className="border-b border-border/60 bg-muted/30 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     <th className="py-3.5 pl-6 pr-3 min-w-[160px]">{t("nameLabel")}</th>
                     <th className="py-3.5 px-3 min-w-[100px]">{t("codeLabel")}</th>
-                    <th className="py-3.5 px-3 min-w-[100px]">{t("defaultCol")}</th>
                     {days.map((day) => (
                       <th key={day.key} className="py-3.5 px-3 min-w-[100px] whitespace-nowrap">{day.label}</th>
                     ))}
@@ -321,15 +315,6 @@ export const DayOfWeekPage = () => {
                     <tr key={dow.id} className="group transition-colors hover:bg-muted/25">
                       <td className="py-3.5 pl-6 pr-3 font-semibold">{dow.name}</td>
                       <td className="py-3.5 px-3 text-muted-foreground font-mono text-xs">{dow.code}</td>
-                      <td className="py-3.5 px-3">
-                        {dow.is_default ? (
-                          <Badge className="rounded-full bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/40 shadow-none">
-                            {t("yes")}
-                          </Badge>
-                        ) : (
-                          <span className="text-xs text-muted-foreground/60">{t("no")}</span>
-                        )}
-                      </td>
                       {days.map((day) => (
                         <td key={day.key} className="py-3.5 px-3 text-xs text-muted-foreground">
                           {getTimeSheetName(dow[`${day.key.toLowerCase()}_id` as keyof DayOfWeek] as number | undefined)}

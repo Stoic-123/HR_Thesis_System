@@ -27,6 +27,9 @@ interface DatePickerProps {
   disabled?: boolean;
   className?: string;
   id?: string;
+  minDate?: Date | string;
+  maxDate?: Date | string;
+  disabledDates?: (date: Date) => boolean;
 }
 
 export function DatePicker({
@@ -36,9 +39,36 @@ export function DatePicker({
   disabled,
   className,
   id,
+  minDate,
+  maxDate,
+  disabledDates,
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false);
   const selected = parseDate(value);
+
+  const minParsed = typeof minDate === "string" ? parseDate(minDate) : minDate;
+  const maxParsed = typeof maxDate === "string" ? parseDate(maxDate) : maxDate;
+
+  const isDateDisabled = (date: Date) => {
+    if (minParsed) {
+      const min = new Date(minParsed);
+      min.setHours(0, 0, 0, 0);
+      const d = new Date(date);
+      d.setHours(0, 0, 0, 0);
+      if (d < min) return true;
+    }
+    if (maxParsed) {
+      const max = new Date(maxParsed);
+      max.setHours(23, 59, 59, 999);
+      const d = new Date(date);
+      d.setHours(0, 0, 0, 0);
+      if (d > max) return true;
+    }
+    if (disabledDates) {
+      return disabledDates(date);
+    }
+    return false;
+  };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -62,6 +92,7 @@ export function DatePicker({
         <Calendar
           mode="single"
           selected={selected}
+          disabled={minParsed || maxParsed || disabledDates ? isDateDisabled : undefined}
           onSelect={(date) => {
             if (date) {
               onChange(toISODate(date));

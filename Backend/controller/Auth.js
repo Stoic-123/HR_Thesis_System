@@ -86,6 +86,14 @@ export const employeeLoginController = async (req, res) => {
       },
     });
 
+    // Check if employee is active
+    if (employeeWithRole?.is_active !== "active") {
+      return res.status(403).json({
+        result: false,
+        message: "Your account is deactivated. Please contact your HR/Admin.",
+      });
+    }
+
     const userPermissions = employeeWithRole?.role?.rolebaseaccess || [];
     const roleName = employeeWithRole?.role?.name || "";
 

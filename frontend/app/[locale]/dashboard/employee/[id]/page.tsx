@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useRouter } from "@/src/i18n/routing";
 import { useParams } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import {
   ArrowLeft,
   Mail,
@@ -87,6 +87,7 @@ const getFileUrl = (path?: string) => {
 };
 
 export default function EmployeeDetailPage() {
+  const locale = useLocale();
   const { id } = useParams();
   const router = useRouter();
   const t = useTranslations("employeeProfile");
@@ -312,6 +313,14 @@ export default function EmployeeDetailPage() {
 
   const handleUpdateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.department_id) {
+      toast.error(locale === "km" ? "សូមជ្រើសរើសផ្នែក (Department)" : "Please select a department");
+      return;
+    }
+    if (!formData.position_id) {
+      toast.error(locale === "km" ? "សូមជ្រើសរើសតួនាទី (Position)" : "Please select a position");
+      return;
+    }
     const data = new FormData();
     Object.entries(formData).forEach(([key, value]) => {
       data.append(key, value);

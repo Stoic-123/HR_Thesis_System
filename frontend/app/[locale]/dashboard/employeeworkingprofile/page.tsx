@@ -422,9 +422,21 @@ export const EmployeeWorkingProfilePage = () => {
                         const timeSheet = profile.dayofweek?.[key] as
                           | TimeSheet
                           | undefined;
-                        const timeIn = timeSheet?.time_in;
-                        const timeOut = timeSheet?.time_out;
                         const hasSchedule = !!timeSheet;
+
+                        // Effective start time: time_in, or fallback to lunch_in (for afternoon shifts)
+                        const startTime = (timeSheet?.time_in && timeSheet.time_in !== "-")
+                          ? timeSheet.time_in
+                          : ((timeSheet?.lunch_in && timeSheet.lunch_in !== "-") ? timeSheet.lunch_in : null);
+
+                        // Effective end time: time_out, or fallback to lunch_out (for morning shifts)
+                        const endTime = (timeSheet?.time_out && timeSheet.time_out !== "-")
+                          ? timeSheet.time_out
+                          : ((timeSheet?.lunch_out && timeSheet.lunch_out !== "-") ? timeSheet.lunch_out : null);
+
+                        const displayRange = startTime && endTime
+                          ? `${startTime}–${endTime}`
+                          : (startTime || endTime || null);
 
                         return (
                           <td key={key} className="py-3.5 px-3 text-center align-middle">
@@ -433,10 +445,10 @@ export const EmployeeWorkingProfilePage = () => {
                                 <span className="text-xs font-medium leading-tight whitespace-nowrap">
                                   {timeSheet!.name}
                                 </span>
-                                {timeIn && timeOut && (
+                                {displayRange && (
                                   <span className="inline-flex items-center gap-1 text-[11px] tabular-nums text-muted-foreground whitespace-nowrap">
                                     <Clock className="size-3 text-slate-400 dark:text-slate-500 shrink-0" />
-                                    {timeIn}–{timeOut}
+                                    {displayRange}
                                   </span>
                                 )}
                               </div>

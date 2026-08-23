@@ -115,6 +115,14 @@ export const CreateNewLeave = async (
       },
     });
 
+    if (employee?.is_active !== "active") {
+      throw new Error("Your employee account is inactive. Please contact HR/Admin.");
+    }
+
+    if (!employee?.department_id) {
+      throw new Error("You are not assigned to any department. Please contact HR/Admin before requesting leave.");
+    }
+
     // Group dates into consecutive ranges
     const dateRanges = groupDatesIntoRanges(dates);
     const leaveRecords = [];

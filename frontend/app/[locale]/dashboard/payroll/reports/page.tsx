@@ -36,7 +36,7 @@ const API_BASE =
 export default function PayrollReportsPage() {
   const t = useTranslations("payroll");
   const [periods, setPeriods] = useState<PayrollPeriod[]>([]);
-  const [reportType, setReportType] = useState<"monthly" | "history" | "summary">("summary");
+  const [reportType, setReportType] = useState<"monthly" | "summary">("monthly");
   const [periodId, setPeriodId] = useState<string>("");
   const [year, setYear] = useState(String(new Date().getFullYear()));
   const [loading, setLoading] = useState<string | null>(null);
@@ -44,17 +44,27 @@ export default function PayrollReportsPage() {
 
   useEffect(() => {
     getPayrollPeriods().then((res) => {
-      if (res.result) setPeriods(res.data);
+      if (res.result && res.data) {
+        setPeriods(res.data);
+        if (res.data.length > 0) {
+          setPeriodId(String(res.data[0].id));
+        }
+      }
     });
   }, []);
 
   const handleExport = async (format: "excel" | "pdf") => {
+    if (reportType === "monthly" && !periodId) {
+      toast.error(t("selectPeriod"));
+      return;
+    }
+
     setLoading(format);
     try {
       const body = {
         report_type: reportType,
         year: Number(year),
-        payroll_period_id: periodId ? Number(periodId) : undefined,
+        payroll_period_id: reportType === "monthly" && periodId ? Number(periodId) : undefined,
       };
 
       if (format === "excel") {
@@ -82,7 +92,7 @@ export default function PayrollReportsPage() {
         if (res.result) {
           let records = res.data || [];
 
-          // Filter by year if report type is summary or history with year constraints
+          // Filter by year if report type is summary
           if (reportType === "summary" && year) {
             records = records.filter((r: any) => {
               const dateStr = r.payrollperiod?.start_date;
@@ -90,19 +100,15 @@ export default function PayrollReportsPage() {
             });
           }
 
-          let titleKh = "របាយការណ៍សង្ខេបប្រាក់បៀវត្សរ៍";
-          let titleEn = "Payroll Summary Report";
-          let typeLabel = "សង្ខេប / Summary";
+          let titleKh = "របាយការណ៍សង្ខេបប្រាក់បៀវត្សរ៍ប្រចាំឆ្នាំ";
+          let titleEn = `Annual Payroll Summary Report (${year})`;
+          let typeLabel = `ប្រចាំឆ្នាំ ${year} / Annual (${year})`;
 
           if (reportType === "monthly") {
             const periodName = periods.find(p => String(p.id) === periodId)?.name || "";
             titleKh = "របាយការណ៍បើកប្រាក់បៀវត្សរ៍ប្រចាំខែ";
-            titleEn = `Monthly Payroll Report`;
+            titleEn = `Monthly Payroll Report - ${periodName}`;
             typeLabel = `ប្រចាំខែ - ${periodName} / Monthly - ${periodName}`;
-          } else if (reportType === "history") {
-            titleKh = "របាយការណ៍ប្រវត្តិបើកប្រាក់បៀវត្សរ៍";
-            titleEn = "Payroll History Report";
-            typeLabel = "ប្រវត្តិ / History";
           }
 
           const userFullName = user?.employee ? `${user.employee.first_name} ${user.employee.last_name}` : "";
@@ -194,7 +200,7 @@ export default function PayrollReportsPage() {
             <Select
               value={reportType}
               onValueChange={(v) =>
-                setReportType(v as "monthly" | "history" | "summary")
+                setReportType(v as "monthly" | "summary")
               }
             >
               <SelectTrigger className="h-9 rounded-lg">
@@ -202,7 +208,6 @@ export default function PayrollReportsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="monthly">{t("monthlyReport")}</SelectItem>
-                <SelectItem value="history">{t("historyReport")}</SelectItem>
                 <SelectItem value="summary">{t("summaryReport")}</SelectItem>
               </SelectContent>
             </Select>
@@ -226,21 +231,23 @@ export default function PayrollReportsPage() {
             </div>
           )}
 
-          <div className="space-y-2">
-            <Label>{t("year")}</Label>
-            <Select value={year} onValueChange={setYear}>
-              <SelectTrigger className="h-9 rounded-lg">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {[2023, 2024, 2025, 2026].map((y) => (
-                  <SelectItem key={y} value={String(y)}>
-                    {y}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {reportType === "summary" && (
+            <div className="space-y-2">
+              <Label>{t("year")}</Label>
+              <Select value={year} onValueChange={setYear}>
+                <SelectTrigger className="h-9 rounded-lg">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[2023, 2024, 2025, 2026].map((y) => (
+                    <SelectItem key={y} value={String(y)}>
+                      {y}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="flex flex-wrap gap-2 pt-2">
             <Button

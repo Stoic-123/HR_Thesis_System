@@ -128,6 +128,9 @@ export const deleteDayOfWeekController = async (req, res) => {
     }
 
     const dayOfWeekData = await deleteDayOfWeek(id);
+    if (!dayOfWeekData.result) {
+      return res.status(400).json(dayOfWeekData);
+    }
     res.status(200).json(dayOfWeekData);
   } catch (error) {
     console.log(error.message);

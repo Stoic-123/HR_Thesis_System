@@ -148,13 +148,6 @@ const menuItems: MenuItem[] = [
         href: "/dashboard/time-attendance/setup",
         permission: "department:manage",
       },
-      {
-        title: "Time Mode",
-        labelKey: "timeMode",
-        icon: Clock,
-        href: "/dashboard/timemode",
-        permission: "department:manage",
-      },
     ],
   },
   {

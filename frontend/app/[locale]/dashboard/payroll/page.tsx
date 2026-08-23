@@ -130,48 +130,45 @@ export default function PayrollDashboardPage() {
 
   if (loading) return <LoadingState variant="dashboard" />;
 
+  const payDateStr = dashboard?.nextPayDate
+    ? new Date(dashboard.nextPayDate).toLocaleDateString()
+    : "";
+
   const cards = [
     {
       label: t("currentPeriod"),
       value: dashboard?.currentPeriod?.name || tc("notSet"),
+      subtext:
+        dashboard?.daysUntilNextPayroll != null
+          ? `${t("payDate")}: ${payDateStr} (${dashboard.daysUntilNextPayroll} ${t("days")})`
+          : t("currentPeriod"),
       icon: CalendarClock,
-      iconBg: "bg-orange-100 text-orange-600",
-      accent: "from-orange-500/10 to-transparent",
+      iconBg: "bg-amber-100 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400",
+      accent: "from-amber-500/10 to-transparent",
     },
     {
       label: t("totalEmployees"),
       value: dashboard?.totalEmployees ?? 0,
+      subtext: `${dashboard?.totalEmployees ?? 0} active staff`,
       icon: Users,
-      iconBg: "bg-blue-100 text-blue-600",
+      iconBg: "bg-blue-100 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400",
       accent: "from-blue-500/10 to-transparent",
-    },
-    {
-      label: t("totalGross"),
-      value: `$${(dashboard?.totalGrossSalary ?? 0).toLocaleString()}`,
-      icon: DollarSign,
-      iconBg: "bg-violet-100 text-violet-600",
-      accent: "from-violet-500/10 to-transparent",
     },
     {
       label: t("totalNet"),
       value: `$${(dashboard?.totalNetSalary ?? 0).toLocaleString()}`,
+      subtext: `${t("totalGross")}: $${(dashboard?.totalGrossSalary ?? 0).toLocaleString()}`,
       icon: Wallet,
-      iconBg: "bg-emerald-100 text-emerald-600",
+      iconBg: "bg-emerald-100 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400",
       accent: "from-emerald-500/10 to-transparent",
     },
     {
-      label: t("approvedPayrolls"),
-      value: dashboard?.approvedPayrolls ?? 0,
-      icon: CheckCircle2,
-      iconBg: "bg-amber-100 text-amber-600",
-      accent: "from-amber-500/10 to-transparent",
-    },
-    {
       label: t("paidPayrolls"),
-      value: dashboard?.paidPayrolls ?? 0,
-      icon: Banknote,
-      iconBg: "bg-green-100 text-green-600",
-      accent: "from-green-500/10 to-transparent",
+      value: `${dashboard?.paidPayrolls ?? 0} Paid`,
+      subtext: `${dashboard?.approvedPayrolls ?? 0} Approved / Pending`,
+      icon: CheckCircle2,
+      iconBg: "bg-violet-100 text-violet-600 dark:bg-violet-950/50 dark:text-violet-400",
+      accent: "from-violet-500/10 to-transparent",
     },
   ];
 
@@ -183,39 +180,20 @@ export default function PayrollDashboardPage() {
           <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
         </div>
         <div className="flex gap-2">
-          <Button asChild variant="outline" size="sm">
+          <Button asChild variant="outline" size="sm" className="rounded-xl">
             <Link href="/dashboard/payroll/periods">{t("managePeriods")}</Link>
           </Button>
-          <Button asChild size="sm">
+          <Button asChild size="sm" className="rounded-xl">
             <Link href="/dashboard/payroll/reports">{t("reports")}</Link>
           </Button>
         </div>
       </div>
 
-      {dashboard?.daysUntilNextPayroll != null && (
-        <Card className="overflow-hidden rounded-3xl border-primary/20 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-sm">
-          <CardContent className="flex flex-wrap items-center justify-between gap-4 py-6">
-            <div>
-              <p className="text-sm font-medium opacity-90">{t("nextPayroll")}</p>
-              <p className="text-3xl font-bold tabular-nums">
-                {dashboard.daysUntilNextPayroll} {t("days")}
-              </p>
-            </div>
-            <p className="text-sm opacity-90">
-              {t("payDate")}:{" "}
-              {dashboard.nextPayDate
-                ? new Date(dashboard.nextPayDate).toLocaleDateString()
-                : tc("notSet")}
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {cards.map((card) => (
           <Card
             key={card.label}
-            className="relative overflow-hidden rounded-3xl border-border/50 shadow-sm"
+            className="relative overflow-hidden rounded-2xl border-border/50 bg-card p-4 shadow-sm"
           >
             <div
               className={cn(
@@ -223,17 +201,22 @@ export default function PayrollDashboardPage() {
                 card.accent,
               )}
             />
-            <CardContent className="relative flex items-center gap-4 py-5">
-              <div className={cn("rounded-2xl p-3", card.iconBg)}>
-                <card.icon className="size-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            <div className="relative flex items-start justify-between gap-3">
+              <div className="min-w-0 space-y-1">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   {card.label}
                 </p>
-                <p className="truncate text-xl font-semibold tabular-nums">{card.value}</p>
+                <p className="truncate text-xl font-bold tabular-nums text-foreground">
+                  {card.value}
+                </p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {card.subtext}
+                </p>
               </div>
-            </CardContent>
+              <div className={cn("rounded-xl p-2.5 shrink-0", card.iconBg)}>
+                <card.icon className="size-5" />
+              </div>
+            </div>
           </Card>
         ))}
       </div>

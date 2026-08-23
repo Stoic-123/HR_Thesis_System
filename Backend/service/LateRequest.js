@@ -260,6 +260,14 @@ export const createLateRequest = async ({
       return { result: false, message: "Employee not found." };
     }
 
+    if (employee.is_active !== "active") {
+      return { result: false, message: "Your employee account is inactive. Please contact HR/Admin." };
+    }
+
+    if (!employee.department_id) {
+      return { result: false, message: "You are not assigned to any department. Please contact HR/Admin." };
+    }
+
     const effectiveCompanyId = company_id || employee.company_id;
 
     const newLate = await prisma.laterequest.create({

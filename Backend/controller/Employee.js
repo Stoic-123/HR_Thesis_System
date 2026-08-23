@@ -249,6 +249,9 @@ export const deleteEmployeeController = async (req, res) => {
     const user_id = req.user.id;
 
     const result = await deleteEmployee(id);
+    if (!result.result) {
+      return res.status(400).json(result);
+    }
 
     // Audit Log
     await addAuditLog(

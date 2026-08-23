@@ -135,6 +135,20 @@ export const getEmployeeWorkingProfileByEmployeeId = async (employee_id) => {
 
 export const deleteEmployeeWorkingProfile = async (id) => {
   try {
+    const wp = await prisma.employeeworkingprofile.findUnique({
+      where: { id: parseInt(id) },
+      include: { employee: true },
+    });
+    if (!wp) {
+      return { result: false, message: "Working profile not found." };
+    }
+    if (wp.employee && wp.employee.is_active === "active") {
+      return {
+        result: false,
+        message: "Cannot delete working profile of an active employee. Please deactivate or reassign the employee first.",
+      };
+    }
+
     await prisma.employeeworkingprofile.delete({
       where: { id: parseInt(id) },
     });

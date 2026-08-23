@@ -102,6 +102,24 @@ const LeaveReportPage = () => {
   const [selectedLeaveTypeId, setSelectedLeaveTypeId] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
 
+  const roleName = (user as any)?.data?.employee?.role?.name?.toLowerCase() || (user as any)?.employee?.role?.name?.toLowerCase() || "";
+  const isHrOrAdmin = roleName.includes("admin") || roleName.includes("superadmin") || roleName.includes("hr") || roleName.includes("general manager") || roleName.includes("director");
+  const userDeptId = (user as any)?.data?.employee?.department_id || (user as any)?.data?.employee?.department_employee_department_idTodepartment?.id || (user as any)?.employee?.department_id || (user as any)?.employee?.department_employee_department_idTodepartment?.id;
+
+  useEffect(() => {
+    if (!isHrOrAdmin && userDeptId) {
+      setSelectedDeptId(String(userDeptId));
+    }
+  }, [isHrOrAdmin, userDeptId]);
+
+  const visibleDepartments = isHrOrAdmin
+    ? departments
+    : departments.filter((d) => d.id === Number(userDeptId));
+
+  const visibleEmployees = isHrOrAdmin
+    ? (selectedDeptId === "all" ? employees : employees.filter((e: any) => e.department_id === Number(selectedDeptId)))
+    : employees.filter((e: any) => e.department_id === Number(userDeptId));
+
   // Pagination states
   const [page, setPage] = useState<number>(1);
   const [limit, setLimit] = useState<number>(10);
@@ -123,7 +141,10 @@ const LeaveReportPage = () => {
   const fetchLeaves = async () => {
     setLoading(true);
     try {
-      const res = await getAllLeaves();
+      const effectiveDeptId = !isHrOrAdmin && userDeptId ? String(userDeptId) : (selectedDeptId !== "all" ? selectedDeptId : undefined);
+      const res = await getAllLeaves({
+        department_id: effectiveDeptId,
+      });
       if (res.result) {
         setLeaves(res.data);
       }
@@ -155,8 +176,11 @@ const LeaveReportPage = () => {
       }
     };
     loadFilters();
-    fetchLeaves();
   }, []);
+
+  useEffect(() => {
+    fetchLeaves();
+  }, [isHrOrAdmin, userDeptId, selectedDeptId]);
 
   // Reset page when filters change
   useEffect(() => {
@@ -206,7 +230,8 @@ const LeaveReportPage = () => {
     }
 
     // 2. Department Filter
-    if (selectedDeptId !== "all" && String(leave.department_id) !== selectedDeptId) {
+    const effectiveDeptId = !isHrOrAdmin && userDeptId ? String(userDeptId) : selectedDeptId;
+    if (effectiveDeptId !== "all" && String(leave.department_id) !== effectiveDeptId) {
       return false;
     }
 
@@ -378,13 +403,19 @@ const LeaveReportPage = () => {
           {/* Department Select */}
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold text-muted-foreground">{locale === "km" ? "នាយកដ្ឋាន" : "Department"}</Label>
-            <Select value={selectedDeptId} onValueChange={setSelectedDeptId}>
+            <Select 
+              value={!isHrOrAdmin && userDeptId ? String(userDeptId) : selectedDeptId} 
+              onValueChange={setSelectedDeptId}
+              disabled={!isHrOrAdmin}
+            >
               <SelectTrigger className="h-10 rounded-xl shadow-xs bg-background border-border/60">
                 <SelectValue placeholder={locale === "km" ? "នាយកដ្ឋាន" : "Department"} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">{locale === "km" ? "ទាំងអស់" : "All"}</SelectItem>
-                {departments.map((dept) => (
+                {isHrOrAdmin && (
+                  <SelectItem value="all">{locale === "km" ? "ទាំងអស់" : "All"}</SelectItem>
+                )}
+                {visibleDepartments.map((dept) => (
                   <SelectItem key={dept.id} value={String(dept.id)}>
                     {dept.name}
                   </SelectItem>
@@ -402,7 +433,7 @@ const LeaveReportPage = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{locale === "km" ? "ទាំងអស់" : "All"}</SelectItem>
-                {employees.map((emp) => (
+                {visibleEmployees.map((emp) => (
                   <SelectItem key={emp.id} value={String(emp.id)}>
                     {`${emp.first_name} ${emp.last_name}`}
                   </SelectItem>

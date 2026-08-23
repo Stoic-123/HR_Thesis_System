@@ -172,8 +172,21 @@ export const updateDayOfWeek = async (
 
 export const deleteDayOfWeek = async (id) => {
   try {
+    const dayOfWeekId = parseInt(id);
+
+    // 1. Check if any employee working profile is using this schedule
+    const workingProfileCount = await prisma.employeeworkingprofile.count({
+      where: { day_of_week_id: dayOfWeekId },
+    });
+    if (workingProfileCount > 0) {
+      return {
+        result: false,
+        message: `Cannot delete this Schedule because ${workingProfileCount} employee working profile(s) are currently assigned to it.`,
+      };
+    }
+
     await prisma.dayofweek.delete({
-      where: { id: parseInt(id) },
+      where: { id: dayOfWeekId },
     });
 
     return {
