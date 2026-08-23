@@ -661,6 +661,7 @@ async function main() {
           gender: empData.gender,
           age: empData.age,
           base_salary: empData.baseSalary,
+          joined_at: emp.joined_at || empData.joinedAt || new Date("2026-01-15T00:00:00Z"),
           is_active: "active",
         },
       });
@@ -680,6 +681,7 @@ async function main() {
           gender: empData.gender,
           age: empData.age,
           base_salary: empData.baseSalary,
+          joined_at: empData.joinedAt || new Date("2026-01-15T00:00:00Z"),
           is_active: "active",
         },
       });

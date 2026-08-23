@@ -89,45 +89,49 @@ const DashboardPage = () => {
   ];
 
   const chartData = useMemo(() => {
-    if (!employeesRes?.data || employeesRes.data.length === 0) return [{ day: "No Data", newHires: 0, headcount: 0 }];
-    
-    const months = new Map();
-    const sortedEmps = [...employeesRes.data].sort((a, b) => {
-      const da = a.joined_at ? new Date(a.joined_at).getTime() : 0;
-      const db = b.joined_at ? new Date(b.joined_at).getTime() : 0;
+    const empList = employeesRes?.data || [];
+    if (empList.length === 0) return [{ day: "No Data", newHires: 0, headcount: 0 }];
+
+    const parseDate = (val: any): Date => {
+      if (val instanceof Date && !isNaN(val.getTime())) return val;
+      if (typeof val === "string" && val.trim()) {
+        const parts = val.trim().split(/\s+/);
+        if (parts.length === 3) {
+          const [d, m, y] = parts.map(Number);
+          const dt = new Date(y, m - 1, d);
+          if (!isNaN(dt.getTime())) return dt;
+        }
+        const dt = new Date(val);
+        if (!isNaN(dt.getTime())) return dt;
+      }
+      return new Date("2026-01-01");
+    };
+
+    const sortedEmps = [...empList].sort((a, b) => {
+      const da = parseDate(a.joined_at).getTime();
+      const db = parseDate(b.joined_at).getTime();
       return da - db;
     });
 
+    const months = new Map<string, { key: string; day: string; newHires: number; headcount: number }>();
     let cumulative = 0;
-    sortedEmps.forEach((emp: any) => {
-      if (!emp.joined_at) return;
-      
-      let date;
-      // The backend format is "DD MM YYYY"
-      const parts = emp.joined_at.split(' ');
-      if (parts.length === 3) {
-        const [day, month, year] = parts;
-        // Month is 1-indexed in the string, but Date expects 0-indexed month
-        date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-      } else {
-        date = new Date(emp.joined_at);
-      }
-      
-      if (isNaN(date.getTime())) return;
 
-      const monthYear = date.toLocaleString('en-US', { month: 'short' });
-      
+    sortedEmps.forEach((emp: any) => {
+      const date = parseDate(emp.joined_at);
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+      const monthLabel = date.toLocaleString("en-US", { month: "short" });
+
       cumulative++;
-      if (!months.has(monthYear)) {
-        months.set(monthYear, { day: monthYear, newHires: 1, headcount: cumulative });
+      if (!months.has(key)) {
+        months.set(key, { key, day: monthLabel, newHires: 1, headcount: cumulative });
       } else {
-        const data = months.get(monthYear);
+        const data = months.get(key)!;
         data.newHires += 1;
         data.headcount = cumulative;
       }
     });
 
-    const result = Array.from(months.values());
+    const result = Array.from(months.values()).sort((a, b) => a.key.localeCompare(b.key));
     return result.length > 0 ? result.slice(-7) : [{ day: "No Data", newHires: 0, headcount: 0 }];
   }, [employeesRes]);
 
