@@ -761,6 +761,46 @@ async function main() {
     }
   }
 
+  // Ensure every employee in the company has a valid, realistically distributed joined_at date
+  const allCompanyEmps = await prisma.employee.findMany({
+    where: { company_id: company.id },
+    orderBy: { id: "asc" },
+  });
+  
+  const sampleJoinDates = [
+    new Date("2025-10-01T00:00:00Z"),
+    new Date("2025-11-01T00:00:00Z"),
+    new Date("2025-11-15T00:00:00Z"),
+    new Date("2025-12-01T00:00:00Z"),
+    new Date("2025-12-05T00:00:00Z"),
+    new Date("2025-12-10T00:00:00Z"),
+    new Date("2025-12-15T00:00:00Z"),
+    new Date("2025-12-20T00:00:00Z"),
+    new Date("2026-01-02T00:00:00Z"),
+    new Date("2026-01-10T00:00:00Z"),
+    new Date("2026-01-15T00:00:00Z"),
+    new Date("2026-02-01T00:00:00Z"),
+    new Date("2026-02-15T00:00:00Z"),
+    new Date("2026-03-01T00:00:00Z"),
+    new Date("2026-03-15T00:00:00Z"),
+    new Date("2026-04-01T00:00:00Z"),
+    new Date("2026-04-20T00:00:00Z"),
+    new Date("2026-05-05T00:00:00Z"),
+    new Date("2026-06-01T00:00:00Z"),
+    new Date("2026-06-15T00:00:00Z"),
+    new Date("2026-07-01T00:00:00Z"),
+    new Date("2026-07-15T00:00:00Z"),
+    new Date("2026-08-01T00:00:00Z"),
+  ];
+
+  for (let i = 0; i < allCompanyEmps.length; i++) {
+    const assignedDate = sampleJoinDates[i % sampleJoinDates.length];
+    await prisma.employee.update({
+      where: { id: allCompanyEmps[i].id },
+      data: { joined_at: allCompanyEmps[i].joined_at || assignedDate },
+    });
+  }
+
   // Assign Department Managers
   for (const assign of managerDeptAssignments) {
     const deptId = deptMap.get(assign.deptName);
