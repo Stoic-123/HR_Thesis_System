@@ -148,6 +148,7 @@ async function main() {
         "recruitment:manage",
         "leave:approve",
         "overtime:approve",
+        "asset:approve",
         "payroll:view",
         "payroll:manage",
         "employee:manage",
@@ -165,7 +166,14 @@ async function main() {
         "overtime:approve",
         "asset:approve",
         "kpi:manage",
-        "payroll:view",
+      ],
+    },
+    {
+      name: "IT Administrator",
+      perms: [
+        "app:web_login",
+        "role:manage",
+        "chatbot:access",
       ],
     },
     {
@@ -204,6 +212,7 @@ async function main() {
   // 7. Departments & Positions (No Duplicates)
   const departmentNames = [
     "General Management",
+    "Information Technology",
     "Human Resources & Admin",
     "Store Operations & Sales",
     "Cashier & POS Management",
@@ -228,6 +237,7 @@ async function main() {
 
   const positionsData = [
     { dept: "General Management", name: "General Store Manager" },
+    { dept: "Information Technology", name: "IT System Administrator" },
     { dept: "Human Resources & Admin", name: "HR & Payroll Manager" },
     { dept: "Human Resources & Admin", name: "HR & Recruitment Officer" },
     { dept: "Store Operations & Sales", name: "Floor Operations Supervisor" },
@@ -289,7 +299,7 @@ async function main() {
 
   // 9. Employees Dataset
   const employeesDataset = [
-    // 1. General Manager (Admin)
+    // 1. General Manager (Admin / Owner - No Salary, Exempt Attendance)
     {
       firstName: "Chantha",
       lastName: "Sok",
@@ -301,7 +311,7 @@ async function main() {
       dept: "General Management",
       pos: "General Store Manager",
       role: "Admin",
-      baseSalary: "1200",
+      baseSalary: "0",
       username: "Chantha Sok",
       passwordHash: adminPasswordHash,
       isManagerOfDept: "General Management",
@@ -325,7 +335,25 @@ async function main() {
       isManagerOfDept: "Human Resources & Admin",
       location: "Main Branch (សាខាធំ)",
     },
-    // 3. HR Officer
+    // 3. IT System Administrator (IT)
+    {
+      firstName: "Vireak",
+      lastName: "Som",
+      gender: "male",
+      age: 29,
+      phone: "012888999",
+      email: "vireak.som@company.com.kh",
+      address: "#33, St. 2004, Sangkat Kakab, Khan Por Senchey, Phnom Penh",
+      dept: "Information Technology",
+      pos: "IT System Administrator",
+      role: "IT Administrator",
+      baseSalary: "650",
+      username: "Vireak Som",
+      passwordHash: adminPasswordHash,
+      isManagerOfDept: "Information Technology",
+      location: "Main Branch (សាខាធំ)",
+    },
+    // 4. HR Officer
     {
       firstName: "Moniroth",
       lastName: "Keo",
@@ -634,6 +662,28 @@ async function main() {
   const managerDeptAssignments = [];
 
   for (const empData of employeesDataset) {
+    // If this entry is for Admin, check if company already has an Admin account
+    if (empData.role === "Admin" || empData.role === "SuperAdmin") {
+      const existingCompanyAdmin = await prisma.employee.findFirst({
+        where: {
+          company_id: company.id,
+          role: { name: { in: ["Admin", "SuperAdmin"] } },
+        },
+      });
+
+      if (existingCompanyAdmin) {
+        console.log(`  + Existing Admin "${existingCompanyAdmin.first_name} ${existingCompanyAdmin.last_name || ''}" found (kept completely untouched).`);
+        createdEmployees.push({ ...existingCompanyAdmin, origData: empData });
+        if (empData.isManagerOfDept) {
+          managerDeptAssignments.push({
+            deptName: empData.isManagerOfDept,
+            managerId: existingCompanyAdmin.id,
+          });
+        }
+        continue;
+      }
+    }
+
     const dId = deptMap.get(empData.dept);
     const pId = posMap.get(empData.pos);
     const rId = roleMap.get(empData.role);
@@ -735,29 +785,39 @@ async function main() {
       }
     }
 
-    // Initialize leave profile balances
-    for (const lt of leaveTypesData) {
-      const dbLt = leaveTypeMap.get(lt.name);
-      if (dbLt) {
-        await prisma.leaveprofile.upsert({
-          where: {
-            employee_id_leave_type_id: {
+    // Initialize leave profile balances (Exempt Admin / Boss)
+    if (empData.role !== "Admin" && empData.role !== "SuperAdmin") {
+      for (const lt of leaveTypesData) {
+        if (lt.code === "ML" && empData.gender !== "female") continue;
+        const dbLt = leaveTypeMap.get(lt.name);
+        if (dbLt) {
+          await prisma.leaveprofile.upsert({
+            where: {
+              employee_id_leave_type_id: {
+                employee_id: emp.id,
+                leave_type_id: dbLt.id,
+              },
+            },
+            update: {
+              assignment: lt.default_balance,
+              balance: lt.default_balance,
+              used: 0,
+            },
+            create: {
               employee_id: emp.id,
               leave_type_id: dbLt.id,
+              assignment: lt.default_balance,
+              balance: lt.default_balance,
+              used: 0,
             },
-          },
-          update: {
-            balance: lt.default_balance,
-            used: 0,
-          },
-          create: {
-            employee_id: emp.id,
-            leave_type_id: dbLt.id,
-            balance: lt.default_balance,
-            used: 0,
-          },
-        });
+          });
+        }
       }
+    } else {
+      // Clean up any old leave profiles for Admin
+      await prisma.leaveprofile.deleteMany({
+        where: { employee_id: emp.id },
+      });
     }
   }
 
@@ -801,23 +861,45 @@ async function main() {
     });
   }
 
-  // Assign Department Managers
+  // Assign Department Managers (ONLY if no manager is currently set, preserving existing managers)
   for (const assign of managerDeptAssignments) {
     const deptId = deptMap.get(assign.deptName);
     if (deptId) {
-      await prisma.department.update({
+      const existingDept = await prisma.department.findUnique({
         where: { id: deptId },
-        data: { manager_id: assign.managerId },
+        select: { manager_id: true },
       });
+      if (!existingDept?.manager_id) {
+        await prisma.department.update({
+          where: { id: deptId },
+          data: { manager_id: assign.managerId },
+        });
+      }
     }
   }
-  console.log(`[8/11] Assigned Department Managers for approvals & evaluations.`);
+  console.log(`[8/11] Verified Department Managers (preserved existing assignments).`);
 
   // 10. Seed Attendance Records (Jan 1, 2026 to Present, Skipping Sundays & Cambodian Holidays)
   console.log(`[9/11] Generating daily attendance records from Jan 1, 2026 to Present (skipping holidays)...`);
   const startDate = new Date("2026-01-01T00:00:00Z");
   const endDate = new Date(); // Today
   endDate.setHours(23, 59, 59, 999);
+
+  // Clean up any existing attendance & payroll records for Admin / Owner (exempt from time-clock & payroll)
+  const adminEmployees = await prisma.employee.findMany({
+    where: { company_id: company.id, role: { name: "Admin" } },
+    select: { id: true },
+  });
+  const adminIds = adminEmployees.map((a) => a.id);
+  if (adminIds.length > 0) {
+    await prisma.attendancerecord.deleteMany({
+      where: { employee_id: { in: adminIds } },
+    });
+    await prisma.payroll.deleteMany({
+      where: { employee_id: { in: adminIds } },
+    });
+    console.log(`  + Cleaned up attendance & payroll records for Admin (exempt).`);
+  }
 
   const existingAttendance = await prisma.attendancerecord.findMany({
     where: {
@@ -856,6 +938,11 @@ async function main() {
   const attendanceInserts = [];
 
   for (const emp of createdEmployees) {
+    // Skip Admin / Owner from attendance punch generation (Boss is exempt from time-clock)
+    if (emp.origData?.role === "Admin" || emp.role?.name === "Admin") {
+      continue;
+    }
+
     for (const dateObj of dateList) {
       const year = dateObj.getFullYear();
       const month = dateObj.getMonth();
@@ -980,30 +1067,32 @@ async function main() {
       }
     }
 
-    // Seed Overtime records (Months 1 to 8)
-    const otMonths = [1, 3, 5, 8];
-    for (const om of otMonths) {
-      const otDay = (emp.id % 22) + 2;
-      const otStart = new Date(Date.UTC(2026, om - 1, otDay, 10, 0, 0)); // 17:00 local time
-      const otEnd = new Date(Date.UTC(2026, om - 1, otDay, 13, 0, 0)); // 20:00 local time
+    // Seed Overtime records (Months 1 to 8) - Skip Admin/Owner (exempt)
+    if (emp.origData?.role !== "Admin" && emp.role?.name !== "Admin") {
+      const otMonths = [1, 3, 5, 8];
+      for (const om of otMonths) {
+        const otDay = (emp.id % 22) + 2;
+        const otStart = new Date(Date.UTC(2026, om - 1, otDay, 10, 0, 0)); // 17:00 local time
+        const otEnd = new Date(Date.UTC(2026, om - 1, otDay, 13, 0, 0)); // 20:00 local time
 
-      const existingOT = await prisma.overtime.findFirst({
-        where: { employee_id: emp.id, start_date: otStart },
-      });
-
-      if (!existingOT) {
-        await prisma.overtime.create({
-          data: {
-            employee_id: emp.id,
-            start_date: otStart,
-            end_date: otEnd,
-            reason: "Monthly store stock count and inventory shelf restocking",
-            status: "approved",
-            approved_by: approverId,
-            created_at: otStart,
-            updated_at: otStart,
-          },
+        const existingOT = await prisma.overtime.findFirst({
+          where: { employee_id: emp.id, start_date: otStart },
         });
+
+        if (!existingOT) {
+          await prisma.overtime.create({
+            data: {
+              employee_id: emp.id,
+              start_date: otStart,
+              end_date: otEnd,
+              reason: "Monthly store stock count and inventory shelf restocking",
+              status: "approved",
+              approved_by: approverId,
+              created_at: otStart,
+              updated_at: otStart,
+            },
+          });
+        }
       }
     }
   }

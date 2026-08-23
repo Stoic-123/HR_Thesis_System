@@ -177,7 +177,14 @@ export const generatePayroll = async (companyId, payrollPeriodId) => {
       period.end_date,
     );
 
-    const base_salary = toNumber(decrypt(employee.base_salary)) || 600;
+    const rawSalary = decrypt(employee.base_salary);
+    const base_salary = rawSalary !== null && rawSalary !== undefined && !isNaN(Number(rawSalary))
+      ? toNumber(rawSalary)
+      : 0;
+
+    // Skip employees without salary (e.g. Owner/Admin)
+    if (base_salary <= 0) continue;
+
     const allowance = roundDefaultAllowance(base_salary);
     const overtime = calculateOvertimeAmount(overtimeRecords, base_salary);
     const bonus = 0;

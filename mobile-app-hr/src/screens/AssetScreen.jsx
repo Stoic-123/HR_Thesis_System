@@ -180,15 +180,16 @@ export default function AssetScreen({ theme, navigateTo }) {
           borderColor: isDarkTheme ? COLORS.dark.border : '#F3F4F6',
         }}
       >
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12, gap: 10 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
             <View style={{
               width: 44,
               height: 44,
               borderRadius: 22,
               backgroundColor: isDarkTheme ? '#2D3748' : '#F3F4F6',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              flexShrink: 0
             }}>
                <MaterialCommunityIcons 
                  name={item.type === 'assignment' ? 'laptop' : 'keyboard-return'} 
@@ -196,30 +197,37 @@ export default function AssetScreen({ theme, navigateTo }) {
                  color={primaryColor} 
                />
             </View>
-            <View>
-              <Text style={{ color: isDarkTheme ? COLORS.dark.text : COLORS.light.text, fontSize: 17, fontWeight: '800', letterSpacing: -0.3 }}>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text 
+                numberOfLines={2}
+                ellipsizeMode="tail"
+                style={{ color: isDarkTheme ? COLORS.dark.text : COLORS.light.text, fontSize: 15, fontWeight: '800', letterSpacing: -0.3 }}
+              >
                 {itemName}
               </Text>
-              <Text style={{ color: isDarkTheme ? COLORS.dark.textSecondary : COLORS.light.textSecondary, fontSize: 13, marginTop: 2 }}>
+              <Text style={{ color: isDarkTheme ? COLORS.dark.textSecondary : COLORS.light.textSecondary, fontSize: 12, marginTop: 2 }}>
                 {new Date(item.created_at).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
               </Text>
             </View>
           </View>
           
-          <View style={{ 
-            backgroundColor: `${statusColor}15`, 
-            paddingHorizontal: 12, 
-            paddingVertical: 6, 
-            borderRadius: 12,
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 4
-          }}>
-            <MaterialCommunityIcons name={getStatusIcon(item.status)} size={14} color={statusColor} />
-            <Text style={{ color: statusColor, fontSize: 11, fontWeight: '800', textTransform: 'uppercase' }}>
-              {item.status.replace('_', ' ')}
-            </Text>
-          </View>
+          {item.status ? (
+            <View style={{ 
+              backgroundColor: `${statusColor}15`, 
+              paddingHorizontal: 10, 
+              paddingVertical: 5, 
+              borderRadius: 12,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 4,
+              flexShrink: 0
+            }}>
+              <MaterialCommunityIcons name={getStatusIcon(item.status)} size={13} color={statusColor} />
+              <Text style={{ color: statusColor, fontSize: 10, fontWeight: '800', textTransform: 'uppercase' }}>
+                {item.status.replace('_', ' ')}
+              </Text>
+            </View>
+          ) : null}
         </View>
 
         <View style={{ backgroundColor: isDarkTheme ? COLORS.dark.bg : '#F9FAFB', padding: 12, borderRadius: 12, marginTop: 4 }}>

@@ -49,6 +49,9 @@ export const GetLeaveProfilesByCompany = async (company_id) => {
       where: {
         employee: {
           company_id: parseInt(company_id),
+          role: {
+            name: { notIn: ["Admin", "SuperAdmin"] }
+          }
         },
       },
       include: {

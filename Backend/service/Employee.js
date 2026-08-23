@@ -67,6 +67,27 @@ export const addEmployee = async (
       },
     });
 
+    // Automatically create initial leave profiles (Annual Leave, Sick Leave, etc.)
+    try {
+      const leaveTypes = await prisma.leavetype.findMany({
+        where: { company_id: parseInt(company_id) },
+      });
+      for (const lt of leaveTypes) {
+        if (lt.code === "ML" && gender !== "female") continue;
+        await prisma.leaveprofile.create({
+          data: {
+            employee_id: employeeId,
+            leave_type_id: lt.id,
+            assignment: lt.default_balance || 0,
+            balance: lt.default_balance || 0,
+            used: 0,
+          },
+        });
+      }
+    } catch (lpErr) {
+      console.error("Auto leave profile creation error:", lpErr.message);
+    }
+
     return {
       id: employeeId,
       result: true,

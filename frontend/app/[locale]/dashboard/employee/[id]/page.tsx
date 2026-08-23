@@ -843,7 +843,7 @@ export default function EmployeeDetailPage() {
               </p>
               <div className="space-y-2 pt-2">
                 <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                  {t.rich("typeDeleteToConfirm", { span: (chunks) => `<span className="text-rose-600">${chunks}</span>` })}
+                  {t.rich("typeDeleteToConfirm", { span: (chunks) => <span className="text-rose-600 font-bold">{chunks}</span> })}
                 </Label>
                 <Input
                   value={deleteConfirmText}
@@ -859,13 +859,12 @@ export default function EmployeeDetailPage() {
               <Button variant="ghost" className="rounded-xl">{tc("cancel")}</Button>
             </DialogClose>
             <Button 
-              variant="destructive" 
               onClick={handleDelete}
               disabled={
                 deleteMutation.isPending ||
                 (deleteConfirmText.trim() !== tc("delete") && deleteConfirmText.trim().toLowerCase() !== "delete")
               }
-              className="rounded-xl bg-rose-500 hover:bg-rose-600"
+              className="rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold shadow-sm disabled:bg-rose-200 disabled:text-rose-600 disabled:opacity-75 transition-all"
             >
               {deleteMutation.isPending ? t("deleting") : t("confirmDelete")}
             </Button>

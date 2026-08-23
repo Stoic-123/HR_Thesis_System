@@ -11,11 +11,9 @@ import {
   ClipboardCheck,
   UserMinus,
   Users,
-  Download,
   Printer,
 } from "lucide-react";
 import { Link } from "@/src/i18n/routing";
-import { exportToCSV } from "@/lib/exportUtils";
 import { exportReportToPDF } from "@/lib/pdf-export";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -84,7 +82,7 @@ const DashboardPage = () => {
       caption: tc("active") || "Active",
       delta: "",
       icon: MapPin,
-      href: "/dashboard/company",
+      href: "/dashboard/company?tab=locations",
     },
   ];
 
@@ -386,27 +384,6 @@ const DashboardPage = () => {
               <CardTitle>{t("recentEmployees")}</CardTitle>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  const cols = [
-                    { header: "Name", key: "full_name" },
-                    { header: "Position", key: "position_name" },
-                    { header: "Email", key: "email" },
-                    { header: "Status", key: "status" },
-                  ];
-                  const rows = (employeesRes?.data || []).map((e: any) => ({
-                    full_name: e.full_name,
-                    position_name: e.position_name || "N/A",
-                    email: e.email || "N/A",
-                    status: e.is_active || "Active",
-                  }));
-                  exportToCSV("Employees_List", cols, rows);
-                }}
-                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 shadow-sm transition-all cursor-pointer"
-              >
-                <Download className="size-3.5 text-emerald-600" /> {tc("exportExcel")}
-              </button>
               <button
                 type="button"
                 onClick={() => {

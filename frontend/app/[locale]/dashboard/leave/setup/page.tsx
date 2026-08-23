@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Plus, Edit } from "lucide-react";
+import { Plus, Edit, Trash2, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ import {
   getAllLeaveTypes,
   createLeaveType,
   updateLeaveType,
+  deleteLeaveType,
 } from "@/services/leavetype.services";
 import { toast } from "sonner";
 
@@ -39,6 +40,8 @@ const LeaveSetupPage = () => {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingItem, setDeletingItem] = useState<LeaveType | null>(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -55,6 +58,7 @@ const LeaveSetupPage = () => {
 
   const [submitting, setSubmitting] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const t = useTranslations("leaveSetup");
   const tc = useTranslations("common");
@@ -97,9 +101,9 @@ const LeaveSetupPage = () => {
       } else {
         toast.error(res.message || "Failed to create");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to create leave type:", error);
-      toast.error("An error occurred");
+      toast.error(error?.response?.data?.message || "An error occurred");
     } finally {
       setSubmitting(false);
     }
@@ -113,6 +117,36 @@ const LeaveSetupPage = () => {
       default_balance: item.default_balance,
     });
     setEditDialogOpen(true);
+  };
+
+  const handleOpenDelete = (item: LeaveType) => {
+    setDeletingItem(item);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!deletingItem) return;
+    try {
+      setDeleting(true);
+      const res = await deleteLeaveType(deletingItem.id);
+      if (res.result) {
+        setDeleteDialogOpen(false);
+        setDeletingItem(null);
+        fetchLeaveTypes();
+        toast.success(
+          locale === "km"
+            ? "បានលុបប្រភេទច្បាប់ឈប់សម្រាកដោយជោគជ័យ"
+            : "Leave type deleted successfully"
+        );
+      } else {
+        toast.error(res.message || "Failed to delete leave type");
+      }
+    } catch (error: any) {
+      console.error("Failed to delete leave type:", error);
+      toast.error(error?.response?.data?.message || "Cannot delete this leave type because active records exist.");
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const handleUpdate = async () => {
@@ -137,9 +171,9 @@ const LeaveSetupPage = () => {
       } else {
         toast.error(res.message || "Failed to update");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to update leave type:", error);
-      toast.error("An error occurred");
+      toast.error(error?.response?.data?.message || "An error occurred");
     } finally {
       setUpdating(false);
     }
@@ -285,7 +319,7 @@ const LeaveSetupPage = () => {
                     {locale === "km" ? `${item.default_balance} ថ្ងៃ/ឆ្នាំ` : `${item.default_balance} days/year`}
                   </p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   <Badge variant="outline" className="rounded-full px-3 py-1 font-semibold text-xs bg-muted/40">
                     {t("codePrefix") || "Code"}: {item.code}
                   </Badge>
@@ -298,12 +332,62 @@ const LeaveSetupPage = () => {
                   >
                     <Edit className="size-3.5 text-muted-foreground hover:text-primary" />
                   </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="size-8 rounded-xl cursor-pointer text-rose-500 hover:text-rose-600 hover:bg-rose-50 border-rose-100 hover:border-rose-200"
+                    onClick={() => handleOpenDelete(item)}
+                    title={locale === "km" ? "លុប" : "Delete"}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </Button>
                 </div>
               </div>
             ))
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Leave Type Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="max-w-md rounded-3xl p-6">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-rose-600 flex items-center gap-2">
+              <Trash2 className="size-5" />
+              {locale === "km" ? "លុបប្រភេទច្បាប់ឈប់សម្រាក" : "Delete Leave Type"}
+            </DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground pt-2">
+              {locale === "km"
+                ? `តើអ្នកពិតជាចង់លុបប្រភេទច្បាប់ "${deletingItem?.name}" (${deletingItem?.code}) មែនទេ? ប្រសិនបើគ្មានបុគ្គលិកណាធ្លាប់ស្នើសុំច្បាប់នេះទេ ប្រព័ន្ធនឹងលុបវាចេញដោយសុវត្ថិភាព។`
+                : `Are you sure you want to delete "${deletingItem?.name}" (${deletingItem?.code})? This will safely remove it if no employee leave requests exist for it.`}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0 pt-4">
+            <Button
+              variant="outline"
+              className="rounded-xl cursor-pointer"
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={deleting}
+            >
+              {tc("cancel") || "Cancel"}
+            </Button>
+            <Button
+              className="rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold cursor-pointer gap-2"
+              onClick={handleDelete}
+              disabled={deleting}
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  {locale === "km" ? "កំពុងលុប..." : "Deleting..."}
+                </>
+              ) : (
+                locale === "km" ? "យល់ព្រមលុប" : "Confirm Delete"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Leave Type Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>

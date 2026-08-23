@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { Link } from "@/src/i18n/routing";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -129,6 +129,7 @@ export default function EmployeePage() {
     joined_at: new Date().toISOString().split("T")[0],
     is_active: "active",
   });
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const { data: departments } = useQuery({
     queryKey: ["departments", company_id],
@@ -172,6 +173,7 @@ export default function EmployeePage() {
         joined_at: new Date().toISOString().split("T")[0],
         is_active: "active",
       });
+      setFormErrors({});
       setPreview("");
       setSelectedFile(null);
     },
@@ -189,21 +191,59 @@ export default function EmployeePage() {
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+    if (formErrors[name]) {
+      setFormErrors((prev) => {
+        const next = { ...prev };
+        delete next[name];
+        return next;
+      });
+    }
+  };
+
+  const validateForm = () => {
+    const errs: Record<string, string> = {};
+    if (!formData.first_name?.trim()) {
+      errs.first_name = locale === "km" ? "សូមបញ្ចូលនាមខ្លួន (First name required)" : "First name is required";
+    }
+    if (!formData.last_name?.trim()) {
+      errs.last_name = locale === "km" ? "សូមបញ្ចូលនាមត្រកូល (Last name required)" : "Last name is required";
+    }
+    if (!formData.age || parseInt(formData.age) <= 0) {
+      errs.age = locale === "km" ? "សូមបញ្ចូលអាយុឱ្យបានត្រឹមត្រូវ" : "Valid age is required";
+    }
+    if (!formData.gender) {
+      errs.gender = locale === "km" ? "សូមជ្រើសរើសភេទ" : "Please select gender";
+    }
+    if (!formData.phone_number1?.trim()) {
+      errs.phone_number1 = locale === "km" ? "សូមបញ្ចូលលេខទូរស័ព្ទ" : "Phone number is required";
+    }
+    if (!formData.email?.trim()) {
+      errs.email = locale === "km" ? "សូមបញ្ចូលអ៊ីមែល" : "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      errs.email = locale === "km" ? "ទម្រង់អ៊ីមែលមិនត្រឹមត្រូវ" : "Please enter a valid email address";
+    }
+    if (!formData.address?.trim()) {
+      errs.address = locale === "km" ? "សូមបញ្ចូលអាសយដ្ឋាន" : "Address is required";
+    }
+    if (!formData.department_id) {
+      errs.department_id = locale === "km" ? "សូមជ្រើសរើសផ្នែក (Department required)" : "Please select a department";
+    }
+    if (!formData.position_id) {
+      errs.position_id = locale === "km" ? "សូមជ្រើសរើសតួនាទី (Position required)" : "Please select a position";
+    }
+    if (!formData.role_id) {
+      errs.role_id = locale === "km" ? "សូមជ្រើសរើសសិទ្ធិប្រើប្រាស់ (Role required)" : "Please select a user role";
+    }
+    setFormErrors(errs);
+    return Object.keys(errs).length === 0;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.department_id) {
-      toast.error(locale === "km" ? "សូមជ្រើសរើសផ្នែក (Department)" : "Please select a department");
-      return;
-    }
-    if (!formData.position_id) {
-      toast.error(locale === "km" ? "សូមជ្រើសរើសតួនាទី (Position)" : "Please select a position");
-      return;
-    }
-    if (!formData.role_id) {
-      toast.error(locale === "km" ? "សូមជ្រើសរើសសិទ្ធិប្រើប្រាស់ (User Role)" : "Please select a user role");
+    if (!validateForm()) {
+      toast.error(locale === "km" ? "សូមពិនិត្យ និងបំពេញព័ត៌មានដែលចាំបាច់" : "Please fill in all required fields");
       return;
     }
     const data = new FormData();
@@ -311,7 +351,7 @@ export default function EmployeePage() {
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-220">
-              <form onSubmit={handleSubmit}>
+              <form onSubmit={handleSubmit} noValidate>
                 <DialogHeader>
                   <DialogTitle className="text-2xl">
                     {t("addNewEmployee")}
@@ -361,24 +401,69 @@ export default function EmployeePage() {
 
                 <FieldGroup className="grid grid-cols-2 gap-4 max-h-[330px] p-2 overflow-auto">
                   <Field className="col-span-1">
-                    <Label htmlFor="first_name">{t("firstName")}</Label>
-                    <Input id="first_name" name="first_name" value={formData.first_name} onChange={handleInputChange} required />
+                    <Label htmlFor="first_name">
+                      {t("firstName")} <span className="text-rose-500">*</span>
+                    </Label>
+                    <Input
+                      id="first_name"
+                      name="first_name"
+                      value={formData.first_name}
+                      onChange={handleInputChange}
+                      className={formErrors.first_name ? "border-rose-500 focus-visible:ring-rose-500" : ""}
+                    />
+                    {formErrors.first_name && (
+                      <p className="text-xs text-rose-500 mt-1 font-medium">{formErrors.first_name}</p>
+                    )}
                   </Field>
                   <Field className="col-span-1">
-                    <Label htmlFor="last_name">{t("lastName")}</Label>
-                    <Input id="last_name" name="last_name" value={formData.last_name} onChange={handleInputChange} required />
+                    <Label htmlFor="last_name">
+                      {t("lastName")} <span className="text-rose-500">*</span>
+                    </Label>
+                    <Input
+                      id="last_name"
+                      name="last_name"
+                      value={formData.last_name}
+                      onChange={handleInputChange}
+                      className={formErrors.last_name ? "border-rose-500 focus-visible:ring-rose-500" : ""}
+                    />
+                    {formErrors.last_name && (
+                      <p className="text-xs text-rose-500 mt-1 font-medium">{formErrors.last_name}</p>
+                    )}
                   </Field>
                   <Field className="col-span-1">
-                    <Label htmlFor="age">{t("age")}</Label>
-                    <Input id="age" name="age" type="number" value={formData.age} onChange={handleInputChange} required />
+                    <Label htmlFor="age">
+                      {t("age")} <span className="text-rose-500">*</span>
+                    </Label>
+                    <Input
+                      id="age"
+                      name="age"
+                      type="number"
+                      value={formData.age}
+                      onChange={handleInputChange}
+                      className={formErrors.age ? "border-rose-500 focus-visible:ring-rose-500" : ""}
+                    />
+                    {formErrors.age && (
+                      <p className="text-xs text-rose-500 mt-1 font-medium">{formErrors.age}</p>
+                    )}
                   </Field>
                   <Field className="col-span-1">
-                    <Label htmlFor="gender">{t("gender")}</Label>
+                    <Label htmlFor="gender">
+                      {t("gender")} <span className="text-rose-500">*</span>
+                    </Label>
                     <Select
                       value={formData.gender || undefined}
-                      onValueChange={(v) => setFormData({ ...formData, gender: v })}
+                      onValueChange={(v) => {
+                        setFormData({ ...formData, gender: v });
+                        if (formErrors.gender) {
+                          setFormErrors((prev) => {
+                            const next = { ...prev };
+                            delete next.gender;
+                            return next;
+                          });
+                        }
+                      }}
                     >
-                      <SelectTrigger id="gender" className="w-full">
+                      <SelectTrigger id="gender" className={`w-full ${formErrors.gender ? "border-rose-500 focus:ring-rose-500" : ""}`}>
                         <SelectValue placeholder={t("selectGender")} />
                       </SelectTrigger>
                       <SelectContent position="popper" className="z-[100]">
@@ -387,32 +472,78 @@ export default function EmployeePage() {
                         <SelectItem value="other">{t("other")}</SelectItem>
                       </SelectContent>
                     </Select>
+                    {formErrors.gender && (
+                      <p className="text-xs text-rose-500 mt-1 font-medium">{formErrors.gender}</p>
+                    )}
                   </Field>
                   <Field className="col-span-1">
-                    <Label htmlFor="phone_number1">{t("phone1")}</Label>
-                    <Input id="phone_number1" name="phone_number1" value={formData.phone_number1} onChange={handleInputChange} required />
+                    <Label htmlFor="phone_number1">
+                      {t("phone1")} <span className="text-rose-500">*</span>
+                    </Label>
+                    <Input
+                      id="phone_number1"
+                      name="phone_number1"
+                      value={formData.phone_number1}
+                      onChange={handleInputChange}
+                      className={formErrors.phone_number1 ? "border-rose-500 focus-visible:ring-rose-500" : ""}
+                    />
+                    {formErrors.phone_number1 && (
+                      <p className="text-xs text-rose-500 mt-1 font-medium">{formErrors.phone_number1}</p>
+                    )}
                   </Field>
                   <Field className="col-span-1">
                     <Label htmlFor="phone_number2">{t("phone2")}</Label>
                     <Input id="phone_number2" name="phone_number2" value={formData.phone_number2} onChange={handleInputChange} />
                   </Field>
                   <Field className="col-span-1">
-                    <Label htmlFor="email">{tc("email")}</Label>
-                    <Input id="email" name="email" type="email" value={formData.email} onChange={handleInputChange} required />
+                    <Label htmlFor="email">
+                      {tc("email")} <span className="text-rose-500">*</span>
+                    </Label>
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      className={formErrors.email ? "border-rose-500 focus-visible:ring-rose-500" : ""}
+                    />
+                    {formErrors.email && (
+                      <p className="text-xs text-rose-500 mt-1 font-medium">{formErrors.email}</p>
+                    )}
                   </Field>
                   <Field className="col-span-1">
-                    <Label htmlFor="address">{t("address")}</Label>
-                    <Input id="address" name="address" value={formData.address} onChange={handleInputChange} required />
+                    <Label htmlFor="address">
+                      {t("address")} <span className="text-rose-500">*</span>
+                    </Label>
+                    <Input
+                      id="address"
+                      name="address"
+                      value={formData.address}
+                      onChange={handleInputChange}
+                      className={formErrors.address ? "border-rose-500 focus-visible:ring-rose-500" : ""}
+                    />
+                    {formErrors.address && (
+                      <p className="text-xs text-rose-500 mt-1 font-medium">{formErrors.address}</p>
+                    )}
                   </Field>
                   <Field className="col-span-1">
-                    <Label htmlFor="department_id">{tc("department")}</Label>
+                    <Label htmlFor="department_id">
+                      {tc("department")} <span className="text-rose-500">*</span>
+                    </Label>
                     <Select
                       value={formData.department_id || undefined}
                       onValueChange={(v) => {
                         setFormData({ ...formData, department_id: v, position_id: "" });
+                        if (formErrors.department_id) {
+                          setFormErrors((prev) => {
+                            const next = { ...prev };
+                            delete next.department_id;
+                            return next;
+                          });
+                        }
                       }}
                     >
-                      <SelectTrigger id="department_id" className="w-full">
+                      <SelectTrigger id="department_id" className={`w-full ${formErrors.department_id ? "border-rose-500 focus:ring-rose-500" : ""}`}>
                         <SelectValue placeholder={t("selectDepartment")} />
                       </SelectTrigger>
                       <SelectContent position="popper" className="z-[100]">
@@ -425,17 +556,29 @@ export default function EmployeePage() {
                         </SelectGroup>
                       </SelectContent>
                     </Select>
+                    {formErrors.department_id && (
+                      <p className="text-xs text-rose-500 mt-1 font-medium">{formErrors.department_id}</p>
+                    )}
                   </Field>
                   <Field className="col-span-1">
-                    <Label htmlFor="position_id">{tc("position")}</Label>
+                    <Label htmlFor="position_id">
+                      {tc("position")} <span className="text-rose-500">*</span>
+                    </Label>
                     <Select
                       value={formData.position_id || undefined}
                       disabled={!formData.department_id}
-                      onValueChange={(v) =>
-                        setFormData({ ...formData, position_id: v })
-                      }
+                      onValueChange={(v) => {
+                        setFormData({ ...formData, position_id: v });
+                        if (formErrors.position_id) {
+                          setFormErrors((prev) => {
+                            const next = { ...prev };
+                            delete next.position_id;
+                            return next;
+                          });
+                        }
+                      }}
                     >
-                      <SelectTrigger id="position_id" className="w-full">
+                      <SelectTrigger id="position_id" className={`w-full ${formErrors.position_id ? "border-rose-500 focus:ring-rose-500" : ""}`}>
                         <SelectValue
                           placeholder={
                             formData.department_id ? t("selectPosition") : t("selectDepartmentFirst")
@@ -452,14 +595,28 @@ export default function EmployeePage() {
                         </SelectGroup>
                       </SelectContent>
                     </Select>
+                    {formErrors.position_id && (
+                      <p className="text-xs text-rose-500 mt-1 font-medium">{formErrors.position_id}</p>
+                    )}
                   </Field>
                   <Field className="col-span-1">
-                    <Label htmlFor="role_id">{t("userRole")}</Label>
+                    <Label htmlFor="role_id">
+                      {t("userRole")} <span className="text-rose-500">*</span>
+                    </Label>
                     <Select
                       value={formData.role_id || undefined}
-                      onValueChange={(v) => setFormData({ ...formData, role_id: v })}
+                      onValueChange={(v) => {
+                        setFormData({ ...formData, role_id: v });
+                        if (formErrors.role_id) {
+                          setFormErrors((prev) => {
+                            const next = { ...prev };
+                            delete next.role_id;
+                            return next;
+                          });
+                        }
+                      }}
                     >
-                      <SelectTrigger id="role_id" className="w-full">
+                      <SelectTrigger id="role_id" className={`w-full ${formErrors.role_id ? "border-rose-500 focus:ring-rose-500" : ""}`}>
                         <SelectValue placeholder={t("selectRole")} />
                       </SelectTrigger>
                       <SelectContent position="popper" className="z-[100]">
@@ -472,6 +629,9 @@ export default function EmployeePage() {
                         </SelectGroup>
                       </SelectContent>
                     </Select>
+                    {formErrors.role_id && (
+                      <p className="text-xs text-rose-500 mt-1 font-medium">{formErrors.role_id}</p>
+                    )}
                   </Field>
                   <Field className="col-span-1">
                     <Label htmlFor="telegram_username">{t("telegramUsername")}</Label>

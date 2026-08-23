@@ -120,7 +120,11 @@ export const createAdjustment = (data) => prisma.payrolladjustment.create({ data
 
 export const getActiveEmployees = (companyId) =>
   prisma.employee.findMany({
-    where: { company_id: companyId, is_active: "active" },
+    where: {
+      company_id: companyId,
+      is_active: "active",
+      role: { name: { notIn: ["Admin", "SuperAdmin"] } },
+    },
     include: {
       positions: true,
       department_employee_department_idTodepartment: true,

@@ -28,5 +28,6 @@ router.get('/requests/mobile', assetController.getRequestsMobile);
 router.post('/requests', assetController.createRequest);
 router.post('/requests/:id/approve-manager', assetController.approveManager);
 router.post('/requests/:id/approve-hr', assetController.approveHR);
+router.delete('/requests/:id', assetController.deleteRequest);
 
 export default router;

@@ -24,27 +24,25 @@ import {
   Mail, 
   Phone, 
   Palette, 
-  Send, 
   Edit3, 
   Upload, 
   X, 
-  Check, 
   Loader2, 
-  Globe, 
-  MessageSquare,
-  Lock,
   ArrowLeft,
   MapPin,
   Trash2,
   Edit2,
   ExternalLink,
   Plus,
-  Sparkles,
-  Cpu
+  Settings,
+  ShieldCheck,
+  ChevronRight,
+  Send,
+  Sparkles
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useSearchParams } from "next/navigation";
 import {
   Dialog,
   DialogContent,
@@ -52,18 +50,26 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
-  DialogClose,
 } from "@/components/ui/dialog";
 
 export default function CompanyPage() {
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
+
   const t = useTranslations("company");
   const tc = useTranslations("common");
   const { data: companyRes, isLoading: isCompanyLoading, isError: isCompanyError } = useCompany();
   const { data: locationsRes, isLoading: isLocationsLoading, isError: isLocationsError } = useLocations();
 
-  const [activeTab, setActiveTab] = useState("profile");
+  const [activeTab, setActiveTab] = useState(tabParam === "locations" ? "locations" : "profile");
+
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab === "locations" || tab === "profile") {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -85,18 +91,6 @@ export default function CompanyPage() {
     email: "",
     primary_color: "#4f46e5",
     secondary_color: "#06b6d4",
-    telegram_group_id: "",
-    telegram_attendance_group_id: "",
-    telegram_leave_group_id: "",
-    telegram_late_group_id: "",
-    telegram_overtime_group_id: "",
-    telegram_announcement_group_id: "",
-    telegram_backup_group_id: "",
-    telegram_bot_token: "",
-    ai_provider: "ollama",
-    ai_api_key: "",
-    ai_model: "qwen2.5:1.5b",
-    default_password: "",
   });
 
   const company = companyRes?.data;
@@ -111,18 +105,6 @@ export default function CompanyPage() {
         email: company.email || "",
         primary_color: company.primary_color || "#4f46e5",
         secondary_color: company.secondary_color || "#06b6d4",
-        telegram_group_id: company.telegram_group_id || "",
-        telegram_attendance_group_id: company.telegram_attendance_group_id || "",
-        telegram_leave_group_id: company.telegram_leave_group_id || "",
-        telegram_late_group_id: company.telegram_late_group_id || "",
-        telegram_overtime_group_id: company.telegram_overtime_group_id || "",
-        telegram_announcement_group_id: company.telegram_announcement_group_id || "",
-        telegram_backup_group_id: company.telegram_backup_group_id || "",
-        telegram_bot_token: company.telegram_bot_token || "",
-        ai_provider: company.ai_provider || "ollama",
-        ai_api_key: company.ai_api_key || "",
-        ai_model: company.ai_model || "qwen2.5:1.5b",
-        default_password: company.default_password || "Hr12345",
       });
       if (company.logo_path) {
         setLogoPreview(`${process.env.NEXT_PUBLIC_API_URL}${company.logo_path}`);
@@ -212,24 +194,26 @@ export default function CompanyPage() {
     }
 
     const data = new FormData();
-    data.append("name", formData.name);
-    data.append("phone", formData.phone);
-    data.append("email", formData.email);
+    data.append("name", formData.name.trim());
+    data.append("phone", formData.phone.trim());
+    data.append("email", formData.email.trim());
     data.append("primary_color", formData.primary_color);
     data.append("secondary_color", formData.secondary_color);
-    data.append("telegram_group_id", formData.telegram_group_id);
-    data.append("telegram_attendance_group_id", formData.telegram_attendance_group_id);
-    data.append("telegram_leave_group_id", formData.telegram_leave_group_id);
-    data.append("telegram_late_group_id", formData.telegram_late_group_id);
-    data.append("telegram_overtime_group_id", formData.telegram_overtime_group_id);
-    data.append("telegram_announcement_group_id", formData.telegram_announcement_group_id);
-    data.append("telegram_backup_group_id", formData.telegram_backup_group_id);
-    data.append("telegram_bot_token", formData.telegram_bot_token);
-    data.append("ai_provider", formData.ai_provider);
-    data.append("ai_api_key", formData.ai_api_key);
-    data.append("ai_model", formData.ai_model);
-    data.append("default_password", formData.default_password);
     data.append("old_logo_path", company?.logo_path || "");
+
+    // Preserve existing technical settings from company record
+    data.append("telegram_group_id", company?.telegram_group_id || "");
+    data.append("telegram_attendance_group_id", company?.telegram_attendance_group_id || "");
+    data.append("telegram_leave_group_id", company?.telegram_leave_group_id || "");
+    data.append("telegram_late_group_id", company?.telegram_late_group_id || "");
+    data.append("telegram_overtime_group_id", company?.telegram_overtime_group_id || "");
+    data.append("telegram_announcement_group_id", company?.telegram_announcement_group_id || "");
+    data.append("telegram_backup_group_id", company?.telegram_backup_group_id || "");
+    data.append("telegram_bot_token", company?.telegram_bot_token || "");
+    data.append("ai_provider", company?.ai_provider || "ollama");
+    data.append("ai_api_key", company?.ai_api_key || "");
+    data.append("ai_model", company?.ai_model || "qwen2.5:1.5b");
+    data.append("default_password", company?.default_password || "Hr12345");
 
     if (selectedFile) {
       data.append("logo_path", selectedFile);
@@ -318,7 +302,7 @@ export default function CompanyPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-gray-900">{t("title")}</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {t("subtitle")}
+            Manage company profile, branding, and attendance locations.
           </p>
         </div>
         {activeTab === "profile" && !isEditing && (
@@ -371,7 +355,7 @@ export default function CompanyPage() {
               transition={{ duration: 0.2 }}
               className="grid grid-cols-1 md:grid-cols-3 gap-6"
             >
-              {/* Left Column: Profile Card & Colors */}
+              {/* Left Column: Profile Card */}
               <div className="md:col-span-1 space-y-6">
                 <Card className="overflow-hidden border border-white/60 bg-white/70 shadow-sm backdrop-blur-xl rounded-3xl">
                   <div className="h-24 bg-gradient-to-r from-primary/10 to-indigo-500/10 relative" />
@@ -454,183 +438,97 @@ export default function CompanyPage() {
                 </Card>
               </div>
 
-              {/* Right Column: Telegram Settings & Default Password */}
+              {/* Right Column: Organization Details & Technical Settings Link */}
               <div className="md:col-span-2 space-y-6">
+                {/* Organization Details Card */}
                 <Card className="border border-white/60 bg-white/70 shadow-sm backdrop-blur-xl rounded-3xl">
-                  <CardHeader>
-                    <CardTitle className="text-lg font-bold flex items-center gap-2 text-gray-800">
-                      <Send className="size-5 text-sky-500" />
-                      {t("telegramIntegration")}
-                    </CardTitle>
-                    <CardDescription>
-                      {t("telegramDesc")}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="space-y-4">
-                      <div className="p-5 rounded-2xl bg-sky-50/50 border border-sky-100/50 space-y-4">
-                        <h3 className="text-sm font-bold text-sky-900 flex items-center gap-2">
-                          <MessageSquare className="size-4.5" />
-                          {t("telegramChannels") || "Telegram Notification Channels"}
-                        </h3>
-                        <p className="text-xs text-sky-700/80 leading-relaxed">
-                          {t("telegramChannelsDesc") || "Configure specific Telegram group IDs for each feature, or use the Default Group ID as a fallback."}
-                        </p>
-                        
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div className="space-y-1">
-                            <span className="text-[11px] font-bold text-gray-400 block uppercase tracking-wider">{t("groupIdLabel")}</span>
-                            <div className="bg-white/90 border border-sky-100 rounded-xl px-3.5 py-2.5 font-mono text-xs text-gray-800 select-all shadow-sm">
-                              {company.telegram_group_id || <span className="text-gray-400 italic font-sans">{tc("notSet")}</span>}
-                            </div>
-                          </div>
-
-                          <div className="space-y-1">
-                            <span className="text-[11px] font-bold text-gray-400 block uppercase tracking-wider">{t("attendanceGroupIdLabel")}</span>
-                            <div className="bg-white/90 border border-sky-100 rounded-xl px-3.5 py-2.5 font-mono text-xs text-gray-800 select-all shadow-sm">
-                              {company.telegram_attendance_group_id || <span className="text-gray-400 italic font-sans">{tc("notSet")}</span>}
-                            </div>
-                          </div>
-
-                          <div className="space-y-1">
-                            <span className="text-[11px] font-bold text-gray-400 block uppercase tracking-wider">{t("leaveGroupIdLabel")}</span>
-                            <div className="bg-white/90 border border-sky-100 rounded-xl px-3.5 py-2.5 font-mono text-xs text-gray-800 select-all shadow-sm">
-                              {company.telegram_leave_group_id || <span className="text-gray-400 italic font-sans">{tc("notSet")}</span>}
-                            </div>
-                          </div>
-
-                          <div className="space-y-1">
-                            <span className="text-[11px] font-bold text-gray-400 block uppercase tracking-wider">{t("lateGroupIdLabel") || "LATE GROUP ID"}</span>
-                            <div className="bg-white/90 border border-sky-100 rounded-xl px-3.5 py-2.5 font-mono text-xs text-gray-800 select-all shadow-sm">
-                              {company.telegram_late_group_id || <span className="text-gray-400 italic font-sans">{tc("notSet")}</span>}
-                            </div>
-                          </div>
-
-                          <div className="space-y-1">
-                            <span className="text-[11px] font-bold text-gray-400 block uppercase tracking-wider">{t("overtimeGroupIdLabel")}</span>
-                            <div className="bg-white/90 border border-sky-100 rounded-xl px-3.5 py-2.5 font-mono text-xs text-gray-800 select-all shadow-sm">
-                              {company.telegram_overtime_group_id || <span className="text-gray-400 italic font-sans">{tc("notSet")}</span>}
-                            </div>
-                          </div>
-
-                          <div className="space-y-1">
-                            <span className="text-[11px] font-bold text-gray-400 block uppercase tracking-wider">{t("announcementGroupIdLabel")}</span>
-                            <div className="bg-white/90 border border-sky-100 rounded-xl px-3.5 py-2.5 font-mono text-xs text-gray-800 select-all shadow-sm">
-                              {company.telegram_announcement_group_id || <span className="text-gray-400 italic font-sans">{tc("notSet")}</span>}
-                            </div>
-                          </div>
-
-                          <div className="space-y-1">
-                            <span className="text-[11px] font-bold text-gray-400 block uppercase tracking-wider">{t("backupGroupIdLabel") || "Backup Group ID"}</span>
-                            <div className="bg-white/90 border border-sky-100 rounded-xl px-3.5 py-2.5 font-mono text-xs text-gray-800 select-all shadow-sm">
-                              {company.telegram_backup_group_id || <span className="text-gray-400 italic font-sans">{tc("notSet")}</span>}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="p-5 rounded-2xl bg-gray-50 border border-gray-100 space-y-3">
-                        <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
-                          <Lock className="size-4.5 text-gray-400" />
-                          {t("botToken")}
-                        </h3>
-                        <p className="text-xs text-gray-500 leading-relaxed">
-                          {t("botTokenDesc")}
-                        </p>
-                        <div className="bg-white border border-gray-100 rounded-xl px-4 py-3 font-mono text-sm text-gray-800 flex items-center justify-between shadow-sm">
-                          <span className="truncate flex-1 max-w-[90%]">
-                            {company.telegram_bot_token 
-                              ? "••••••••••••••••••••••••••••••••••••••••••••••••" 
-                              : <span className="text-gray-400 italic font-sans text-xs">{tc("notSet")}</span>}
-                          </span>
-                          {company.telegram_bot_token && (
-                            <Badge variant="secondary" className="rounded-full bg-gray-100 text-gray-600 hover:bg-gray-100 text-[10px]">
-                              {t("secure")}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
+                  <CardHeader className="pb-4">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="size-5 text-primary" />
+                      <CardTitle className="text-lg font-bold text-gray-800">
+                        {t("companyInfo")}
+                      </CardTitle>
                     </div>
-                  </CardContent>
-                </Card>
-
-                {/* AI Chatbot Settings Card */}
-                <Card className="border border-white/60 bg-white/70 shadow-sm backdrop-blur-xl rounded-3xl">
-                  <CardHeader>
-                    <CardTitle className="text-lg font-bold flex items-center gap-2 text-gray-800">
-                      <Sparkles className="size-5 text-indigo-500 animate-pulse" />
-                      {t("aiSettingsTitle")}
-                    </CardTitle>
                     <CardDescription>
-                      {t("aiSettingsDesc")}
+                      Official company identity and contact information used across reports and employee portals.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <span className="text-[11px] font-bold text-gray-400 block uppercase tracking-wider">{t("aiProviderLabel")}</span>
-                        <div className="bg-white/90 border border-indigo-50/50 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 shadow-sm">
-                          {company.ai_provider === 'ollama' && t("aiLocalOption")}
-                          {company.ai_provider === 'gemini' && t("aiGeminiOption")}
-                          {company.ai_provider === 'huggingface' && t("aiHuggingFaceOption")}
-                          {company.ai_provider === 'openrouter' && t("aiOpenrouterOption")}
-                          {!company.ai_provider && t("aiLocalOption")}
-                        </div>
+                      <div className="p-4 rounded-2xl bg-gray-50/80 border border-gray-100 space-y-1">
+                        <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">
+                          {t("companyName")}
+                        </span>
+                        <p className="text-sm font-bold text-gray-900 truncate">
+                          {company.name || tc("notSet")}
+                        </p>
                       </div>
 
-                      <div className="space-y-1">
-                        <span className="text-[11px] font-bold text-gray-400 block uppercase tracking-wider">{t("aiModelLabel")}</span>
-                        <div className="bg-white/90 border border-indigo-50/50 rounded-xl px-3.5 py-2.5 font-mono text-xs text-gray-800 shadow-sm">
-                          {company.ai_model || "qwen2.5:1.5b"}
+                      <div className="p-4 rounded-2xl bg-gray-50/80 border border-gray-100 space-y-1">
+                        <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">
+                          {t("companyEmail")}
+                        </span>
+                        <p className="text-sm font-bold text-gray-900 truncate">
+                          {company.email || tc("notSet")}
+                        </p>
+                      </div>
+
+                      <div className="p-4 rounded-2xl bg-gray-50/80 border border-gray-100 space-y-1">
+                        <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">
+                          {t("companyPhone")}
+                        </span>
+                        <p className="text-sm font-bold text-gray-900 truncate">
+                          {company.phone || tc("notSet")}
+                        </p>
+                      </div>
+
+                      <div className="p-4 rounded-2xl bg-gray-50/80 border border-gray-100 space-y-1">
+                        <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">
+                          Attendance Geofencing
+                        </span>
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-bold text-gray-900">
+                            {locations.length} {locations.length === 1 ? "Location" : "Locations"}
+                          </p>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setActiveTab("locations")}
+                            className="h-6 text-xs text-primary hover:text-primary font-bold px-2"
+                          >
+                            View Tab →
+                          </Button>
                         </div>
                       </div>
                     </div>
-
-                    {(company.ai_provider && company.ai_provider !== 'ollama') && (
-                      <div className="p-5 rounded-2xl bg-gray-50 border border-gray-100 space-y-3">
-                        <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
-                          <Lock className="size-4.5 text-gray-400" />
-                          {t("aiApiKeyLabel")}
-                        </h3>
-                        <div className="bg-white border border-gray-100 rounded-xl px-4 py-3 font-mono text-sm text-gray-800 flex items-center justify-between shadow-sm">
-                          <span className="truncate flex-1 max-w-[90%]">
-                            {company.ai_api_key 
-                              ? "••••••••••••••••••••••••••••••••••••••••••••••••" 
-                              : <span className="text-gray-400 italic font-sans text-xs">{tc("notSet")}</span>}
-                          </span>
-                          {company.ai_api_key && (
-                            <Badge variant="secondary" className="rounded-full bg-gray-100 text-gray-600 hover:bg-gray-100 text-[10px]">
-                              {t("secure")}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    )}
                   </CardContent>
                 </Card>
 
-                {/* Default Password Card */}
-                <Card className="border border-white/60 bg-white/70 shadow-sm backdrop-blur-xl rounded-3xl">
-                  <CardHeader>
-                    <CardTitle className="text-lg font-bold flex items-center gap-2 text-gray-800">
-                      <Lock className="size-5 text-indigo-500" />
-                      {t("defaultPasswordTitle")}
-                    </CardTitle>
-                    <CardDescription>
-                      {t("defaultPasswordDesc")}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="p-5 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-between shadow-sm">
+                {/* Technical Configuration Callout Card */}
+                <Card className="border border-sky-100 bg-gradient-to-br from-sky-50/70 via-indigo-50/40 to-white/70 shadow-sm backdrop-blur-xl rounded-3xl overflow-hidden">
+                  <CardContent className="p-6">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                       <div className="space-y-1">
-                        <span className="text-[11px] font-bold text-gray-400 block uppercase tracking-wider">{t("defaultPasswordLabel")}</span>
-                        <span className="font-mono text-sm font-semibold text-gray-800">
-                          {company.default_password || "Hr12345"}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <div className="size-8 rounded-xl bg-sky-500/15 flex items-center justify-center text-sky-600">
+                            <Settings size={18} />
+                          </div>
+                          <h3 className="text-base font-bold text-gray-900">
+                            System & Technical Settings
+                          </h3>
+                        </div>
+                        <p className="text-xs sm:text-sm text-gray-600 leading-relaxed max-w-xl">
+                          Configure Telegram notification group channels, Bot token, AI Large Language Models, and default employee passwords on the dedicated Settings page.
+                        </p>
                       </div>
-                      <Badge variant="secondary" className="rounded-full bg-indigo-50 text-indigo-700 hover:bg-indigo-50 text-[10px] font-bold border border-indigo-100 px-3 py-1">
-                        {t("activeSetting")}
-                      </Badge>
+
+                      <Link href="/dashboard/setting" className="shrink-0 w-full sm:w-auto">
+                        <Button className="w-full sm:w-auto rounded-2xl h-11 px-5 gap-2 bg-sky-600 hover:bg-sky-700 text-white font-semibold shadow-sm">
+                          <Settings size={16} />
+                          Go to System Settings
+                          <ChevronRight size={16} />
+                        </Button>
+                      </Link>
                     </div>
                   </CardContent>
                 </Card>
@@ -770,7 +668,7 @@ export default function CompanyPage() {
               </CardHeader>
               <CardContent className="space-y-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Left Column */}
+                  {/* Left Column: Basic Details & Theme */}
                   <div className="space-y-6">
                     <div className="space-y-2">
                       <Label htmlFor="name" className="text-sm font-bold text-gray-700">{t("companyName")} <span className="text-rose-500">*</span></Label>
@@ -778,7 +676,7 @@ export default function CompanyPage() {
                         id="name"
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        placeholder="e.g. Sarana Group"
+                        placeholder="e.g. Bayon Market"
                         className="h-11 rounded-2xl border-white/80 bg-white/60 focus:bg-white"
                         required
                       />
@@ -791,7 +689,7 @@ export default function CompanyPage() {
                         type="email"
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        placeholder="info@saranagroup.com"
+                        placeholder="info@bayonmarket.com.kh"
                         className="h-11 rounded-2xl border-white/80 bg-white/60 focus:bg-white"
                       />
                     </div>
@@ -802,7 +700,7 @@ export default function CompanyPage() {
                         id="phone"
                         value={formData.phone}
                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                        placeholder="012 345 678 / 098 765 432"
+                        placeholder="012 888 111 / 023 999 888"
                         className="h-11 rounded-2xl border-white/80 bg-white/60 focus:bg-white"
                       />
                     </div>
@@ -854,97 +752,13 @@ export default function CompanyPage() {
                         </div>
                       </div>
                     </div>
-
-                    <div className="p-5 rounded-2xl bg-indigo-50/30 border border-indigo-100/50 space-y-4">
-                      <h3 className="text-sm font-bold text-indigo-900 flex items-center gap-2">
-                        <Lock size={16} className="text-indigo-500" />
-                        {t("defaultPasswordTitle")}
-                      </h3>
-                      <div className="space-y-2">
-                        <Label htmlFor="default_password" className="text-xs font-semibold text-indigo-800">{t("defaultPasswordLabel")}</Label>
-                        <Input
-                          id="default_password"
-                          value={formData.default_password}
-                          onChange={(e) => setFormData({ ...formData, default_password: e.target.value })}
-                          placeholder="e.g. Hr12345"
-                          className="h-11 rounded-2xl border-indigo-100/80 bg-white/60 focus:bg-white text-sm"
-                          required
-                        />
-                        <p className="text-[10px] text-indigo-700/70 leading-normal">
-                          {t("defaultPasswordHelp")}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* AI Chatbot Settings Card */}
-                    <div className="p-5 rounded-2xl bg-indigo-50/30 border border-indigo-100/50 space-y-4">
-                      <h3 className="text-sm font-bold text-indigo-900 flex items-center gap-2">
-                        <Sparkles size={16} className="text-indigo-500" />
-                        {t("aiSettingsTitle")}
-                      </h3>
-                      
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                          <Label htmlFor="ai_provider" className="text-xs font-semibold text-indigo-800">{t("aiProviderLabel")}</Label>
-                          <Select
-                            value={formData.ai_provider}
-                            onValueChange={(val) => {
-                              let defaultModel = 'qwen2.5:1.5b';
-                              if (val === 'gemini') {
-                                defaultModel = 'gemini-3.5-flash-lite';
-                              } else if (val === 'huggingface') {
-                                defaultModel = 'Qwen/Qwen2.5-72B-Instruct';
-                              } else if (val === 'openrouter') {
-                                defaultModel = 'openrouter/free';
-                              }
-                              setFormData({ ...formData, ai_provider: val, ai_model: defaultModel });
-                            }}
-                          >
-                            <SelectTrigger id="ai_provider" className="h-10 rounded-xl border-indigo-100/80 bg-white/60 focus:bg-white text-sm">
-                              <SelectValue placeholder="Select Provider" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="ollama">{t("aiLocalOption")}</SelectItem>
-                              <SelectItem value="gemini">{t("aiGeminiOption")}</SelectItem>
-                              <SelectItem value="huggingface">{t("aiHuggingFaceOption")}</SelectItem>
-                              <SelectItem value="openrouter">{t("aiOpenrouterOption")}</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <Label htmlFor="ai_model" className="text-xs font-semibold text-indigo-800">{t("aiModelLabel")}</Label>
-                          <Input
-                            id="ai_model"
-                            value={formData.ai_model}
-                            onChange={(e) => setFormData({ ...formData, ai_model: e.target.value })}
-                            placeholder={t("aiModelPlaceholder")}
-                            className="h-10 rounded-xl border-indigo-100/80 bg-white/60 focus:bg-white text-sm"
-                          />
-                        </div>
-                      </div>
-
-                      {formData.ai_provider !== 'ollama' && (
-                        <div className="space-y-1.5 animate-fadeIn">
-                          <Label htmlFor="ai_api_key" className="text-xs font-semibold text-indigo-800">{t("aiApiKeyLabel")}</Label>
-                          <Input
-                            id="ai_api_key"
-                            type="password"
-                            value={formData.ai_api_key}
-                            onChange={(e) => setFormData({ ...formData, ai_api_key: e.target.value })}
-                            placeholder={t("aiApiKeyPlaceholder")}
-                            className="h-10 rounded-xl border-indigo-100/80 bg-white/60 focus:bg-white text-sm"
-                          />
-                        </div>
-                      )}
-                    </div>
                   </div>
 
-                  {/* Right Column */}
+                  {/* Right Column: Logo Upload */}
                   <div className="space-y-6">
                     <div className="space-y-2">
                       <Label className="text-sm font-bold text-gray-700">{t("companyLogo")}</Label>
-                      <div className="border-2 border-dashed border-gray-200 hover:border-primary/50 transition-colors rounded-2xl p-6 flex flex-col items-center justify-center bg-white/40 cursor-pointer relative min-h-[195px]">
+                      <div className="border-2 border-dashed border-gray-200 hover:border-primary/50 transition-colors rounded-2xl p-6 flex flex-col items-center justify-center bg-white/40 cursor-pointer relative min-h-[220px]">
                         <input
                           type="file"
                           accept="image/*"
@@ -954,7 +768,7 @@ export default function CompanyPage() {
                         />
                         {logoPreview ? (
                           <div className="flex flex-col items-center space-y-3 z-10">
-                            <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-md border-2 border-white bg-white relative">
+                            <div className="w-24 h-24 rounded-2xl overflow-hidden shadow-md border-2 border-white bg-white relative">
                               <img src={logoPreview} alt="Preview" className="w-full h-full object-cover" />
                             </div>
                             <div className="flex items-center gap-2">
@@ -977,105 +791,13 @@ export default function CompanyPage() {
                           </div>
                         ) : (
                           <div className="text-center space-y-2 pointer-events-none">
-                            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center mx-auto mb-2">
-                              <Upload size={20} />
+                            <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto mb-2">
+                              <Upload size={22} />
                             </div>
                             <p className="text-xs font-semibold text-gray-700">{t("uploadImage")}</p>
                             <p className="text-[10px] text-gray-400">{t("supportedFormats")}</p>
                           </div>
                         )}
-                      </div>
-                    </div>
-
-                    <div className="p-5 rounded-2xl bg-sky-50/30 border border-sky-100/50 space-y-4">
-                      <h3 className="text-sm font-bold text-sky-900 flex items-center gap-2">
-                        <Send size={16} className="text-sky-500" />
-                        {t("telegramIntegration")}
-                      </h3>
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div className="space-y-1.5">
-                            <Label htmlFor="telegram_group_id" className="text-xs font-semibold text-sky-800">{t("groupIdLabel")}</Label>
-                            <Input
-                              id="telegram_group_id"
-                              value={formData.telegram_group_id}
-                              onChange={(e) => setFormData({ ...formData, telegram_group_id: e.target.value })}
-                              placeholder="e.g. -100123456789"
-                              className="h-10 rounded-xl border-sky-100/80 bg-white/70 focus:bg-white text-sm font-mono"
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label htmlFor="telegram_attendance_group_id" className="text-xs font-semibold text-sky-800">{t("attendanceGroupIdLabel")}</Label>
-                            <Input
-                              id="telegram_attendance_group_id"
-                              value={formData.telegram_attendance_group_id}
-                              onChange={(e) => setFormData({ ...formData, telegram_attendance_group_id: e.target.value })}
-                              placeholder="e.g. -100123456789"
-                              className="h-10 rounded-xl border-sky-100/80 bg-white/70 focus:bg-white text-sm font-mono"
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label htmlFor="telegram_leave_group_id" className="text-xs font-semibold text-sky-800">{t("leaveGroupIdLabel")}</Label>
-                            <Input
-                              id="telegram_leave_group_id"
-                              value={formData.telegram_leave_group_id}
-                              onChange={(e) => setFormData({ ...formData, telegram_leave_group_id: e.target.value })}
-                              placeholder="e.g. -100123456789"
-                              className="h-10 rounded-xl border-sky-100/80 bg-white/70 focus:bg-white text-sm font-mono"
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label htmlFor="telegram_late_group_id" className="text-xs font-semibold text-sky-800">{t("lateGroupIdLabel") || "Late Group ID"}</Label>
-                            <Input
-                              id="telegram_late_group_id"
-                              value={formData.telegram_late_group_id}
-                              onChange={(e) => setFormData({ ...formData, telegram_late_group_id: e.target.value })}
-                              placeholder="e.g. -100123456789"
-                              className="h-10 rounded-xl border-sky-100/80 bg-white/70 focus:bg-white text-sm font-mono"
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label htmlFor="telegram_overtime_group_id" className="text-xs font-semibold text-sky-800">{t("overtimeGroupIdLabel")}</Label>
-                            <Input
-                              id="telegram_overtime_group_id"
-                              value={formData.telegram_overtime_group_id}
-                              onChange={(e) => setFormData({ ...formData, telegram_overtime_group_id: e.target.value })}
-                              placeholder="e.g. -100123456789"
-                              className="h-10 rounded-xl border-sky-100/80 bg-white/70 focus:bg-white text-sm font-mono"
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label htmlFor="telegram_announcement_group_id" className="text-xs font-semibold text-sky-800">{t("announcementGroupIdLabel")}</Label>
-                            <Input
-                              id="telegram_announcement_group_id"
-                              value={formData.telegram_announcement_group_id}
-                              onChange={(e) => setFormData({ ...formData, telegram_announcement_group_id: e.target.value })}
-                              placeholder="e.g. -100123456789"
-                              className="h-10 rounded-xl border-sky-100/80 bg-white/70 focus:bg-white text-sm font-mono"
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label htmlFor="telegram_backup_group_id" className="text-xs font-semibold text-sky-800">{t("backupGroupIdLabel") || "Backup Group ID"}</Label>
-                            <Input
-                              id="telegram_backup_group_id"
-                              value={formData.telegram_backup_group_id}
-                              onChange={(e) => setFormData({ ...formData, telegram_backup_group_id: e.target.value })}
-                              placeholder="e.g. -100123456789"
-                              className="h-10 rounded-xl border-sky-100/80 bg-white/70 focus:bg-white text-sm font-mono"
-                            />
-                          </div>
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label htmlFor="telegram_bot_token" className="text-xs font-semibold text-sky-800">{t("botTokenLabel")}</Label>
-                          <Input
-                            id="telegram_bot_token"
-                            type="password"
-                            value={formData.telegram_bot_token}
-                            onChange={(e) => setFormData({ ...formData, telegram_bot_token: e.target.value })}
-                            placeholder="e.g. 123456:ABC-DEF1234ghIkl-zyx"
-                            className="h-10 rounded-xl border-sky-100/80 bg-white/70 focus:bg-white text-sm"
-                          />
-                        </div>
                       </div>
                     </div>
                   </div>
@@ -1101,14 +823,11 @@ export default function CompanyPage() {
                 >
                   {updateCompanyMutation.isPending ? (
                     <>
-                      <Loader2 className="size-4 animate-spin" />
+                      <Loader2 size={16} className="animate-spin" />
                       {tc("saving")}
                     </>
                   ) : (
-                    <>
-                      <Check size={18} />
-                      {t("saveChanges")}
-                    </>
+                    t("saveChanges")
                   )}
                 </Button>
               </div>
@@ -1117,147 +836,123 @@ export default function CompanyPage() {
         </motion.div>
       )}
 
-      {/* Add / Edit Location Dialog */}
-      <Dialog 
-        open={isLocationDialogOpen} 
-        onOpenChange={(open) => {
-          setIsLocationDialogOpen(open);
-          if (!open) resetLocationForm();
-        }}
-      >
-        <DialogContent className="max-w-md p-6 rounded-3xl border border-white/60 bg-white/95 backdrop-blur-xl shadow-lg">
-          <form onSubmit={handleLocationSubmit}>
-            <DialogHeader className="mb-4">
-              <DialogTitle className="text-xl font-bold text-gray-900">
-                {selectedLocation ? t("editLocation") : t("addNewLocation")}
-              </DialogTitle>
-              <DialogDescription className="text-xs text-gray-500">
-                {t("locationFormDesc")}
-              </DialogDescription>
-            </DialogHeader>
+      {/* Location Add/Edit Dialog */}
+      <Dialog open={isLocationDialogOpen} onOpenChange={setIsLocationDialogOpen}>
+        <DialogContent className="rounded-3xl max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold">
+              {selectedLocation ? t("editLocation") : t("addNewLocation")}
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              {t("locationFormDesc")}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleLocationSubmit} className="space-y-4 pt-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="loc_name" className="text-xs font-bold">{t("locationName")} <span className="text-rose-500">*</span></Label>
+              <Input
+                id="loc_name"
+                value={locationForm.name}
+                onChange={(e) => setLocationForm({ ...locationForm, name: e.target.value })}
+                placeholder="e.g. Main Branch / Head Office"
+                className="h-10 rounded-xl text-sm"
+                required
+              />
+            </div>
 
-            <div className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="loc-name" className="text-sm font-bold text-gray-700">{t("locationName")} <span className="text-rose-500">*</span></Label>
+                <Label htmlFor="loc_lat" className="text-xs font-bold">{t("latitude")}</Label>
                 <Input
-                  id="loc-name"
-                  value={locationForm.name}
-                  onChange={(e) => setLocationForm({ ...locationForm, name: e.target.value })}
-                  placeholder="e.g. Head Office Branch (Norton)"
-                  className="h-10 rounded-xl border-gray-200 bg-white text-sm"
-                  required
+                  id="loc_lat"
+                  value={locationForm.latitude}
+                  onChange={(e) => setLocationForm({ ...locationForm, latitude: e.target.value })}
+                  placeholder="11.5683"
+                  className="h-10 rounded-xl text-xs font-mono"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="loc-lat" className="text-sm font-bold text-gray-700">{t("latitude")}</Label>
-                  <Input
-                    id="loc-lat"
-                    value={locationForm.latitude}
-                    onChange={(e) => setLocationForm({ ...locationForm, latitude: e.target.value })}
-                    placeholder="e.g. 11.5833"
-                    className="h-10 rounded-xl border-gray-200 bg-white text-sm font-mono"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="loc-lng" className="text-sm font-bold text-gray-700">{t("longitude")}</Label>
-                  <Input
-                    id="loc-lng"
-                    value={locationForm.longitude}
-                    onChange={(e) => setLocationForm({ ...locationForm, longitude: e.target.value })}
-                    placeholder="e.g. 104.9167"
-                    className="h-10 rounded-xl border-gray-200 bg-white text-sm font-mono"
-                  />
-                </div>
-              </div>
-
               <div className="space-y-1.5">
-                <Label htmlFor="loc-radius" className="text-sm font-bold text-gray-700">{t("radiusLabel")} <span className="text-rose-500">*</span></Label>
-                <div className="relative">
-                  <Input
-                    id="loc-radius"
-                    type="number"
-                    value={locationForm.radius}
-                    onChange={(e) => setLocationForm({ ...locationForm, radius: e.target.value })}
-                    placeholder="100"
-                    className="h-10 rounded-xl border-gray-200 bg-white text-sm pr-16"
-                    required
-                    min="10"
-                  />
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-400">
-                    {tc("meters")}
-                  </div>
-                </div>
-                <p className="text-[10px] text-gray-400 leading-normal">
-                  {t("radiusHint")}
-                </p>
+                <Label htmlFor="loc_lng" className="text-xs font-bold">{t("longitude")}</Label>
+                <Input
+                  id="loc_lng"
+                  value={locationForm.longitude}
+                  onChange={(e) => setLocationForm({ ...locationForm, longitude: e.target.value })}
+                  placeholder="104.9189"
+                  className="h-10 rounded-xl text-xs font-mono"
+                />
               </div>
             </div>
 
-            <DialogFooter className="mt-6 gap-2">
-              <DialogClose asChild>
-                <Button type="button" variant="outline" className="rounded-xl h-10 text-sm">
-                  {tc("cancel")}
-                </Button>
-              </DialogClose>
+            <div className="space-y-1.5">
+              <Label htmlFor="loc_radius" className="text-xs font-bold">{t("radiusLabel")}</Label>
+              <Input
+                id="loc_radius"
+                type="number"
+                value={locationForm.radius}
+                onChange={(e) => setLocationForm({ ...locationForm, radius: e.target.value })}
+                placeholder="100"
+                className="h-10 rounded-xl text-sm"
+                min="10"
+                max="5000"
+              />
+              <p className="text-[10px] text-gray-400">{t("radiusHint")}</p>
+            </div>
+
+            <DialogFooter className="pt-3 gap-2">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setIsLocationDialogOpen(false)}
+                className="rounded-xl"
+              >
+                {tc("cancel")}
+              </Button>
               <Button 
                 type="submit" 
-                className="rounded-xl h-10 px-5 text-sm bg-primary text-white font-medium"
+                className="rounded-xl bg-primary text-white"
                 disabled={addLocationMutation.isPending || updateLocationMutation.isPending}
               >
-                {(addLocationMutation.isPending || updateLocationMutation.isPending) ? (
-                  <>
-                    <Loader2 className="size-4 animate-spin mr-1.5" />
-                    {tc("saving")}
-                  </>
-                ) : (
-                  <>
-                    <Check size={16} className="mr-1.5" />
-                    {tc("save")}
-                  </>
-                )}
+                {addLocationMutation.isPending || updateLocationMutation.isPending ? (
+                  <Loader2 size={14} className="animate-spin mr-1" />
+                ) : null}
+                {tc("save")}
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Location Confirmation Dialog */}
-      <Dialog 
-        open={isDeleteConfirmOpen} 
-        onOpenChange={(open) => {
-          setIsDeleteConfirmOpen(open);
-          if (!open) setSelectedLocation(null);
-        }}
-      >
-        <DialogContent className="max-w-sm p-6 rounded-3xl border border-white/60 bg-white/95 backdrop-blur-xl shadow-lg">
-          <DialogHeader className="mb-4">
-            <DialogTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
-              <Trash2 className="size-5 text-rose-500" />
+      {/* Delete Location Confirm Dialog */}
+      <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <DialogContent className="rounded-3xl max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-rose-600 flex items-center gap-2">
+              <Trash2 size={18} />
               {t("deleteLocation")}
             </DialogTitle>
-            <DialogDescription className="text-xs text-gray-500 leading-normal">
+            <DialogDescription className="text-xs pt-1">
               {t("deleteLocationDesc", { name: selectedLocation?.name || "" })}
             </DialogDescription>
           </DialogHeader>
-
-          <DialogFooter className="mt-6 flex flex-row items-center justify-end gap-2">
-            <DialogClose asChild>
-              <Button type="button" variant="outline" className="rounded-xl h-10 text-sm flex-1">
-                {tc("cancel")}
-              </Button>
-            </DialogClose>
-            <Button
+          <DialogFooter className="pt-3 gap-2">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setIsDeleteConfirmOpen(false)}
+              className="rounded-xl"
+            >
+              {tc("cancel")}
+            </Button>
+            <Button 
+              type="button" 
+              variant="destructive"
               onClick={() => selectedLocation?.id && deleteLocationMutation.mutate(selectedLocation.id)}
-              className="rounded-xl h-10 px-5 text-sm bg-rose-500 hover:bg-rose-600 text-white font-medium flex-1"
+              className="rounded-xl"
               disabled={deleteLocationMutation.isPending}
             >
-              {deleteLocationMutation.isPending ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                t("deleteLocationBtn")
-              )}
+              {deleteLocationMutation.isPending ? <Loader2 size={14} className="animate-spin mr-1" /> : null}
+              {t("deleteLocationBtn")}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -7,7 +7,7 @@ export const createLeaveType = async (
   company_id,
 ) => {
   try {
-    await prisma.leavetype.create({
+    const newLt = await prisma.leavetype.create({
       data: {
         name,
         code,
@@ -15,6 +15,28 @@ export const createLeaveType = async (
         company_id: parseInt(company_id),
       },
     });
+
+    // Automatically create leave profiles for all active employees in the company
+    try {
+      const activeEmployees = await prisma.employee.findMany({
+        where: { company_id: parseInt(company_id), is_active: "active" },
+        select: { id: true, gender: true },
+      });
+      for (const emp of activeEmployees) {
+        if (code === "ML" && emp.gender !== "female") continue;
+        await prisma.leaveprofile.create({
+          data: {
+            employee_id: emp.id,
+            leave_type_id: newLt.id,
+            assignment: parseInt(default_balance) || 0,
+            balance: parseInt(default_balance) || 0,
+            used: 0,
+          },
+        });
+      }
+    } catch (err) {
+      console.error("Auto-sync new leave type to employees error:", err.message);
+    }
 
     return {
       result: true,
@@ -99,26 +121,36 @@ export const deleteLeaveType = async (id) => {
     if (recordCount > 0) {
       return {
         result: false,
-        message: `Cannot delete this Leave Type because ${recordCount} leave request record(s) are using it.`,
+        message: `Cannot delete this Leave Type because ${recordCount} leave request record(s) are already using it.`,
       };
     }
 
-    // 2. Check if any employee leave profile balance is using this leave type
-    const profileCount = await prisma.leaveprofile.count({
-      where: { leave_type_id: leaveTypeId },
+    // 2. Check if any employee has used leave days under this type
+    const usedProfiles = await prisma.leaveprofile.count({
+      where: {
+        leave_type_id: leaveTypeId,
+        used: { gt: 0 },
+      },
     });
-    if (profileCount > 0) {
+    if (usedProfiles > 0) {
       return {
         result: false,
-        message: `Cannot delete this Leave Type because ${profileCount} employee leave balance profile(s) are assigned to it.`,
+        message: `Cannot delete this Leave Type because employees have recorded leave days used under it.`,
       };
     }
 
+    // 3. Remove unused employee leave profile placeholders for this leave type
+    await prisma.leaveprofile.deleteMany({
+      where: { leave_type_id: leaveTypeId },
+    });
+
+    // 4. Delete the leave type
     await prisma.leavetype.delete({
       where: {
         id: leaveTypeId,
       },
     });
+
     return {
       result: true,
       message: "Leave Type deleted successfully.",

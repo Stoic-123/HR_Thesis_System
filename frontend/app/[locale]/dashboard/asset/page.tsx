@@ -13,6 +13,7 @@ import {
   approveHRAssetRequest,
   updateAsset,
   deleteAsset,
+  deleteAssetRequest,
   type Asset,
   type AssetCategory,
   type AssetRequest,
@@ -27,7 +28,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Plus, UserPlus, Undo2, Laptop, ListTree, PackageSearch, CheckCircle2, UserCircle, RefreshCcw, Pencil, Trash2, Eye, Printer, Search, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, UserPlus, Undo2, Laptop, ListTree, PackageSearch, CheckCircle2, UserCircle, RefreshCcw, Pencil, Trash2, Eye, Printer, Search, X, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import dayjs from "dayjs";
 import { useMe } from "@/hooks/useMe";
@@ -246,6 +247,27 @@ export default function AssetDashboardPage() {
   const [approveData, setApproveData] = useState({ asset_id: "", hr_comment: "", condition_out: "good" });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Delete Request Confirmation State
+  const [deleteRequestOpen, setDeleteRequestOpen] = useState<{ open: boolean; requestId: number | null }>({
+    open: false,
+    requestId: null,
+  });
+
+  const confirmDeleteRequest = async () => {
+    if (!deleteRequestOpen.requestId) return;
+    try {
+      setIsSubmitting(true);
+      await deleteAssetRequest(deleteRequestOpen.requestId);
+      toast.success(locale === "km" ? "បានលុបសំណើរសុំទ្រព្យសកម្មដោយជោគជ័យ" : "Asset request deleted successfully");
+      queryClient.invalidateQueries({ queryKey: ["asset-requests"] });
+      setDeleteRequestOpen({ open: false, requestId: null });
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to delete asset request");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   // Edit Asset State
   const [editOpen, setEditOpen] = useState<{ open: boolean; asset: Asset | null }>({
@@ -1221,15 +1243,26 @@ export default function AssetDashboardPage() {
                             </Badge>
                           </TableCell>
                           <TableCell className="py-3.5 pl-4 pr-6 text-right whitespace-nowrap">
-                            {r.status === "pending_hr" && (
+                            <div className="flex items-center justify-end gap-2">
+                              {r.status === "pending_hr" && (
+                                <Button
+                                  size="sm"
+                                  className="rounded-xl shadow-sm gap-1 bg-emerald-600 hover:bg-emerald-700 text-white whitespace-nowrap"
+                                  onClick={() => setApproveOpen({ open: true, request: r })}
+                                >
+                                  Review & Approve
+                                </Button>
+                              )}
                               <Button
+                                variant="ghost"
                                 size="sm"
-                                className="rounded-xl shadow-sm gap-1 bg-emerald-600 hover:bg-emerald-700 text-white whitespace-nowrap"
-                                onClick={() => setApproveOpen({ open: true, request: r })}
+                                className="size-8 p-0 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl"
+                                title={locale === "km" ? "លុបសំណើរ" : "Delete Request"}
+                                onClick={() => setDeleteRequestOpen({ open: true, requestId: r.id })}
                               >
-                                Review & Approve
+                                <Trash2 className="size-4" />
                               </Button>
-                            )}
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -1242,6 +1275,52 @@ export default function AssetDashboardPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* ============================================================ */}
+      {/* DELETE ASSET REQUEST CONFIRMATION MODAL */}
+      {/* ============================================================ */}
+      <Dialog
+        open={deleteRequestOpen.open}
+        onOpenChange={(v) => !v && setDeleteRequestOpen({ open: false, requestId: null })}
+      >
+        <DialogContent className="max-w-md rounded-3xl p-6">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-rose-600 flex items-center gap-2">
+              <Trash2 className="size-5" />
+              {locale === "km" ? "លុបសំណើរសុំទ្រព្យសកម្ម" : "Delete Asset Request"}
+            </DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground pt-2">
+              {locale === "km"
+                ? "តើអ្នកពិតជាចង់លុបសំណើរសុំទ្រព្យសកម្មនេះមែនទេ? សកម្មភាពនេះមិនអាចត្រឡប់វិញបានទេ។"
+                : "Are you sure you want to delete this asset request? This action cannot be undone."}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0 pt-4">
+            <Button
+              variant="outline"
+              className="rounded-xl cursor-pointer"
+              onClick={() => setDeleteRequestOpen({ open: false, requestId: null })}
+              disabled={isSubmitting}
+            >
+              {locale === "km" ? "បោះបង់" : "Cancel"}
+            </Button>
+            <Button
+              className="rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold cursor-pointer gap-2"
+              onClick={confirmDeleteRequest}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  {locale === "km" ? "កំពុងលុប..." : "Deleting..."}
+                </>
+              ) : (
+                locale === "km" ? "យល់ព្រមលុប" : "Confirm Delete"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ============================================================ */}
       {/* DIRECT ASSIGN DIALOG */}

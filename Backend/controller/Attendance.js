@@ -421,7 +421,10 @@ export const getAttendanceReportController = async (req, res) => {
 
     const whereClause = {
       work_at: { gte: start, lte: end },
-      employee: { company_id: parseInt(company_id) },
+      employee: {
+        company_id: parseInt(company_id),
+        role: { name: { notIn: ["Admin", "SuperAdmin"] } },
+      },
     };
 
     // Restrict query: non-HR/Admin (e.g. Store Manager, Department Manager) is LOCKED to their department

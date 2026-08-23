@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Edit, RefreshCw, FileText, User, ArrowUpRight, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import { useRouter } from "@/src/i18n/routing";
 import {
   getLeaveProfiles,
   updateLeaveProfile,
@@ -67,7 +68,7 @@ export default function LeaveProfilePage() {
   const [editingLeaveType, setEditingLeaveType] = useState<LeaveType | null>(null);
   const [editAssignment, setEditAssignment] = useState<string>("");
   const [editBalance, setEditBalance] = useState<string>("");
-  const [activeTab, setActiveTab] = useState<'profile' | 'details'>('profile');
+  const router = useRouter();
   const t = useTranslations("leaveProfile");
   const tc = useTranslations("common");
 
@@ -82,9 +83,9 @@ export default function LeaveProfilePage() {
       if (leaveProfilesData?.result) setLeaveProfiles(leaveProfilesData.data);
       if (leaveTypesData?.result) setLeaveTypes(leaveTypesData.data);
       if (employeesData?.result) {
-        const filteredEmployees = employeesData.data.filter((emp: Employee) => {
-          const roleName = emp.role_name?.toLowerCase() || "";
-          return roleName.includes("employee") || roleName.includes("manager");
+        const filteredEmployees = (employeesData.data || []).filter((emp: Employee) => {
+          const roleName = (emp.role_name || "").toLowerCase();
+          return roleName !== "admin" && roleName !== "superadmin";
         });
         setEmployees(filteredEmployees);
       }
@@ -100,7 +101,6 @@ export default function LeaveProfilePage() {
 
   const handleEmployeeClick = async (employee: Employee) => {
     setSelectedEmployee(employee);
-    setActiveTab('profile');
     try {
       const response = await getEmployeeLeaveProfiles(employee.id);
       if (response?.result) setSelectedEmployeeProfiles(response.data);
@@ -243,18 +243,11 @@ export default function LeaveProfilePage() {
               </CardContent>
 
               <CardContent className="pt-0 border-t border-gray-100">
-                <div className="flex justify-between gap-2">
-                  <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-800 hover:bg-gray-50 flex-1"
-                    onClick={(e) => { e.stopPropagation(); handleEmployeeClick(employee); setActiveTab('profile'); }}>
-                    <FileText className="h-4 w-4 mr-2" />
-                    {t("profileTab")}
-                  </Button>
-                  <Button variant="ghost" size="sm" className="text-amber-600 hover:text-amber-700 hover:bg-amber-50 flex-1"
-                    onClick={(e) => { e.stopPropagation(); handleEmployeeClick(employee); setActiveTab('details'); }}>
-                    <ArrowUpRight className="h-4 w-4 mr-2" />
-                    {t("detailsTab")}
-                  </Button>
-                </div>
+                <Button variant="ghost" size="sm" className="w-full text-amber-600 hover:text-amber-700 hover:bg-amber-50 font-semibold flex items-center justify-center"
+                  onClick={(e) => { e.stopPropagation(); handleEmployeeClick(employee); }}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  {t("profileTab")}
+                </Button>
               </CardContent>
             </Card>
           );
@@ -305,132 +298,73 @@ export default function LeaveProfilePage() {
             </div>
           </DialogHeader>
 
-          <div className="flex gap-1 border-b mb-8 mt-4">
-            <Button variant="ghost"
-              className={`rounded-none border-b-2 px-6 py-3 text-base ${activeTab === 'profile' ? 'border-amber-500 text-amber-600 bg-amber-50' : 'border-transparent text-gray-600 hover:text-gray-800'}`}
-              onClick={() => setActiveTab('profile')}>
-              {t("profileViewTab")}
-            </Button>
-            <Button variant="ghost"
-              className={`rounded-none border-b-2 px-6 py-3 text-base ${activeTab === 'details' ? 'border-amber-500 text-amber-600 bg-amber-50' : 'border-transparent text-gray-600 hover:text-gray-800'}`}
-              onClick={() => setActiveTab('details')}>
-              {t("detailsTab")}
-            </Button>
+          <div className="space-y-6 mt-6">
+            {selectedEmployeeProfiles.map((profile) => {
+              const leaveType = leaveTypes.find(lt => lt.id === profile.leave_type_id);
+              const assignment = profile.assignment || 0;
+              const used = profile.used || 0;
+              const balance = profile.balance || 0;
+
+              return (
+                <Card key={profile.id} className="overflow-hidden border border-gray-100 hover:border-gray-200 shadow-sm transition-all rounded-2xl">
+                  <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-gray-50 bg-gray-50/50 px-6 py-4">
+                    <CardTitle className="text-lg font-bold text-gray-800">
+                      {leaveType?.name}
+                      <span className="text-xs text-gray-400 font-normal ml-2">({leaveType?.code})</span>
+                    </CardTitle>
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="rounded-xl h-8 px-3 border-gray-200 hover:bg-gray-50 text-xs"
+                        onClick={() => router.push('/dashboard/leave/report')}
+                      >
+                        <FileText className="h-3.5 w-3.5 mr-1.5" />
+                        {t("viewReport")}
+                      </Button>
+                      <Button variant="outline" size="sm"
+                        className="rounded-xl h-8 px-3 text-amber-600 border-amber-200 bg-amber-50 hover:bg-amber-100 hover:text-amber-700 text-xs font-semibold"
+                        onClick={() => handleEdit(profile, leaveType!)}>
+                        <Edit className="h-3.5 w-3.5 mr-1.5" />
+                        {t("adjust")}
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <div className="flex flex-col xl:flex-row items-start xl:items-center gap-6">
+                      <div className="flex-shrink-0 self-center">
+                        <CircularGauge value={used} max={assignment} label={t("usedLabel")} />
+                      </div>
+                      <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+                        <div className="bg-gray-50 p-4 rounded-xl">
+                          <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">{t("entitlement")}</p>
+                          <p className="text-2xl font-bold text-gray-900">{assignment}</p>
+                        </div>
+                        <div className="bg-gray-50 p-4 rounded-xl">
+                          <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">{t("usedLabel")}</p>
+                          <p className="text-2xl font-bold text-gray-900">{used}</p>
+                        </div>
+                      </div>
+                      <div className="w-full sm:w-auto flex-shrink-0 bg-gradient-to-br from-amber-50 to-orange-50 p-5 rounded-2xl border border-amber-100 text-center min-w-[130px]">
+                        <p className="text-xs text-gray-600 font-semibold uppercase tracking-wider mb-1">{t("balance")}</p>
+                        <p className={`text-3xl font-black ${balance < 0 ? 'text-red-600' : 'text-amber-600'}`}>{balance}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+
+            {selectedEmployeeProfiles.length === 0 && (
+              <div className="text-center py-16 text-gray-500 bg-gray-50 rounded-2xl">
+                <User className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                <p className="text-lg">{t("noProfiles")}</p>
+              </div>
+            )}
           </div>
 
-          {activeTab === 'profile' ? (
-            <div className="space-y-6">
-              {selectedEmployeeProfiles.map((profile) => {
-                const leaveType = leaveTypes.find(lt => lt.id === profile.leave_type_id);
-                const assignment = profile.assignment || 0;
-                const used = profile.used || 0;
-                const balance = profile.balance || 0;
-                const accrued = (assignment || 0) - (used || 0);
-
-                return (
-                  <Card key={profile.id} className="overflow-hidden border-2 border-gray-100 hover:border-gray-200 transition-all">
-                    <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-gray-50 bg-gray-50/50">
-                      <CardTitle className="text-xl font-semibold text-gray-800">
-                        {leaveType?.name}
-                        <span className="text-sm text-gray-400 font-normal ml-2">({leaveType?.code})</span>
-                      </CardTitle>
-                      <div className="flex items-center gap-3">
-                        <Button variant="outline" size="sm" className="border-gray-200 hover:bg-gray-50">
-                          <FileText className="h-4 w-4 mr-2" />
-                          {t("viewReport")}
-                        </Button>
-                        <Button variant="outline" size="sm"
-                          className="text-amber-600 border-amber-200 bg-amber-50 hover:bg-amber-100 hover:text-amber-700"
-                          onClick={() => handleEdit(profile, leaveType!)}>
-                          <Edit className="h-4 w-4 mr-2" />
-                          {t("adjust")}
-                        </Button>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="pt-6">
-                      <div className="flex flex-col xl:flex-row items-start xl:items-center gap-8">
-                        <div className="flex-shrink-0 self-center">
-                          <CircularGauge value={used} max={assignment} label={t("usedLabel")} />
-                        </div>
-                        <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
-                          <div className="bg-gray-50 p-5 rounded-xl min-w-[120px]">
-                            <p className="text-sm text-gray-500 font-medium mb-1 whitespace-nowrap">{t("entitlement")}</p>
-                            <p className="text-2xl font-bold text-gray-800">{assignment}</p>
-                          </div>
-                          <div className="bg-gray-50 p-5 rounded-xl min-w-[120px]">
-                            <p className="text-sm text-gray-500 font-medium mb-1 whitespace-nowrap">{t("accrued")}</p>
-                            <p className="text-2xl font-bold text-gray-800">{Math.max(0, accrued)}</p>
-                          </div>
-                          <div className="bg-gray-50 p-5 rounded-xl min-w-[120px]">
-                            <p className="text-sm text-gray-500 font-medium mb-1 whitespace-nowrap">{t("usedLabel")}</p>
-                            <p className="text-2xl font-bold text-gray-800">{used}</p>
-                          </div>
-                        </div>
-                        <div className="w-full sm:w-auto flex-shrink-0 bg-gradient-to-br from-amber-50 to-orange-50 p-6 rounded-2xl border border-amber-100 text-center">
-                          <p className="text-sm text-gray-600 font-medium mb-1">{t("balance")}</p>
-                          <p className={`text-3xl font-bold ${balance < 0 ? 'text-red-600' : 'text-amber-600'}`}>{balance}</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-
-              {selectedEmployeeProfiles.length === 0 && (
-                <div className="text-center py-16 text-gray-500 bg-gray-50 rounded-2xl">
-                  <User className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-lg">{t("noProfiles")}</p>
-                  <Button variant="outline" size="sm" className="mt-4"
-                    onClick={() => selectedEmployee && handleSync(selectedEmployee.id)}>
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    {t("syncTypes")}
-                  </Button>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {selectedEmployeeProfiles.map((profile) => {
-                  const leaveType = leaveTypes.find(lt => lt.id === profile.leave_type_id);
-                  return (
-                    <Card key={profile.id} className="border-2 border-gray-100 hover:border-gray-200 transition-all">
-                      <CardHeader className="pb-4 border-b border-gray-50">
-                        <CardTitle className="text-lg font-semibold text-gray-800">
-                          {leaveType?.name}
-                          <span className="text-sm text-gray-400 font-normal ml-2">({leaveType?.code})</span>
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="pt-4 grid grid-cols-3 gap-4">
-                        <div className="text-center">
-                          <p className="text-xs text-gray-500 font-medium mb-1">{t("entitlement")}</p>
-                          <p className="text-xl font-bold text-gray-800">{profile.assignment || 0}</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-xs text-gray-500 font-medium mb-1">{t("usedLabel")}</p>
-                          <p className="text-xl font-bold text-gray-800">{profile.used || 0}</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-xs text-gray-500 font-medium mb-1">{t("balance")}</p>
-                          <p className={`text-xl font-bold ${(profile.balance || 0) < 0 ? 'text-red-600' : 'text-amber-600'}`}>
-                            {profile.balance}
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          <DialogFooter className="flex flex-col md:flex-row justify-between items-center gap-3 mt-8 pb-4">
-            <Button variant="outline" onClick={() => selectedEmployee && handleSync(selectedEmployee.id)}
-              className="w-full md:w-auto border-gray-200 hover:bg-gray-50">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              {t("syncTypes")}
-            </Button>
-            <Button onClick={() => setIsEmployeeModalOpen(false)} className="w-full md:w-auto bg-gray-800 hover:bg-gray-900">
+          <DialogFooter className="flex justify-end items-center gap-3 mt-8 pb-4">
+            <Button onClick={() => setIsEmployeeModalOpen(false)} className="rounded-xl px-6 bg-gray-900 text-white hover:bg-black font-semibold">
               {tc("close")}
             </Button>
           </DialogFooter>

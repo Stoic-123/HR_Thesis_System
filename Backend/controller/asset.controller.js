@@ -691,6 +691,29 @@ const deleteAsset = async (req, res) => {
   }
 };
 
+const deleteRequest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const requestId = parseInt(id);
+
+    const request = await prisma.assetrequest.findFirst({
+      where: { id: requestId, company_id: req.user.company_id },
+    });
+
+    if (!request) {
+      return res.status(404).json({ result: false, message: "Asset request not found." });
+    }
+
+    await prisma.assetrequest.delete({
+      where: { id: requestId },
+    });
+
+    res.status(200).json({ result: true, message: "Asset request deleted successfully." });
+  } catch (error) {
+    res.status(500).json({ result: false, message: error.message });
+  }
+};
+
 export default {
   getCategories,
   createCategory,
@@ -705,5 +728,6 @@ export default {
   approveManager,
   approveHR,
   updateAsset,
-  deleteAsset
+  deleteAsset,
+  deleteRequest,
 };

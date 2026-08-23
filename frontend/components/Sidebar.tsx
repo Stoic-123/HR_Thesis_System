@@ -174,7 +174,7 @@ const menuItems: MenuItem[] = [
         labelKey: "setup",
         icon: Wrench,
         href: "/dashboard/leave/setup",
-        permission: "role:manage",
+        permission: "department:manage",
       },
       {
         title: "Leave Profile",
@@ -197,7 +197,7 @@ const menuItems: MenuItem[] = [
     labelKey: "documentType",
     icon: FileText,
     href: "/dashboard/document-type",
-    permission: "role:manage",
+    permission: "employee:manage",
   },
   {
     title: "Overtime",
@@ -260,7 +260,7 @@ const menuItems: MenuItem[] = [
     labelKey: "kpi",
     icon: Award,
     href: "/dashboard/kpi",
-    permission: "payroll:view",
+    permission: "kpi:manage",
   },
   {
     title: "Asset",

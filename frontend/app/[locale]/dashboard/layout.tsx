@@ -71,10 +71,10 @@ const routePermissions = [
   { path: "/dashboard/time-attendance/setup", permission: "department:manage" },
   { path: "/dashboard/timemode", permission: "department:manage" },
   { path: "/dashboard/leave/report", permission: "leave:approve" },
-  { path: "/dashboard/leave/setup", permission: "role:manage" },
+  { path: "/dashboard/leave/setup", permission: "department:manage" },
   { path: "/dashboard/leave/profile", permission: "employee:manage" },
   { path: "/dashboard/leave", permission: "leave:approve" },
-  { path: "/dashboard/document-type", permission: "role:manage" },
+  { path: "/dashboard/document-type", permission: "employee:manage" },
   { path: "/dashboard/holiday", permission: "department:manage" },
   { path: "/dashboard/overtime", permission: "overtime:approve" },
   { path: "/dashboard/payroll/review", permission: "payroll:manage" },
@@ -84,10 +84,10 @@ const routePermissions = [
   { path: "/dashboard/audit-log", permission: "role:manage" },
   { path: "/dashboard/setting", permission: "role:manage" },
   { path: "/dashboard/asset/inventory", permission: "asset:approve" },
-  { path: "/dashboard/asset/categories", permission: "role:manage" },
+  { path: "/dashboard/asset/categories", permission: "asset:approve" },
   { path: "/dashboard/asset/requests", permission: "asset:approve" },
   { path: "/dashboard/asset", permission: "asset:approve" },
-  { path: "/dashboard/kpi", permission: "app:web_login" },
+  { path: "/dashboard/kpi", permission: "kpi:manage" },
 ];
 
 export default function DashboardLayout({

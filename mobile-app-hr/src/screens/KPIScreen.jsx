@@ -542,27 +542,37 @@ export default function KPIScreen({ theme, navigateTo }) {
                 </Text>
               </View>
 
-              {!myKPIData?.evaluations || myKPIData.evaluations.length === 0 ? (
-                <View
-                  style={{
-                    padding: 32,
-                    borderRadius: 20,
-                    borderWidth: 1.5,
-                    borderStyle: 'dashed',
-                    borderColor: isDark ? '#374151' : '#CBD5E1',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: isDark ? 'transparent' : '#FFFFFF',
-                  }}
-                >
-                  <MaterialIcons name="fact-check" size={38} color={textSub} style={{ marginBottom: 10 }} />
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: textMain }}>No evaluations recorded</Text>
-                  <Text style={{ fontSize: 11, color: textSub, marginTop: 3 }}>
-                    Monthly supervisor evaluation will appear here.
-                  </Text>
-                </View>
-              ) : (
-                myKPIData.evaluations.map((ev) => (
+              {(() => {
+                const filteredEvaluations = (myKPIData?.evaluations || []).filter(
+                  (ev) => !selectedMonth || ev.month === selectedMonth
+                );
+
+                if (filteredEvaluations.length === 0) {
+                  return (
+                    <View
+                      style={{
+                        padding: 32,
+                        borderRadius: 20,
+                        borderWidth: 1.5,
+                        borderStyle: 'dashed',
+                        borderColor: isDark ? '#374151' : '#CBD5E1',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: isDark ? 'transparent' : '#FFFFFF',
+                      }}
+                    >
+                      <MaterialIcons name="fact-check" size={38} color={textSub} style={{ marginBottom: 10 }} />
+                      <Text style={{ fontSize: 13, fontWeight: '600', color: textMain }}>
+                        No evaluation for {MONTHS.find((m) => m.val === selectedMonth)?.label || `Month ${selectedMonth}`}
+                      </Text>
+                      <Text style={{ fontSize: 11, color: textSub, marginTop: 3 }}>
+                        No supervisor evaluation recorded for this month yet.
+                      </Text>
+                    </View>
+                  );
+                }
+
+                return filteredEvaluations.map((ev) => (
                   <View
                     key={ev.id}
                     style={{
@@ -691,8 +701,8 @@ export default function KPIScreen({ theme, navigateTo }) {
                       </View>
                     ) : null}
                   </View>
-                ))
-              )}
+                ));
+              })()}
             </View>
           )}
 

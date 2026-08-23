@@ -146,3 +146,8 @@ export const deleteAsset = async (id: number) => {
   const res = await api.delete(`${API_URL}/${id}`);
   return res.data;
 };
+
+export const deleteAssetRequest = async (id: number) => {
+  const res = await api.delete(`${API_URL}/requests/${id}`);
+  return res.data;
+};

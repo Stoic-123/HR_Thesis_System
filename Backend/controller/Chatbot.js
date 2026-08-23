@@ -180,16 +180,10 @@ const tools = {
   },
   get_department_headcount: async (args, company_id, deptFilter) => {
     try {
-      const empWhere = {
-        company_id: parseInt(company_id),
-        is_active: "active",
-      };
-      if (deptFilter) empWhere.department_id = parseInt(deptFilter);
-
       const departments = await prisma.department.findMany({
         where: { company_id: parseInt(company_id) },
         include: {
-          employee_department_idToemployee: {
+          employee_employee_department_idTodepartment: {
             where: { is_active: "active" },
           },
         },
@@ -199,9 +193,9 @@ const tools = {
         return { success: true, message: "No departments found for this company." };
       }
 
-      const totalEmployees = departments.reduce((acc, d) => acc + (d.employee_department_idToemployee?.length || 0), 0);
+      const totalEmployees = departments.reduce((acc, d) => acc + (d.employee_employee_department_idTodepartment?.length || 0), 0);
       const summaryText = departments
-        .map((d) => `- **${d.name}:** ${d.employee_department_idToemployee?.length || 0} active employee(s)`)
+        .map((d) => `- **${d.name}:** ${d.employee_employee_department_idTodepartment?.length || 0} active employee(s)`)
         .join("\n");
 
       return {
@@ -219,7 +213,7 @@ const tools = {
           company_id: parseInt(company_id),
         },
         include: {
-          assetcategory: true,
+          category: true,
         },
       });
 
@@ -234,7 +228,7 @@ const tools = {
 
       const availText =
         availableAssets.length > 0
-          ? availableAssets.map((a) => `- **${a.asset_name}** (${a.asset_code || "No Code"}) — Category: ${a.assetcategory?.category_name || "General"}`).join("\n")
+          ? availableAssets.map((a) => `- **${a.name}** (${a.serial_number || "No Code"}) — Category: ${a.category?.name || "General"}`).join("\n")
           : "- None available right now";
 
       return {

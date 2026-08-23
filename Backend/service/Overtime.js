@@ -106,6 +106,58 @@ export const createOvertime = async (employee_id, start_date, end_date, reason, 
       }
     }
 
+    // Check if the requested OT overlaps with regular working shift hours
+    const workingProfile = await prisma.employeeworkingprofile.findUnique({
+      where: { employee_id: parseInt(employee_id) },
+      include: {
+        dayofweek: {
+          include: {
+            monday: true,
+            tuesday: true,
+            wednesday: true,
+            thursday: true,
+            friday: true,
+            saturday: true,
+            sunday: true,
+          },
+        },
+      },
+    });
+
+    if (workingProfile?.dayofweek) {
+      // Parse requested date and time in a timezone-resilient way
+      const [startDatePart, startTimePart] = start_date.split('T');
+      const [startYear, startMonth, startDay] = startDatePart.split('-').map(Number);
+      const reqDate = new Date(startYear, startMonth - 1, startDay);
+      
+      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      const dayOfWeekKey = dayNames[reqDate.getDay()];
+      const shift = workingProfile.dayofweek[dayOfWeekKey];
+
+      if (shift && shift.time_in && shift.time_out) {
+        const [reqStartH, reqStartM] = startTimePart ? startTimePart.split(':').map(Number) : [0, 0];
+        const [_, endTimePart] = end_date.split('T');
+        const [reqEndH, reqEndM] = endTimePart ? endTimePart.split(':').map(Number) : [0, 0];
+
+        const [shiftInH, shiftInM] = shift.time_in.split(':').map(Number);
+        const [shiftOutH, shiftOutM] = shift.time_out.split(':').map(Number);
+
+        const reqStartMins = reqStartH * 60 + reqStartM;
+        const reqEndMins = reqEndH * 60 + reqEndM;
+        const shiftInMins = shiftInH * 60 + shiftInM;
+        const shiftOutMins = shiftOutH * 60 + shiftOutM;
+
+        // Overlap occurs if requested OT window intersects the standard shift window
+        if (reqStartMins < shiftOutMins && reqEndMins > shiftInMins) {
+          const shiftInFormatted = shift.time_in.slice(0, 5);
+          const shiftOutFormatted = shift.time_out.slice(0, 5);
+          throw new Error(
+            `Overtime cannot be requested during regular working hours (${shiftInFormatted} - ${shiftOutFormatted}). Overtime is only permitted before or after your shift.`
+          );
+        }
+      }
+    }
+
     // Get employee details and check department
     const employee = await prisma.employee.findUnique({
       where: { id: parseInt(employee_id) },
